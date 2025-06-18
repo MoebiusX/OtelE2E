@@ -65,9 +65,12 @@ export function createKongRouter(): Router {
 
   // Kong Payments Route - proxy to /api/payments
   router.all('/payments*', (req: Request, res: Response, next) => {
-    // Transform Kong route to API route
-    req.url = req.url.replace('/kong/payments', '/api/payments');
-    req.originalUrl = req.originalUrl.replace('/kong/payments', '/api/payments');
+    // Transform Kong route to API route - handle both exact match and wildcard
+    const newUrl = req.url.replace(/^\/payments/, '/api/payments');
+    const newOriginalUrl = req.originalUrl.replace(/\/kong\/payments/, '/api/payments');
+    
+    req.url = newUrl;
+    req.originalUrl = newOriginalUrl;
     
     // Forward to next middleware (which will be the API routes)
     next();
@@ -144,14 +147,7 @@ export function createKongRouter(): Router {
     });
   });
 
-  // Catch-all for unmatched Kong routes
-  router.all('*', (req: Request, res: Response) => {
-    res.status(404).json({
-      message: 'Kong route not found',
-      request_id: uuidv4(),
-      path: req.path
-    });
-  });
+  // Handle Kong admin and status routes that don't need proxying
 
   return router;
 }
