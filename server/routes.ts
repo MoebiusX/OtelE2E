@@ -11,7 +11,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
   await setupPaymentProcessor(queueSimulator);
   // Payment submission endpoint
   app.post("/api/payments", async (req, res) => {
-    const { span, traceId, spanId, finish } = createSpan("payment.submit");
+    // Extract trace context from Kong Gateway if available, otherwise generate new
+    let traceId: string;
+    let spanId: string;
+    
+    if (req.headers['traceparent']) {
+      const traceparent = req.headers['traceparent'] as string;
+      const parts = traceparent.split('-');
+      traceId = parts[1];
+      spanId = parts[2];
+    } else {
+      traceId = generateTraceId();
+      spanId = generateSpanId();
+    }
+    
+    const { span, finish } = createSpan("payment.submit");
     
     try {
       const validatedData = insertPaymentSchema.parse(req.body);
