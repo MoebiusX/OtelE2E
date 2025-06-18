@@ -48,7 +48,6 @@ export function PaymentForm() {
             ...createTraceHeaders(currentTraceId, currentSpanId)
           };
       
-      console.log('Payment submission - useEmptyTrace:', useEmptyTrace, 'headers:', headers);
       const response = await apiRequest("POST", "/api/payments", data, headers);
       return response.json();
     },

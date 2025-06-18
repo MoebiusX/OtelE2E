@@ -165,7 +165,7 @@ export class KongGateway {
         traceId,
         spanId: this.generateSpanId(),
         parentSpanId: null,
-        operationName: hasIncomingTrace ? "Kong Gateway (with trace headers)" : "Kong Gateway (injected trace)",
+        operationName: hasIncomingTrace ? "Trace by Client" : "Trace by Kong",
         serviceName: 'kong-gateway',
         status: 'success',
         duration: 3,
