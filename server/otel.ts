@@ -12,20 +12,8 @@ export const traces: any[] = [];
 class TraceCollector implements SpanExporter {
   export(spans: ReadableSpan[], resultCallback: (result: ExportResult) => void): void {
     spans.forEach(span => {
-      // Filter out GET requests to payment-api endpoints to reduce noise
-      const httpMethod = span.attributes?.['http.method'];
-      const httpRoute = span.attributes?.['http.route'] || span.attributes?.['http.target'] || span.attributes?.['http.url'];
-      const spanName = span.name || '';
-      
-      // Skip GET requests entirely - they're just frontend polling
-      if (httpMethod === 'GET' || spanName.includes('GET ')) {
-        return; // Skip all GET requests
-      }
-      
-      // Also skip any spans that mention payment-api in parentheses (these are the noise spans)
-      if (spanName.includes('(payment-api)')) {
-        return;
-      }
+      // Collect ALL spans for authentic OpenTelemetry demonstration
+      // No filtering - show complete trace context
       
       const traceData = {
         traceId: span.spanContext().traceId,

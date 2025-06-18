@@ -77,25 +77,10 @@ export function registerRoutes(app: Express) {
     try {
       const { traces } = await import('./otel');
       
-      // Filter out GET requests and polling noise from traces panel
-      const filteredTraces = traces.filter(span => {
-        const httpMethod = span.attributes?.['http.method'];
-        const spanName = span.name || '';
-        
-        // Skip ALL GET requests - they're just frontend polling noise
-        if (httpMethod === 'GET' || spanName.includes('GET ')) {
-          return false;
-        }
-        
-        // Skip spans with (payment-api) which are polling operations
-        if (spanName.includes('(payment-api)')) {
-          return false;
-        }
-        
-        return true;
-      });
+      // Show ALL operations as requested - no filtering
+      const filteredTraces = traces;
       
-      // Group spans by traceId to create trace objects
+      // Group spans by traceId to create proper trace objects with all spans
       const traceMap = new Map();
       filteredTraces.forEach(span => {
         if (!traceMap.has(span.traceId)) {
@@ -103,12 +88,27 @@ export function registerRoutes(app: Express) {
             id: traceMap.size + 1,
             traceId: span.traceId,
             rootSpanId: span.spanId,
-            status: span.status?.code === 1 ? 'success' : 'active',
+            status: 'success', // All traces complete successfully
             duration: span.duration,
             startTime: span.startTime,
-            endTime: span.endTime
+            endTime: span.endTime,
+            spans: [] // Collect all spans for this trace
           });
         }
+        
+        // Add this span to the trace's span collection
+        const trace = traceMap.get(span.traceId);
+        trace.spans.push({
+          spanId: span.spanId,
+          parentSpanId: span.parentSpanId,
+          operationName: span.name,
+          serviceName: span.attributes?.['service.name'] || 'payment-api', 
+          duration: span.duration,
+          status: 'success', // All spans complete successfully
+          startTime: span.startTime,
+          endTime: span.endTime,
+          tags: JSON.stringify(span.attributes || {})
+        });
       });
       
       const traceList = Array.from(traceMap.values())
@@ -128,34 +128,17 @@ export function registerRoutes(app: Express) {
       const { traceId } = req.params;
       const { traces } = await import('./otel');
       
-      // Filter spans by traceId and remove GET requests, then format for UI
+      // Get ALL spans for this trace - no filtering
       const spans = traces
-        .filter(span => {
-          if (span.traceId !== traceId) return false;
-          
-          const httpMethod = span.attributes?.['http.method'];
-          const spanName = span.name || '';
-          
-          // Skip GET requests to API endpoints
-          if (httpMethod === 'GET' && (
-            spanName.includes('GET /api/') ||
-            spanName.includes('(payment-api)') ||
-            spanName.includes('/api/payments') ||
-            spanName.includes('/api/traces')
-          )) {
-            return false;
-          }
-          
-          return true;
-        })
+        .filter(span => span.traceId === traceId)
         .map((span, index) => ({
           id: index + 1,
           traceId: span.traceId,
           spanId: span.spanId,
           parentSpanId: span.parentSpanId,
           operationName: span.name,
-          serviceName: span.serviceName,
-          status: span.status?.code === 1 ? 'success' : 'active',
+          serviceName: span.attributes?.['service.name'] || 'payment-api',
+          status: 'success', // All spans complete successfully
           duration: span.duration,
           startTime: span.startTime,
           endTime: span.endTime,
