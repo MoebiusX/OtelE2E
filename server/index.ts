@@ -1,7 +1,7 @@
 import express, { type Request, Response, NextFunction } from "express";
 import { registerRoutes } from "./routes";
 import { setupVite, serveStatic, log } from "./vite";
-import { kongGateway } from "./kong";
+import { createKongRouter } from "./kong-routes";
 
 const app = express();
 app.use(express.json());
@@ -40,8 +40,8 @@ app.use((req, res, next) => {
 (async () => {
   const server = await registerRoutes(app);
 
-  // Kong Gateway middleware for /kong routes - after API routes but before Vite
-  app.use('/kong', kongGateway.gatewayMiddleware());
+  // Kong Gateway router for /kong routes - after API routes but before Vite
+  app.use('/kong', createKongRouter());
 
   app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
     const status = err.status || err.statusCode || 500;

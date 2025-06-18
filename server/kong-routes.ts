@@ -66,10 +66,8 @@ export function createKongRouter(): Router {
   // Kong Payments Route - proxy to /api/payments
   router.all('/payments*', (req: Request, res: Response, next) => {
     // Transform Kong route to API route
-    const apiPath = req.path.replace('/payments', '/api/payments');
-    req.url = req.url.replace('/payments', '/api/payments');
-    req.baseUrl = '';
-    req.path = apiPath;
+    req.url = req.url.replace('/kong/payments', '/api/payments');
+    req.originalUrl = req.originalUrl.replace('/kong/payments', '/api/payments');
     
     // Forward to next middleware (which will be the API routes)
     next();
@@ -78,10 +76,8 @@ export function createKongRouter(): Router {
   // Kong Traces Route - proxy to /api/traces
   router.all('/traces*', (req: Request, res: Response, next) => {
     // Transform Kong route to API route
-    const apiPath = req.path.replace('/traces', '/api/traces');
-    req.url = req.url.replace('/traces', '/api/traces');
-    req.baseUrl = '';
-    req.path = apiPath;
+    req.url = req.url.replace('/kong/traces', '/api/traces');
+    req.originalUrl = req.originalUrl.replace('/kong/traces', '/api/traces');
     
     next();
   });
@@ -89,10 +85,8 @@ export function createKongRouter(): Router {
   // Kong Metrics Route - proxy to /api/metrics
   router.all('/metrics*', (req: Request, res: Response, next) => {
     // Transform Kong route to API route
-    const apiPath = req.path.replace('/metrics', '/api/metrics');
-    req.url = req.url.replace('/metrics', '/api/metrics');
-    req.baseUrl = '';
-    req.path = apiPath;
+    req.url = req.url.replace('/kong/metrics', '/api/metrics');
+    req.originalUrl = req.originalUrl.replace('/kong/metrics', '/api/metrics');
     
     next();
   });
@@ -126,8 +120,27 @@ export function createKongRouter(): Router {
   router.get('/status', (req: Request, res: Response) => {
     res.json({
       database: { reachable: true },
-      server: { connections_accepted: 42, connections_active: 1, connections_handled: 42, connections_reading: 0, connections_waiting: 0, connections_writing: 1, total_requests: 42 },
-      memory: { workers_lua_vms: [{ http_allocated_gc: "0.02 MiB", pid: 1 }], lua_shared_dicts: { kong: { allocated_slabs: "0.04 MiB", capacity": "5.00 MiB" } } }
+      server: { 
+        connections_accepted: 42, 
+        connections_active: 1, 
+        connections_handled: 42, 
+        connections_reading: 0, 
+        connections_waiting: 0, 
+        connections_writing: 1, 
+        total_requests: 42 
+      },
+      memory: { 
+        workers_lua_vms: [{ 
+          http_allocated_gc: "0.02 MiB", 
+          pid: 1 
+        }], 
+        lua_shared_dicts: { 
+          kong: { 
+            allocated_slabs: "0.04 MiB", 
+            capacity: "5.00 MiB" 
+          } 
+        } 
+      }
     });
   });
 
