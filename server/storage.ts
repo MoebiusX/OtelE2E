@@ -37,63 +37,7 @@ export class MemoryStorage implements IStorage {
   }
 
   private createDemoData() {
-    // Demo payment for UI demonstration
-    const demoPayment: Payment = {
-      id: this.nextId++,
-      amount: 250.75,
-      currency: "USD",
-      recipient: "alice@example.com",
-      description: "Demo payment for Jaeger tracing",
-      status: "completed",
-      traceId: "demo-trace-001",
-      spanId: "demo-span-001",
-      createdAt: new Date(Date.now() - 1000 * 60 * 30), // 30 minutes ago
-    };
-    this.payments.set(demoPayment.id, demoPayment);
-
-    // Demo trace for UI demonstration
-    const demoTrace: Trace = {
-      id: this.nextId++,
-      traceId: "demo-trace-001",
-      rootSpanId: "demo-span-001",
-      status: "completed",
-      duration: 245,
-      startTime: new Date(Date.now() - 1000 * 60 * 30),
-      endTime: new Date(Date.now() - 1000 * 60 * 29),
-    };
-    this.traces.set(demoTrace.traceId, demoTrace);
-
-    // Demo spans for UI demonstration
-    const demoSpans: Span[] = [
-      {
-        id: this.nextId++,
-        traceId: "demo-trace-001",
-        spanId: "demo-span-001",
-        parentSpanId: null,
-        operationName: "Payment Request Received",
-        serviceName: "payment-api",
-        status: "completed",
-        duration: 245,
-        startTime: new Date(Date.now() - 1000 * 60 * 30),
-        endTime: new Date(Date.now() - 1000 * 60 * 29),
-        tags: JSON.stringify({ component: "payment-api", amount: 250.75 })
-      },
-      {
-        id: this.nextId++,
-        traceId: "demo-trace-001",
-        spanId: "demo-span-002",
-        parentSpanId: "demo-span-001",
-        operationName: "Kong Gateway Route",
-        serviceName: "kong-gateway",
-        status: "completed",
-        duration: 12,
-        startTime: new Date(Date.now() - 1000 * 60 * 30),
-        endTime: new Date(Date.now() - 1000 * 60 * 29),
-        tags: JSON.stringify({ component: "kong-gateway", route: "/payments" })
-      }
-    ];
-    
-    demoSpans.forEach(span => this.spans.set(span.spanId, span));
+    // Clean slate - no demo data, only real payment submissions will appear
   }
 
   async getUser(id: number): Promise<User | undefined> {

@@ -22,9 +22,9 @@ export function TraceVisualization() {
     refetchInterval: 2000, // Refresh every 2 seconds to show latest traces
   });
 
-  // Sort traces by creation date (most recent first) and select the latest one
+  // Sort traces by start time (most recent first) and select the latest one
   const sortedTraces = traces ? [...traces].sort((a, b) => 
-    new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+    new Date(b.startTime).getTime() - new Date(a.startTime).getTime()
   ) : [];
   const activeTrace = sortedTraces[0];
 
