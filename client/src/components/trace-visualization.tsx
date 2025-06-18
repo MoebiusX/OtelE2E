@@ -85,7 +85,7 @@ export function TraceVisualization() {
   const sortedSpans = spans ? [...spans].sort((a, b) => {
     if (!a.parentSpanId && b.parentSpanId) return -1;
     if (a.parentSpanId && !b.parentSpanId) return 1;
-    return a.startTime.getTime() - b.startTime.getTime();
+    return new Date(a.startTime).getTime() - new Date(b.startTime).getTime();
   }) : [];
 
   return (
