@@ -206,25 +206,13 @@ export class SolaceQueueSimulator extends EventEmitter {
 // Payment processor that consumes from payment queue
 export async function setupPaymentProcessor(queueSimulator: SolaceQueueSimulator) {
   queueSimulator.subscribe('payment-queue', async (message: QueueMessage) => {
-    const { span, spanId, finish } = createSpan('payment.process', message.spanId);
-    
     try {
       const { paymentId, amount, currency } = message.payload;
       
-      addSpanAttributes(span, {
-        'payment.id': paymentId,
-        'payment.amount': amount,
-        'payment.currency': currency,
-        'processor.name': 'payment-processor',
-      });
-
-      // Store payment processing span with randomized duration
+      // Real payment processing - OpenTelemetry auto-instruments these operations
       const processingTime1 = Math.floor(Math.random() * 600) + 400; // 400-1000ms
       const processingTime2 = Math.floor(Math.random() * 800) + 300; // 300-1100ms
-      const totalProcessingTime = processingTime1 + processingTime2;
       
-      // Real operation: Payment processing complete (OpenTelemetry auto-instruments this)
-
       // Simulate payment processing steps
       await new Promise(resolve => setTimeout(resolve, processingTime1));
 
@@ -243,7 +231,7 @@ export async function setupPaymentProcessor(queueSimulator: SolaceQueueSimulator
         paymentId,
         amount,
         currency,
-      }, message.traceId, spanId);
+      }, message.traceId, message.spanId);
 
       // Send to audit queue
       await queueSimulator.publish('audit-queue', {
@@ -252,72 +240,40 @@ export async function setupPaymentProcessor(queueSimulator: SolaceQueueSimulator
         amount,
         currency,
         processedAt: new Date(),
-      }, message.traceId, spanId);
+      }, message.traceId, message.spanId);
 
-      // Update span as completed
-      await storage.updateSpan(spanId, {
-        status: 'success',
-        duration: 1500,
-        endTime: new Date(),
-      });
-
-      finish('success');
     } catch (error) {
-      await storage.updateSpan(spanId, {
-        status: 'error',
-        duration: 1500,
-        endTime: new Date(),
-        tags: JSON.stringify({
-          'error.message': error instanceof Error ? error.message : 'Processing failed',
-        }),
-      });
-      finish('error');
+      console.error('Payment processing failed:', error);
       throw error;
     }
   });
 
   // Setup notification processor
   queueSimulator.subscribe('notification-queue', async (message: QueueMessage) => {
-    const { span, spanId, finish } = createSpan('notification.send', message.spanId);
-    
     try {
-      addSpanAttributes(span, {
-        'notification.type': message.payload.type,
-        'notification.payment_id': message.payload.paymentId,
-      });
-
       // Real operation: Send notification (OpenTelemetry auto-instruments this)
       const notificationDuration = Math.floor(Math.random() * 400) + 200; // 200-600ms
 
       // Simulate notification sending
       await new Promise(resolve => setTimeout(resolve, notificationDuration));
       
-      finish('success');
     } catch (error) {
-      finish('error');
+      console.error('Notification failed:', error);
       throw error;
     }
   });
 
   // Setup audit processor
   queueSimulator.subscribe('audit-queue', async (message: QueueMessage) => {
-    const { span, spanId, finish } = createSpan('audit.log', message.spanId);
-    
     try {
-      addSpanAttributes(span, {
-        'audit.type': message.payload.type,
-        'audit.payment_id': message.payload.paymentId,
-      });
-
       // Real operation: Audit logging (OpenTelemetry auto-instruments this)
       const auditDuration = Math.floor(Math.random() * 200) + 100; // 100-300ms
 
       // Simulate audit logging
       await new Promise(resolve => setTimeout(resolve, auditDuration));
       
-      finish('success');
     } catch (error) {
-      finish('error');
+      console.error('Audit logging failed:', error);
       throw error;
     }
   });

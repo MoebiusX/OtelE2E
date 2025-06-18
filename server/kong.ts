@@ -166,26 +166,7 @@ export class KongGateway {
         req.headers['traceparent'] = `00-${traceId}-${spanId}-${traceFlags}`;
       }
 
-      // Store Kong Gateway span for UI demonstration
-      const { storage } = await import('./storage');
-      const kongDuration = Math.floor(Math.random() * 5) + 2; // 2-6ms
-      await storage.createSpan({
-        traceId,
-        spanId: this.generateSpanId(),
-        parentSpanId: null,
-        operationName: hasIncomingTrace ? "Trace by Client" : "Trace by Kong",
-        serviceName: 'kong-gateway',
-        status: 'success',
-        duration: kongDuration,
-        startTime: new Date(),
-        endTime: new Date(Date.now() + kongDuration),
-        tags: JSON.stringify({
-          'kong.route': req.path,
-          'kong.method': req.method,
-          'kong.plugins': 'rate-limiting,cors,tracing',
-          'trace.source': hasIncomingTrace ? 'client_headers' : 'kong_injection'
-        })
-      });
+      // Kong Gateway adds authentic OpenTelemetry attributes only
 
       // Add Kong headers
       res.set({
