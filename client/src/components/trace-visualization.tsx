@@ -184,12 +184,12 @@ export function TraceVisualization() {
         ) : (
           <div className="text-center py-8 text-slate-500">
             <Globe className="w-8 h-8 mx-auto mb-2 opacity-50" />
-            <p className="font-medium">OpenTelemetry Jaeger Integration Active</p>
-            <p className="text-sm mt-2">Traces are sent directly to Jaeger backend via OpenTelemetry SDK</p>
-            <p className="text-sm">Submit a payment to generate authentic distributed traces</p>
+            <p className="font-medium">OpenTelemetry + Kong + Solace Integration</p>
+            <p className="text-sm mt-2">Traces flow through complete microservices architecture</p>
+            <p className="text-sm">Submit a payment to see context propagation in action</p>
             <div className="mt-4 p-3 bg-blue-50 rounded-lg text-xs">
-              <p className="font-medium text-blue-700">Architecture:</p>
-              <p className="text-blue-600">Frontend → Kong Gateway → Backend → Jaeger</p>
+              <p className="font-medium text-blue-700">Trace Flow:</p>
+              <p className="text-blue-600">Frontend → Kong Gateway → Backend → Solace Queues → Processors → Jaeger</p>
             </div>
           </div>
         )}

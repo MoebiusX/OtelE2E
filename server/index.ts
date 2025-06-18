@@ -5,6 +5,7 @@ import express, { type Request, Response, NextFunction } from "express";
 import { registerRoutes } from "./routes";
 import { setupVite, serveStatic, log } from "./vite";
 import { createKongRouter } from "./kong-routes";
+import { queueSimulator, setupPaymentProcessor } from "./queue";
 
 const app = express();
 app.use(express.json());
@@ -41,6 +42,9 @@ app.use((req, res, next) => {
 });
 
 (async () => {
+  // Initialize Solace queue processors for payment processing
+  await setupPaymentProcessor(queueSimulator);
+
   // Register API routes
   registerRoutes(app);
 

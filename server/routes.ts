@@ -8,6 +8,7 @@ import { storage } from "./storage";
 import { insertPaymentSchema } from "@shared/schema";
 import { generateTraceId, generateSpanId } from "./tracing";
 import { kongGateway } from "./kong";
+import { queueSimulator } from "./queue";
 
 export function registerRoutes(app: Express) {
   // Note: Kong Gateway middleware is applied only to /kong routes
@@ -38,14 +39,21 @@ export function registerRoutes(app: Express) {
         spanId: spanId,
       });
 
-      // Note: OpenTelemetry automatic instrumentation will create actual spans 
-      // that are sent to Jaeger. No synthetic spans are created here.
+      // Publish to Solace queue for downstream processing
+      // This demonstrates OpenTelemetry context propagation through message queues
+      const messageId = await queueSimulator.publish('payment-queue', {
+        paymentId: payment.id,
+        amount: validatedData.amount,
+        currency: validatedData.currency,
+        recipient: validatedData.recipient
+      }, traceId, spanId);
 
       res.json({ 
         success: true, 
         payment,
         traceId,
-        spanId
+        spanId,
+        messageId
       });
     } catch (error: any) {
       log(`Payment creation error: ${error.message}`, "error");
