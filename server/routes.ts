@@ -77,9 +77,27 @@ export function registerRoutes(app: Express) {
     try {
       const { traces } = await import('./otel');
       
+      // Filter out GET requests and other noise from traces
+      const filteredTraces = traces.filter(span => {
+        const httpMethod = span.attributes?.['http.method'];
+        const spanName = span.name || '';
+        
+        // Skip GET requests to API endpoints
+        if (httpMethod === 'GET' && (
+          spanName.includes('GET /api/') ||
+          spanName.includes('(payment-api)') ||
+          spanName.includes('/api/payments') ||
+          spanName.includes('/api/traces')
+        )) {
+          return false;
+        }
+        
+        return true;
+      });
+      
       // Group spans by traceId to create trace objects
       const traceMap = new Map();
-      traces.forEach(span => {
+      filteredTraces.forEach(span => {
         if (!traceMap.has(span.traceId)) {
           traceMap.set(span.traceId, {
             id: traceMap.size + 1,
@@ -110,9 +128,26 @@ export function registerRoutes(app: Express) {
       const { traceId } = req.params;
       const { traces } = await import('./otel');
       
-      // Filter spans by traceId and format for UI
+      // Filter spans by traceId and remove GET requests, then format for UI
       const spans = traces
-        .filter(span => span.traceId === traceId)
+        .filter(span => {
+          if (span.traceId !== traceId) return false;
+          
+          const httpMethod = span.attributes?.['http.method'];
+          const spanName = span.name || '';
+          
+          // Skip GET requests to API endpoints
+          if (httpMethod === 'GET' && (
+            spanName.includes('GET /api/') ||
+            spanName.includes('(payment-api)') ||
+            spanName.includes('/api/payments') ||
+            spanName.includes('/api/traces')
+          )) {
+            return false;
+          }
+          
+          return true;
+        })
         .map((span, index) => ({
           id: index + 1,
           traceId: span.traceId,

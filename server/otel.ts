@@ -12,6 +12,18 @@ export const traces: any[] = [];
 class TraceCollector implements SpanExporter {
   export(spans: ReadableSpan[], resultCallback: (result: ExportResult) => void): void {
     spans.forEach(span => {
+      // Filter out GET requests to payment-api endpoints to reduce noise
+      const httpMethod = span.attributes?.['http.method'];
+      const httpRoute = span.attributes?.['http.route'] || span.attributes?.['http.target'];
+      
+      if (httpMethod === 'GET' && (
+        httpRoute?.includes('/api/payments') || 
+        httpRoute?.includes('/api/traces') ||
+        span.name.includes('GET /api/')
+      )) {
+        return; // Skip these spans
+      }
+      
       const traceData = {
         traceId: span.spanContext().traceId,
         spanId: span.spanContext().spanId,
