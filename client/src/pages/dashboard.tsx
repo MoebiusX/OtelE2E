@@ -168,16 +168,19 @@ export default function Dashboard() {
 
           {/* Configuration Example */}
           <div className="mt-6 p-4 bg-slate-50 rounded-lg border border-slate-200">
-            <h4 className="text-sm font-medium text-slate-700 mb-2">Sample Configuration</h4>
+            <h4 className="text-sm font-medium text-slate-700 mb-2">Jaeger Integration Configuration</h4>
             <pre className="text-xs text-slate-600 overflow-x-auto">
-              <code>{`// OpenTelemetry SDK Configuration
+              <code>{`// OpenTelemetry SDK with Jaeger Backend
 const { NodeSDK } = require('@opentelemetry/sdk-node');
-const { getNodeAutoInstrumentations } = require('@opentelemetry/auto-instrumentations-node');
+const { JaegerExporter } = require('@opentelemetry/exporter-jaeger');
+
+const jaegerExporter = new JaegerExporter({
+  endpoint: process.env.JAEGER_ENDPOINT || 'http://localhost:14268/api/traces',
+});
 
 const sdk = new NodeSDK({
-  traceExporter: new JaegerExporter({
-    endpoint: 'http://jaeger:14268/api/traces',
-  }),
+  serviceName: 'payment-api',
+  traceExporter: jaegerExporter,
   instrumentations: [getNodeAutoInstrumentations()],
 });
 

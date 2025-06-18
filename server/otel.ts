@@ -10,7 +10,6 @@ const jaegerExporter = new JaegerExporter({
 // Initialize OpenTelemetry SDK
 const sdk = new NodeSDK({
   serviceName: 'payment-api',
-  serviceVersion: '1.0.0',
   traceExporter: jaegerExporter,
   instrumentations: [getNodeAutoInstrumentations({
     // Disable fs instrumentation to reduce noise
