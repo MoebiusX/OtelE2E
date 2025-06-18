@@ -60,7 +60,7 @@ export class KongGateway {
         id: 'payment-route',
         name: 'payment-operations',
         methods: ['GET', 'POST', 'PUT', 'DELETE'],
-        paths: ['/payments', '/payments/*'],
+        paths: ['/api/payments', '/api/payments/*'],
         service: 'payment-api-service',
         plugins: ['rate-limiting', 'opentelemetry', 'cors']
       },
@@ -68,7 +68,7 @@ export class KongGateway {
         id: 'trace-route',
         name: 'trace-operations',
         methods: ['GET'],
-        paths: ['/traces', '/traces/*'],
+        paths: ['/api/traces', '/api/traces/*'],
         service: 'payment-api-service',
         plugins: ['opentelemetry', 'cors']
       },
@@ -136,23 +136,14 @@ export class KongGateway {
   // Kong Gateway Middleware
   public gatewayMiddleware() {
     return async (req: Request, res: Response, next: NextFunction) => {
-      // Only intercept payment requests for demonstration
-      if (!req.path.startsWith('/api/payments')) {
+      // Only intercept payment POST requests for demonstration
+      if (!req.path.startsWith('/api/payments') || req.method !== 'POST') {
         return next();
       }
 
       const { span, finish } = createSpan('kong.gateway.request');
       
       const startTime = Date.now();
-      const route = this.matchRoute(req);
-      
-      if (!route) {
-        finish('error');
-        return res.status(404).json({ 
-          message: 'Route not found',
-          request_id: uuidv4()
-        });
-      }
 
       // Extract or generate trace context
       let traceId = req.headers['x-trace-id'] as string;
@@ -188,9 +179,6 @@ export class KongGateway {
         })
       });
 
-      // Apply plugins
-      this.applyPlugins(route, req, res);
-
       // Add Kong headers
       res.set({
         'X-Kong-Upstream-Latency': '0',
@@ -199,18 +187,11 @@ export class KongGateway {
         'Via': '1.1 kong/3.4.2'
       });
 
-      // Transform path for upstream service
-      const originalUrl = req.url;
-      req.url = this.transformPath(req.url, route);
-
       // Add tracing context
       span.setAttributes({
-        'kong.route.id': route.id,
-        'kong.route.name': route.name,
-        'kong.service.name': route.service,
+        'kong.route': req.path,
         'http.method': req.method,
-        'http.url': originalUrl,
-        'http.upstream.url': req.url,
+        'http.url': req.url,
         'trace.injected': !hasIncomingTrace
       });
 
@@ -241,9 +222,13 @@ export class KongGateway {
     for (const route of routes) {
       if (route.methods.includes(req.method)) {
         for (const path of route.paths) {
-          const pattern = path.replace('*', '.*');
-          const regex = new RegExp(`^${pattern}$`);
-          if (regex.test(req.path)) {
+          // Simple path matching - exact match or wildcard
+          if (path.endsWith('/*')) {
+            const basePath = path.slice(0, -2);
+            if (req.path.startsWith(basePath)) {
+              return route;
+            }
+          } else if (req.path === path) {
             return route;
           }
         }
