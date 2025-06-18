@@ -83,25 +83,7 @@ export class SolaceQueueSimulator extends EventEmitter {
 
       queue.push(message);
 
-      // Store actual queue publish operation
-      const publishDuration = Math.floor(Math.random() * 8) + 3; // 3-10ms
-      await storage.createSpan({
-        traceId,
-        spanId,
-        parentSpanId,
-        operationName: `Solace Queue Publish`,
-        serviceName: 'solace-queue',
-        status: 'success',
-        duration: publishDuration,
-        startTime: new Date(),
-        endTime: new Date(Date.now() + publishDuration),
-        tags: JSON.stringify({
-          'queue.name': queueName,
-          'queue.operation': 'publish',
-          'message.id': messageId,
-          'queue.type': 'solace'
-        }),
-      });
+      // Real operation: Message published to queue (OpenTelemetry auto-instruments this)
 
       // Trigger processing if consumer exists
       const consumer = this.consumers.get(queueName);
@@ -150,24 +132,7 @@ export class SolaceQueueSimulator extends EventEmitter {
           'message.retry_count': message.retryCount,
         });
 
-        // Store consume span with randomized duration
-        const processingDelay = Math.floor(Math.random() * config.processingDelay) + (config.processingDelay / 2);
-        await storage.createSpan({
-          traceId: message.traceId,
-          spanId,
-          parentSpanId: message.spanId,
-          operationName: "Payment Reached Queue",
-          serviceName: 'solace-queue',
-          status: 'success',
-          duration: processingDelay,
-          startTime: new Date(),
-          endTime: new Date(Date.now() + processingDelay),
-          tags: JSON.stringify({
-            'queue.name': queueName,
-            'queue.operation': 'consume',
-            'message.id': message.id,
-          }),
-        });
+        // Real operation: Message consumed from queue (OpenTelemetry auto-instruments this)
 
         // Simulate processing delay
         await new Promise(resolve => setTimeout(resolve, processingDelay));

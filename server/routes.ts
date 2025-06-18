@@ -40,16 +40,6 @@ export function registerRoutes(app: Express) {
         spanId: spanId,
       });
 
-      // Create trace record for demonstration
-      await storage.createTrace({
-        traceId: traceId,
-        rootSpanId: spanId,
-        status: 'active',
-        startTime: new Date(),
-        endTime: null,
-        duration: null
-      });
-
       // Actual operation: Publish to Solace queue (this really happens)
       const messageId = await queueSimulator.publish('payment-queue', {
         paymentId: payment.id,
@@ -57,9 +47,6 @@ export function registerRoutes(app: Express) {
         currency: validatedData.currency,
         recipient: validatedData.recipient
       }, traceId, spanId);
-
-      // Mark trace as complete
-      await storage.updateTraceStatus(traceId, 'success', 25);
 
       res.json({ 
         success: true, 
