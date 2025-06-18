@@ -1,5 +1,5 @@
 import express, { type Request, type Response, type Router } from 'express';
-import { kongGateway } from './kong';
+import { kongGateway } from './kong-clean';
 import { createSpan } from './tracing';
 import { v4 as uuidv4 } from 'uuid';
 

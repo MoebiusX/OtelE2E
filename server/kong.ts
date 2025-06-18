@@ -147,9 +147,7 @@ export class KongGateway {
       
       const hasIncomingTrace = !!(traceId && spanId) || !!traceparent;
       
-      // Create different span names based on trace source
-      const spanName = hasIncomingTrace ? 'kong.client.proxy' : 'kong.gateway.inject';
-      const { span, finish } = createSpan(spanName);
+      // Kong Gateway processes requests - OpenTelemetry auto-instruments this
       
       const startTime = Date.now();
       
