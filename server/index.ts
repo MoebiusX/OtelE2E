@@ -7,9 +7,6 @@ const app = express();
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
 
-// Kong Gateway middleware for /kong routes
-app.use('/kong', kongGateway.gatewayMiddleware());
-
 app.use((req, res, next) => {
   const start = Date.now();
   const path = req.path;
@@ -42,6 +39,9 @@ app.use((req, res, next) => {
 
 (async () => {
   const server = await registerRoutes(app);
+
+  // Kong Gateway middleware for /kong routes - after API routes but before Vite
+  app.use('/kong', kongGateway.gatewayMiddleware());
 
   app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
     const status = err.status || err.statusCode || 500;
