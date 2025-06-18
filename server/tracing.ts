@@ -1,10 +1,18 @@
 import { NodeSDK } from '@opentelemetry/sdk-node';
 import { getNodeAutoInstrumentations } from '@opentelemetry/auto-instrumentations-node';
+import { OTLPTraceExporter } from '@opentelemetry/exporter-trace-otlp-http';
 import { trace, context, SpanStatusCode, SpanKind } from '@opentelemetry/api';
 import { v4 as uuidv4 } from 'uuid';
 
-// Initialize OpenTelemetry SDK
+// Configure OTLP exporter for Grafana Tempo
+const traceExporter = new OTLPTraceExporter({
+  url: process.env.TEMPO_ENDPOINT || 'http://localhost:3200/v1/traces',
+  headers: {},
+});
+
+// Initialize OpenTelemetry SDK with Tempo exporter
 const sdk = new NodeSDK({
+  traceExporter,
   instrumentations: [getNodeAutoInstrumentations({
     '@opentelemetry/instrumentation-fs': {
       enabled: false,

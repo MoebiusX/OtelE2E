@@ -109,23 +109,23 @@ export function TraceVisualization() {
               size="sm"
               className="bg-otel-blue hover:bg-blue-700 text-white"
               onClick={() => {
-                // Open Jaeger UI in new window - in demo mode shows configuration
-                fetch('/api/jaeger')
+                // Open Grafana Tempo UI in new window - in demo mode shows configuration
+                fetch('/api/tempo')
                   .then(res => res.json())
                   .then(config => {
                     if (config.status === 'demo_mode') {
-                      alert(`Jaeger UI Demo Mode\n\nIn production, this would open: ${config.ui_url}\n\nAvailable services:\n${config.services.join('\n')}\n\nTrace data is being collected and would be visible in the full Jaeger interface.`);
+                      alert(`Grafana Tempo Demo Mode\n\nTempo Endpoint: ${config.tempo_endpoint}\nGrafana UI: ${config.ui_url}\nExport Format: ${config.export_format}\n\nAvailable Services:\n${config.services.join('\n')}\n\nTrace data is being exported via OTLP HTTP to Tempo and would be visible in Grafana dashboards.`);
                     } else {
                       window.open(config.ui_url, '_blank');
                     }
                   })
                   .catch(() => {
-                    alert('Jaeger UI connection failed. In production, ensure Jaeger is running and accessible.');
+                    alert('Grafana Tempo connection failed. In production, ensure Tempo and Grafana are running and accessible.');
                   });
               }}
             >
               <ExternalLink className="w-4 h-4 mr-1" />
-              Jaeger UI
+              Grafana
             </Button>
           </div>
         </div>

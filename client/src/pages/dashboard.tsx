@@ -6,6 +6,7 @@ import { PaymentForm } from "@/components/payment-form";
 import { TraceVisualization } from "@/components/trace-visualization";
 import { SystemMetrics } from "@/components/system-metrics";
 import { QueueMonitor } from "@/components/queue-monitor";
+import { TempoDashboard } from "@/components/tempo-dashboard";
 import { formatCurrency, formatTimeAgo, truncateId } from "@/lib/utils";
 import { ChartLine, Settings } from "lucide-react";
 import type { Payment } from "@shared/schema";

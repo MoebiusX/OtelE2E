@@ -233,23 +233,26 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Jaeger UI proxy endpoint
-  app.get("/api/jaeger", async (req, res) => {
-    const { span, finish } = createSpan("jaeger.redirect");
+  // Grafana Tempo UI proxy endpoint
+  app.get("/api/tempo", async (req, res) => {
+    const { span, finish } = createSpan("tempo.redirect");
     
     try {
-      // In a real deployment, this would proxy to actual Jaeger instance
-      // For demo purposes, provide mock Jaeger interface or redirect
-      const jaegerConfig = {
-        ui_url: process.env.JAEGER_UI_URL || "http://localhost:16686",
-        query_url: process.env.JAEGER_QUERY_URL || "http://localhost:16686/api",
+      // In a real deployment, this would proxy to actual Grafana/Tempo instance
+      // For demo purposes, provide configuration for Grafana Tempo
+      const tempoConfig = {
+        ui_url: process.env.GRAFANA_UI_URL || "http://localhost:3000",
+        tempo_endpoint: process.env.TEMPO_ENDPOINT || "http://localhost:3200",
+        query_url: process.env.TEMPO_QUERY_URL || "http://localhost:3200/api/search",
         status: "demo_mode",
         traces_available: true,
+        datasource: "tempo",
+        export_format: "otlp",
         services: ["payment-api", "kong-gateway", "solace-queue", "payment-processor", "notification-service", "audit-service"]
       };
       
       finish('success');
-      res.json(jaegerConfig);
+      res.json(tempoConfig);
     } catch (error) {
       finish('error');
       res.status(500).json({ 
