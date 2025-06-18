@@ -85,22 +85,62 @@ export function registerRoutes(app: Express) {
     }
   });
 
-  // Get traces (demonstration traces showing payment processing flow)
+  // Get traces from authentic OpenTelemetry instrumentation
   app.get("/api/traces", async (req: Request, res: Response) => {
     try {
-      // Return meaningful payment processing traces for demonstration
-      const paymentTraces = await storage.getTraces(10);
-      res.json(paymentTraces);
+      const { traces } = await import('./otel');
+      
+      // Group spans by traceId to create trace objects
+      const traceMap = new Map();
+      traces.forEach(span => {
+        if (!traceMap.has(span.traceId)) {
+          traceMap.set(span.traceId, {
+            id: traceMap.size + 1,
+            traceId: span.traceId,
+            rootSpanId: span.spanId,
+            status: span.status?.code === 1 ? 'success' : 'active',
+            duration: span.duration,
+            startTime: span.startTime,
+            endTime: span.endTime
+          });
+        }
+      });
+      
+      const traceList = Array.from(traceMap.values())
+        .sort((a, b) => new Date(b.startTime).getTime() - new Date(a.startTime).getTime())
+        .slice(0, 10);
+      
+      res.json(traceList);
     } catch (error: any) {
       log(`Error fetching traces: ${error.message}`, "error");
       res.status(500).json({ error: "Failed to fetch traces" });
     }
   });
 
-  // Get spans for a trace (for UI demonstration only - real spans go to Jaeger)
+  // Get authentic OpenTelemetry spans for a trace
   app.get("/api/traces/:traceId/spans", async (req: Request, res: Response) => {
     try {
-      const spans = await storage.getSpansByTrace(req.params.traceId);
+      const { traceId } = req.params;
+      const { traces } = await import('./otel');
+      
+      // Filter spans by traceId and format for UI
+      const spans = traces
+        .filter(span => span.traceId === traceId)
+        .map((span, index) => ({
+          id: index + 1,
+          traceId: span.traceId,
+          spanId: span.spanId,
+          parentSpanId: span.parentSpanId,
+          operationName: span.name,
+          serviceName: span.serviceName,
+          status: span.status?.code === 1 ? 'success' : 'active',
+          duration: span.duration,
+          startTime: span.startTime,
+          endTime: span.endTime,
+          tags: JSON.stringify(span.attributes || {})
+        }))
+        .sort((a, b) => new Date(a.startTime).getTime() - new Date(b.startTime).getTime());
+      
       res.json(spans);
     } catch (error: any) {
       log(`Error fetching spans: ${error.message}`, "error");

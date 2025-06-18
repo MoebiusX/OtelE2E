@@ -158,9 +158,10 @@ export class SolaceQueueSimulator extends EventEmitter {
           parentSpanId: message.spanId,
           operationName: "Payment Reached Queue",
           serviceName: 'solace-queue',
-          status: 'active',
+          status: 'success',
           duration: processingDelay,
           startTime: new Date(),
+          endTime: new Date(Date.now() + processingDelay),
           tags: JSON.stringify({
             'queue.name': queueName,
             'queue.operation': 'consume',
@@ -262,9 +263,10 @@ export async function setupPaymentProcessor(queueSimulator: SolaceQueueSimulator
         parentSpanId: message.spanId,
         operationName: 'Payment Processing Complete',
         serviceName: 'payment-processor',
-        status: 'active',
+        status: 'success',
         duration: totalProcessingTime,
         startTime: new Date(),
+        endTime: new Date(Date.now() + totalProcessingTime),
         tags: JSON.stringify({
           'payment.id': paymentId,
           'payment.amount': amount,

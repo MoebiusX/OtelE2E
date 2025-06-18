@@ -15,7 +15,7 @@ class TraceCollector implements SpanExporter {
       const traceData = {
         traceId: span.spanContext().traceId,
         spanId: span.spanContext().spanId,
-        parentSpanId: span.parentSpanId,
+        parentSpanId: span.parentSpanContext?.spanId || null,
         name: span.name,
         kind: span.kind,
         status: span.status,
