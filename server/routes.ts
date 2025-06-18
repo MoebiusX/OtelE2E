@@ -77,8 +77,25 @@ export function registerRoutes(app: Express) {
     try {
       const { traces } = await import('./otel');
       
-      // Show ALL operations as requested - no filtering
-      const filteredTraces = traces;
+      // Filter out GET requests and polling operations to show only meaningful business operations
+      const filteredTraces = traces.filter(span => {
+        const httpMethod = span.attributes?.['http.method'];
+        const spanName = span.name || '';
+        
+        // Skip GET requests - they're just frontend polling
+        if (httpMethod === 'GET' || spanName.includes('GET ')) {
+          return false;
+        }
+        
+        // Skip internal polling operations
+        if (spanName.includes('(payment-api)') || 
+            spanName.includes('/api/payments') || 
+            spanName.includes('/api/traces')) {
+          return false;
+        }
+        
+        return true;
+      });
       
       // Group spans by traceId to create proper trace objects with all spans
       const traceMap = new Map();
@@ -128,9 +145,24 @@ export function registerRoutes(app: Express) {
       const { traceId } = req.params;
       const { traces } = await import('./otel');
       
-      // Get ALL spans for this trace - no filtering
+      // Filter spans for this trace to show only meaningful business operations
       const spans = traces
-        .filter(span => span.traceId === traceId)
+        .filter(span => {
+          if (span.traceId !== traceId) return false;
+          
+          const httpMethod = span.attributes?.['http.method'];
+          const spanName = span.name || '';
+          
+          // Skip GET requests and polling operations
+          if (httpMethod === 'GET' || spanName.includes('GET ') || 
+              spanName.includes('(payment-api)') ||
+              spanName.includes('/api/payments') || 
+              spanName.includes('/api/traces')) {
+            return false;
+          }
+          
+          return true;
+        })
         .map((span, index) => ({
           id: index + 1,
           traceId: span.traceId,

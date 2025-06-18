@@ -12,8 +12,22 @@ export const traces: any[] = [];
 class TraceCollector implements SpanExporter {
   export(spans: ReadableSpan[], resultCallback: (result: ExportResult) => void): void {
     spans.forEach(span => {
-      // Collect ALL spans for authentic OpenTelemetry demonstration
-      // No filtering - show complete trace context
+      // Filter out GET requests and polling operations at collection level
+      const httpMethod = span.attributes?.['http.method'];
+      const httpUrl = span.attributes?.['http.url'] || span.attributes?.['http.target'] || '';
+      const spanName = span.name || '';
+      
+      // Skip GET requests entirely - they're just frontend polling noise
+      if (httpMethod === 'GET' || spanName.includes('GET ')) {
+        return;
+      }
+      
+      // Skip API polling endpoints
+      if (httpUrl.includes('/api/payments') || 
+          httpUrl.includes('/api/traces') || 
+          spanName.includes('(payment-api)')) {
+        return;
+      }
       
       const traceData = {
         traceId: span.spanContext().traceId,
