@@ -94,7 +94,7 @@ The application is configured for deployment on Replit with the following setup:
 - June 18, 2025: Enhanced with comprehensive JMS queue simulation using Solace message broker patterns
 - June 18, 2025: Added real-time queue monitoring dashboard with message processing visualization
 - June 18, 2025: Implemented multi-service trace propagation through payment processing pipeline
-- June 18, 2025: Complete OpenTelemetry context propagation demonstration operational with Grafana Tempo
+- June 18, 2025: Complete OpenTelemetry context propagation demonstration operational with built-in trace visualization
 - June 18, 2025: Successfully implemented real Kong Gateway functionality with Admin API, plugin system, and request routing
 - June 18, 2025: Kong Gateway now intercepts /kong/* routes with proper headers, rate limiting, CORS, and OpenTelemetry integration
 - June 18, 2025: Enhanced trace visualization with meaningful span operation names showing complete payment journey
