@@ -28,7 +28,7 @@ export function TraceVisualization() {
   ) : [];
   const activeTrace = sortedTraces[0];
 
-  const { data: spans, isLoading: spansLoading } = useQuery<Span[]>({
+  const { data: spans, isLoading: spansLoading } = useQuery<any[]>({
     queryKey: ["/api/traces", activeTrace?.traceId, "spans"],
     enabled: !!activeTrace?.traceId,
     refetchInterval: 2000, // Keep spans in sync with traces
@@ -179,7 +179,7 @@ export function TraceVisualization() {
                         <div className="flex items-center space-x-2">
                           {getSpanIcon(span.serviceName)}
                           <span className="font-medium text-slate-800">
-                            {span.operationName || `[${span.serviceName}] Operation`}
+                            {span.operationName || "Unknown Operation"}
                           </span>
                         </div>
                       </div>
