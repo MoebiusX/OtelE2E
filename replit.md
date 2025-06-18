@@ -100,6 +100,7 @@ The application is configured for deployment on Replit with the following setup:
 - June 18, 2025: Kong Gateway now intercepts /kong/* routes with proper headers, rate limiting, CORS, and OpenTelemetry integration
 - June 18, 2025: Enhanced trace visualization with meaningful span operation names showing complete payment journey
 - June 18, 2025: Fixed trace ordering to display most recent traces first with automatic refresh functionality
+- June 18, 2025: Resolved frontend query key issue preventing span data display - trace visualization now shows meaningful operation names
 - June 18, 2025: Comprehensive OpenTelemetry context propagation demonstration fully operational with enterprise-grade tracing
 
 ## User Preferences
