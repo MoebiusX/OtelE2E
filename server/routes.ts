@@ -4,6 +4,7 @@ import { storage } from "./storage";
 import { insertPaymentSchema } from "@shared/schema";
 import { createSpan, generateTraceId, generateSpanId, addSpanAttributes } from "./tracing";
 import { queueSimulator, setupPaymentProcessor } from "./queue";
+import { kongGateway } from "./kong";
 
 export async function registerRoutes(app: Express): Promise<Server> {
   // Initialize queue processor
@@ -253,6 +254,137 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       finish('success');
       res.json(tempoConfig);
+    } catch (error) {
+      finish('error');
+      res.status(500).json({ 
+        error: error instanceof Error ? error.message : "Unknown error" 
+      });
+    }
+  });
+
+  // Kong Admin API endpoints
+  app.get("/admin/services", async (req, res) => {
+    const { span, finish } = createSpan("kong.admin.services");
+    
+    try {
+      const services = kongGateway.getServices();
+      finish('success');
+      res.json({
+        data: services,
+        total: services.length
+      });
+    } catch (error) {
+      finish('error');
+      res.status(500).json({ 
+        error: error instanceof Error ? error.message : "Unknown error" 
+      });
+    }
+  });
+
+  app.get("/admin/routes", async (req, res) => {
+    const { span, finish } = createSpan("kong.admin.routes");
+    
+    try {
+      const routes = kongGateway.getRoutes();
+      finish('success');
+      res.json({
+        data: routes,
+        total: routes.length
+      });
+    } catch (error) {
+      finish('error');
+      res.status(500).json({ 
+        error: error instanceof Error ? error.message : "Unknown error" 
+      });
+    }
+  });
+
+  app.get("/admin/plugins", async (req, res) => {
+    const { span, finish } = createSpan("kong.admin.plugins");
+    
+    try {
+      const plugins = kongGateway.getPlugins();
+      finish('success');
+      res.json({
+        data: plugins,
+        total: plugins.length
+      });
+    } catch (error) {
+      finish('error');
+      res.status(500).json({ 
+        error: error instanceof Error ? error.message : "Unknown error" 
+      });
+    }
+  });
+
+  app.post("/admin/services", async (req, res) => {
+    const { span, finish } = createSpan("kong.admin.create_service");
+    
+    try {
+      const newService = kongGateway.addService(req.body);
+      finish('success');
+      res.status(201).json(newService);
+    } catch (error) {
+      finish('error');
+      res.status(400).json({ 
+        error: error instanceof Error ? error.message : "Invalid service data" 
+      });
+    }
+  });
+
+  app.post("/admin/routes", async (req, res) => {
+    const { span, finish } = createSpan("kong.admin.create_route");
+    
+    try {
+      const newRoute = kongGateway.addRoute(req.body);
+      finish('success');
+      res.status(201).json(newRoute);
+    } catch (error) {
+      finish('error');
+      res.status(400).json({ 
+        error: error instanceof Error ? error.message : "Invalid route data" 
+      });
+    }
+  });
+
+  // Kong status endpoint
+  app.get("/admin/status", async (req, res) => {
+    const { span, finish } = createSpan("kong.admin.status");
+    
+    try {
+      const status = {
+        database: {
+          reachable: true
+        },
+        memory: {
+          workers_lua_vms: [
+            {
+              http_allocated_gc: "0.02 MiB",
+              pid: process.pid
+            }
+          ]
+        },
+        server: {
+          connections_accepted: 42,
+          connections_active: 1,
+          connections_handled: 42,
+          connections_reading: 0,
+          connections_waiting: 0,
+          connections_writing: 1,
+          total_requests: 42
+        },
+        configuration_hash: "a9a166c59873245db8f1a747ba9a80a7",
+        version: "3.4.2",
+        hostname: "kong-gateway",
+        lua_version: "LuaJIT 2.1.0-beta3",
+        plugins: {
+          available_on_server: kongGateway.getPlugins().map(p => p.name),
+          enabled_in_cluster: kongGateway.getPlugins().filter(p => p.enabled).map(p => p.name)
+        }
+      };
+      
+      finish('success');
+      res.json(status);
     } catch (error) {
       finish('error');
       res.status(500).json({ 

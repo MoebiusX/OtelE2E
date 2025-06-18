@@ -204,7 +204,8 @@ export class KongGateway {
   }
 
   private matchRoute(req: Request): KongRoute | null {
-    for (const [, route] of this.routes.entries()) {
+    const routes = Array.from(this.routes.values());
+    for (const route of routes) {
       if (route.methods.includes(req.method)) {
         for (const path of route.paths) {
           const pattern = path.replace('*', '.*');

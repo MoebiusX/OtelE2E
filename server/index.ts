@@ -7,6 +7,9 @@ const app = express();
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
 
+// Kong Gateway middleware for /kong routes
+app.use('/kong', kongGateway.gatewayMiddleware());
+
 app.use((req, res, next) => {
   const start = Date.now();
   const path = req.path;
