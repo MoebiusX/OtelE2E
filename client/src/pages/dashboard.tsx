@@ -4,8 +4,7 @@ import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { PaymentForm } from "@/components/payment-form";
 import { TraceVisualization } from "@/components/trace-visualization";
-import { SystemMetrics } from "@/components/system-metrics";
-import { QueueMonitor } from "@/components/queue-monitor";
+
 
 import { formatCurrency, formatTimeAgo, truncateId } from "@/lib/utils";
 import { ChartLine, Settings } from "lucide-react";
@@ -119,10 +118,6 @@ export default function Dashboard() {
           {/* Right Column */}
           <div className="space-y-6">
             <TraceVisualization />
-            <div className="grid grid-cols-1 gap-6">
-              <SystemMetrics />
-              <QueueMonitor />
-            </div>
           </div>
         </div>
 

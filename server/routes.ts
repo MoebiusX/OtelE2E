@@ -202,56 +202,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // System metrics endpoint
-  app.get("/api/metrics", async (req, res) => {
-    const { span, finish } = createSpan("metrics.get");
-    
-    try {
-      const payments = await storage.getPayments(1000);
-      const traces = await storage.getTraces(1000);
-      
-      const successfulPayments = payments.filter(p => p.status === 'completed').length;
-      const successRate = payments.length > 0 ? (successfulPayments / payments.length * 100).toFixed(1) : '0';
-      
-      const completedTraces = traces.filter(t => t.duration !== null);
-      const avgLatency = completedTraces.length > 0 
-        ? Math.round(completedTraces.reduce((sum, t) => sum + (t.duration || 0), 0) / completedTraces.length)
-        : 0;
 
-      const activeTraces = traces.filter(t => t.status === 'active').length;
-
-      const metrics = {
-        totalRequests: payments.length,
-        successRate: `${successRate}%`,
-        avgLatency: `${avgLatency}ms`,
-        activeTraces: activeTraces,
-      };
-
-      finish('success');
-      res.json(metrics);
-    } catch (error) {
-      finish('error');
-      res.status(500).json({ 
-        error: error instanceof Error ? error.message : "Unknown error" 
-      });
-    }
-  });
-
-  // Queue stats endpoint
-  app.get("/api/queues", async (req, res) => {
-    const { span, finish } = createSpan("queues.stats");
-    
-    try {
-      const queueStats = queueSimulator.getQueueStats();
-      finish('success');
-      res.json(queueStats);
-    } catch (error) {
-      finish('error');
-      res.status(500).json({ 
-        error: error instanceof Error ? error.message : "Unknown error" 
-      });
-    }
-  });
 
 
 

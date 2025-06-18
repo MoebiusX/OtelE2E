@@ -85,14 +85,7 @@ export function createKongRouter(): Router {
     next();
   });
 
-  // Kong Metrics Route - proxy to /api/metrics
-  router.all('/metrics*', (req: Request, res: Response, next) => {
-    // Transform Kong route to API route
-    req.url = req.url.replace('/kong/metrics', '/api/metrics');
-    req.originalUrl = req.originalUrl.replace('/kong/metrics', '/api/metrics');
-    
-    next();
-  });
+
 
   // Kong Admin API Routes
   router.get('/admin/services', (req: Request, res: Response) => {

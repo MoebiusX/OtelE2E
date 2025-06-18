@@ -72,14 +72,7 @@ export class KongGateway {
         service: 'payment-api-service',
         plugins: ['opentelemetry', 'cors']
       },
-      {
-        id: 'metrics-route',
-        name: 'metrics-operations',
-        methods: ['GET'],
-        paths: ['/metrics'],
-        service: 'payment-api-service',
-        plugins: ['opentelemetry', 'cors']
-      }
+
     ];
 
     paymentRoutes.forEach(route => {
