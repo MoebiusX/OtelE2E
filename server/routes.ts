@@ -24,34 +24,6 @@ export function registerRoutes(app: Express) {
       const parentSpanId = req.headers['x-span-id'] as string;
       const spanId = generateSpanId();
 
-      // Create comprehensive payment processing trace for UI demonstration
-      await storage.createTrace({
-        traceId: traceId,
-        rootSpanId: spanId,
-        status: 'active',
-        startTime: new Date(),
-        endTime: null,
-        duration: null
-      });
-
-      // Kong Gateway Entry Point Span
-      await storage.createSpan({
-        traceId: traceId,
-        spanId: generateSpanId(),
-        parentSpanId: null,
-        operationName: "Kong Gateway Entry",
-        serviceName: 'kong-gateway',
-        status: 'success',
-        duration: 2,
-        startTime: new Date(Date.now() - 50),
-        endTime: new Date(Date.now() - 48),
-        tags: JSON.stringify({
-          'kong.route': '/api/payments',
-          'kong.method': 'POST',
-          'kong.plugin': 'rate-limiting,cors,tracing'
-        })
-      });
-
       // Validate payment data
       const result = insertPaymentSchema.safeParse(req.body);
       if (!result.success) {
@@ -61,50 +33,24 @@ export function registerRoutes(app: Express) {
 
       const validatedData = result.data;
 
-      // Payment Validation Span
-      await storage.createSpan({
-        traceId: traceId,
-        spanId: generateSpanId(),
-        parentSpanId: spanId,
-        operationName: "Payment Validation",
-        serviceName: 'payment-api',
-        status: 'success',
-        duration: 8,
-        startTime: new Date(Date.now() - 40),
-        endTime: new Date(Date.now() - 32),
-        tags: JSON.stringify({
-          'payment.amount': validatedData.amount,
-          'payment.currency': validatedData.currency,
-          'validation.result': 'success'
-        })
-      });
-
-      // Create payment record with trace correlation
+      // Create payment record with trace correlation (actual operation)
       const payment = await storage.createPayment({
         ...validatedData,
         traceId: traceId,
         spanId: spanId,
       });
 
-      // Database Operation Span
-      await storage.createSpan({
+      // Create trace record for demonstration
+      await storage.createTrace({
         traceId: traceId,
-        spanId: generateSpanId(),
-        parentSpanId: spanId,
-        operationName: "Database Insert",
-        serviceName: 'payment-api',
-        status: 'success',
-        duration: 15,
-        startTime: new Date(Date.now() - 30),
-        endTime: new Date(Date.now() - 15),
-        tags: JSON.stringify({
-          'db.operation': 'INSERT',
-          'db.table': 'payments',
-          'payment.id': payment.id
-        })
+        rootSpanId: spanId,
+        status: 'active',
+        startTime: new Date(),
+        endTime: null,
+        duration: null
       });
 
-      // Publish to Solace queue for downstream processing
+      // Actual operation: Publish to Solace queue (this really happens)
       const messageId = await queueSimulator.publish('payment-queue', {
         paymentId: payment.id,
         amount: validatedData.amount,
@@ -112,8 +58,8 @@ export function registerRoutes(app: Express) {
         recipient: validatedData.recipient
       }, traceId, spanId);
 
-      // Complete the trace
-      await storage.updateTraceStatus(traceId, 'success', 50);
+      // Mark trace as complete
+      await storage.updateTraceStatus(traceId, 'success', 25);
 
       res.json({ 
         success: true, 

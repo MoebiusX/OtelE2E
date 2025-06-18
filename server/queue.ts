@@ -83,21 +83,22 @@ export class SolaceQueueSimulator extends EventEmitter {
 
       queue.push(message);
 
-      // Store span in database
+      // Store actual queue publish operation
       await storage.createSpan({
         traceId,
         spanId,
         parentSpanId,
-        operationName: `queue.publish.${queueName}`,
+        operationName: `Solace Queue Publish`,
         serviceName: 'solace-queue',
         status: 'success',
-        duration: 45,
+        duration: 5,
         startTime: new Date(),
-        endTime: new Date(Date.now() + 45),
+        endTime: new Date(Date.now() + 5),
         tags: JSON.stringify({
           'queue.name': queueName,
           'queue.operation': 'publish',
           'message.id': messageId,
+          'queue.type': 'solace'
         }),
       });
 
