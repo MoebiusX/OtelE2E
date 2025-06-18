@@ -4,13 +4,13 @@ import { OTLPTraceExporter } from '@opentelemetry/exporter-trace-otlp-http';
 import { trace, context, SpanStatusCode, SpanKind } from '@opentelemetry/api';
 import { v4 as uuidv4 } from 'uuid';
 
-// Configure OTLP exporter for Grafana Tempo
+// Configure console exporter for development
 const traceExporter = new OTLPTraceExporter({
-  url: process.env.TEMPO_ENDPOINT || 'http://localhost:3200/v1/traces',
+  url: process.env.OTLP_ENDPOINT || 'http://localhost:4318/v1/traces',
   headers: {},
 });
 
-// Initialize OpenTelemetry SDK with Tempo exporter
+// Initialize OpenTelemetry SDK with OTLP exporter
 const sdk = new NodeSDK({
   traceExporter,
   instrumentations: [getNodeAutoInstrumentations({

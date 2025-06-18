@@ -253,33 +253,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Grafana Tempo UI proxy endpoint
-  app.get("/api/tempo", async (req, res) => {
-    const { span, finish } = createSpan("tempo.redirect");
-    
-    try {
-      // In a real deployment, this would proxy to actual Grafana/Tempo instance
-      // For demo purposes, provide configuration for Grafana Tempo
-      const tempoConfig = {
-        ui_url: process.env.GRAFANA_UI_URL || "http://localhost:3000",
-        tempo_endpoint: process.env.TEMPO_ENDPOINT || "http://localhost:3200",
-        query_url: process.env.TEMPO_QUERY_URL || "http://localhost:3200/api/search",
-        status: "demo_mode",
-        traces_available: true,
-        datasource: "tempo",
-        export_format: "otlp",
-        services: ["payment-api", "kong-gateway", "solace-queue", "payment-processor", "notification-service", "audit-service"]
-      };
-      
-      finish('success');
-      res.json(tempoConfig);
-    } catch (error) {
-      finish('error');
-      res.status(500).json({ 
-        error: error instanceof Error ? error.message : "Unknown error" 
-      });
-    }
-  });
+
 
   // Kong Admin API endpoints
   app.get("/admin/services", async (req, res) => {
