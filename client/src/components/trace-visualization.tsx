@@ -77,16 +77,25 @@ export function TraceVisualization() {
     }
   };
 
-  const getStatusBadge = (status: string) => {
-    switch (status) {
+  const getStatusBadge = (status: any) => {
+    // Handle OpenTelemetry status objects
+    const statusCode = typeof status === 'object' ? status?.code : status;
+    const statusText = typeof status === 'object' ? 
+      (statusCode === 1 ? 'OK' : statusCode === 2 ? 'ERROR' : 'UNSET') : 
+      status;
+
+    switch (statusText) {
+      case 'OK':
       case 'success':
-        return <Badge className="bg-otel-green/20 text-otel-green">Success</Badge>;
+        return <Badge className="bg-otel-green/20 text-otel-green">OK</Badge>;
       case 'active':
         return <Badge className="bg-otel-amber/20 text-otel-amber">Active</Badge>;
+      case 'ERROR':
       case 'error':
         return <Badge className="bg-red-500/20 text-red-500">Error</Badge>;
+      case 'UNSET':
       default:
-        return <Badge variant="secondary">{status}</Badge>;
+        return <Badge variant="secondary">Running</Badge>;
     }
   };
 
@@ -152,21 +161,21 @@ export function TraceVisualization() {
                   
                   return (
                     <div
-                      key={span.id}
+                      key={span.spanId || span.id || index}
                       className={`flex items-center justify-between p-3 rounded-lg border-l-4 ${getSpanColor(span.serviceName)} ${marginLeft}`}
                     >
                       <div className="flex items-center space-x-3">
                         <div className="flex items-center space-x-2">
                           {getSpanIcon(span.serviceName)}
                           <span className="font-medium text-slate-800">
-                            {span.operationName || "Unknown Operation"}
+                            {span.name || span.operationName || "Unknown Operation"}
                           </span>
                         </div>
                       </div>
                       <div className="flex items-center space-x-4 text-xs text-slate-500">
                         <div className="flex items-center space-x-1">
                           <Clock className="w-3 h-3" />
-                          <span>Duration: {span.duration}ms</span>
+                          <span>Duration: {Math.round(span.duration || 0)}ms</span>
                         </div>
                         {getStatusBadge(span.status)}
                       </div>
