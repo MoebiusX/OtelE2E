@@ -9,6 +9,7 @@ import { insertPaymentSchema } from "@shared/schema";
 import { generateTraceId, generateSpanId } from "./tracing";
 import { kongGateway } from "./kong";
 import { queueSimulator } from "./queue";
+import { traces } from "./otel";
 
 export function registerRoutes(app: Express) {
   // Note: Kong Gateway middleware is applied only to /kong routes
@@ -72,11 +73,12 @@ export function registerRoutes(app: Express) {
     }
   });
 
-  // Get traces (for UI demonstration only - real traces go to Jaeger)
+  // Get traces (actual OpenTelemetry traces from collector)
   app.get("/api/traces", async (req: Request, res: Response) => {
     try {
-      const traces = await storage.getTraces(10);
-      res.json(traces);
+      // Return actual OpenTelemetry traces captured by our collector
+      const recentTraces = traces.slice(-20).reverse(); // Show 20 most recent, newest first
+      res.json(recentTraces);
     } catch (error: any) {
       log(`Error fetching traces: ${error.message}`, "error");
       res.status(500).json({ error: "Failed to fetch traces" });
