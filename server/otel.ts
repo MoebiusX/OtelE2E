@@ -8,6 +8,11 @@ import { ReadableSpan } from '@opentelemetry/sdk-trace-base';
 // Store traces for local visualization
 export const traces: any[] = [];
 
+// Clear traces function for proper isolation
+export function clearTraces() {
+  traces.length = 0;
+}
+
 // Custom trace collector for demo visualization
 class TraceCollector implements SpanExporter {
   export(spans: ReadableSpan[], resultCallback: (result: ExportResult) => void): void {
@@ -36,8 +41,11 @@ class TraceCollector implements SpanExporter {
         events: span.events || []
       };
       
-      // Store trace data for API endpoint
-      traces.push(traceData);
+      // Only add if this span doesn't already exist to prevent duplicates
+      const existingSpan = traces.find(t => t.traceId === traceData.traceId && t.spanId === traceData.spanId);
+      if (!existingSpan) {
+        traces.push(traceData);
+      }
       
       // Keep only last 100 traces
       if (traces.length > 100) {
