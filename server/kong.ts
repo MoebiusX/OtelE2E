@@ -233,6 +233,14 @@ export class KongGateway {
     });
   }
 
+  private generateTraceId(): string {
+    return Array.from({length: 32}, () => Math.floor(Math.random() * 16).toString(16)).join('');
+  }
+
+  private generateSpanId(): string {
+    return Array.from({length: 16}, () => Math.floor(Math.random() * 16).toString(16)).join('');
+  }
+
   private executePlugin(plugin: KongPlugin, req: Request, res: Response) {
     switch (plugin.name) {
       case 'rate-limiting':
@@ -242,7 +250,27 @@ export class KongGateway {
         break;
         
       case 'opentelemetry':
-        // OpenTelemetry headers are already handled by our tracing system
+        // Inject OpenTelemetry context if not present
+        if (!req.headers['traceparent']) {
+          const traceId = this.generateTraceId();
+          const spanId = this.generateSpanId();
+          const traceparent = `00-${traceId}-${spanId}-01`;
+          
+          // Inject tracing headers into request
+          req.headers['traceparent'] = traceparent;
+          req.headers['tracestate'] = `kong=gateway-${spanId}`;
+          
+          // Add response headers for visibility
+          res.setHeader('X-Kong-Trace-Injected', 'true');
+          res.setHeader('X-Kong-Trace-ID', traceId);
+          res.setHeader('X-Kong-Span-ID', spanId);
+        } else {
+          // Pass through existing trace context
+          const existingTrace = req.headers['traceparent'] as string;
+          const traceId = existingTrace.split('-')[1];
+          res.setHeader('X-Kong-Trace-Injected', 'false');
+          res.setHeader('X-Kong-Trace-ID', traceId);
+        }
         break;
         
       case 'cors':
