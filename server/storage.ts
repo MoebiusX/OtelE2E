@@ -23,6 +23,9 @@ export interface IStorage {
   getSpan(spanId: string): Promise<Span | undefined>;
   getSpansByTrace(traceId: string): Promise<Span[]>;
   updateSpan(spanId: string, updates: Partial<Span>): Promise<Span | undefined>;
+
+  // Clear all data
+  clearAllData(): Promise<void>;
 }
 
 export class MemoryStorage implements IStorage {
@@ -156,6 +159,13 @@ export class MemoryStorage implements IStorage {
       return span;
     }
     return undefined;
+  }
+
+  async clearAllData(): Promise<void> {
+    this.payments.clear();
+    this.traces.clear();
+    this.spans.clear();
+    this.nextId = 1;
   }
 }
 

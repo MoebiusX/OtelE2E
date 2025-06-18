@@ -152,4 +152,21 @@ export function registerRoutes(app: Express) {
       res.status(500).json({ error: "Failed to fetch spans" });
     }
   });
+
+  // Clear all recorded traces and payments
+  app.delete("/api/clear", async (req: Request, res: Response) => {
+    try {
+      // Clear traces from OpenTelemetry collector
+      const { traces } = await import('./otel');
+      traces.length = 0;
+      
+      // Clear payments from storage
+      await storage.clearAllData();
+      
+      res.json({ success: true, message: "All recorded transactions cleared" });
+    } catch (error: any) {
+      log(`Error clearing data: ${error.message}`, "error");
+      res.status(500).json({ error: "Failed to clear data" });
+    }
+  });
 }

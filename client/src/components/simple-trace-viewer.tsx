@@ -1,9 +1,10 @@
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { RefreshCw, Globe, Clock, Shield, List, Server } from "lucide-react";
+import { Trash2, Globe, Clock, Shield, List, Server } from "lucide-react";
 import { formatTimeAgo, truncateId } from "@/lib/utils";
+import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useState } from "react";
 
 function TraceCard({ trace }: { trace: any }) {
@@ -87,9 +88,21 @@ function TraceCard({ trace }: { trace: any }) {
 }
 
 export function SimpleTraceViewer() {
-  const { data: traces, isLoading, refetch } = useQuery({
+  const { data: traces, isLoading } = useQuery({
     queryKey: ['/api/traces'],
     refetchInterval: 3000
+  });
+
+  const clearMutation = useMutation({
+    mutationFn: async () => {
+      return await apiRequest('/api/clear', {
+        method: 'DELETE'
+      });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/traces'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/payments'] });
+    }
   });
 
   // Display traces as individual trace records showing payment processing flows
@@ -107,12 +120,12 @@ export function SimpleTraceViewer() {
           <Button
             variant="outline"
             size="sm"
-            onClick={() => refetch()}
-            disabled={isLoading}
-            className="text-slate-700 hover:bg-slate-200"
+            onClick={() => clearMutation.mutate()}
+            disabled={clearMutation.isPending}
+            className="text-red-600 hover:bg-red-50 border-red-200"
           >
-            <RefreshCw className={`w-4 h-4 mr-1 ${isLoading ? 'animate-spin' : ''}`} />
-            Refresh
+            <Trash2 className={`w-4 h-4 mr-1 ${clearMutation.isPending ? 'animate-pulse' : ''}`} />
+            Clear
           </Button>
         </div>
       </CardHeader>
