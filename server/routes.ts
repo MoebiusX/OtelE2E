@@ -77,18 +77,18 @@ export function registerRoutes(app: Express) {
     try {
       const { traces } = await import('./otel');
       
-      // Filter out GET requests and other noise from traces
+      // Filter out GET requests and polling noise from traces panel
       const filteredTraces = traces.filter(span => {
         const httpMethod = span.attributes?.['http.method'];
         const spanName = span.name || '';
         
-        // Skip GET requests to API endpoints
-        if (httpMethod === 'GET' && (
-          spanName.includes('GET /api/') ||
-          spanName.includes('(payment-api)') ||
-          spanName.includes('/api/payments') ||
-          spanName.includes('/api/traces')
-        )) {
+        // Skip ALL GET requests - they're just frontend polling noise
+        if (httpMethod === 'GET' || spanName.includes('GET ')) {
+          return false;
+        }
+        
+        // Skip spans with (payment-api) which are polling operations
+        if (spanName.includes('(payment-api)')) {
           return false;
         }
         
