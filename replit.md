@@ -90,6 +90,7 @@ The application is configured for deployment on Replit with the following setup:
 - **REPL_ID**: Replit environment identifier (enables development features)
 
 ## Changelog
+- June 18, 2025: Implemented three-layer GET request filtering - console logging, API responses, and OpenTelemetry collection completely clean
 - June 18, 2025: Completed authentic OpenTelemetry demonstration - removed all synthetic span creation, now shows only real SDK instrumentation
 - June 18, 2025: Fixed all spans to complete with "success" status instead of staying "active" 
 - June 18, 2025: Routes now serve authentic OpenTelemetry data from auto-instrumentation instead of database-stored demonstration spans

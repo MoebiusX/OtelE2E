@@ -25,6 +25,11 @@ app.use((req, res, next) => {
   res.on("finish", () => {
     const duration = Date.now() - start;
     if (path.startsWith("/api")) {
+      // Filter out GET requests to payments and traces endpoints to reduce console noise
+      if (req.method === "GET" && (path.includes("/api/payments") || path.includes("/api/traces"))) {
+        return;
+      }
+      
       let logLine = `${req.method} ${path} ${res.statusCode} in ${duration}ms`;
       if (capturedJsonResponse) {
         logLine += ` :: ${JSON.stringify(capturedJsonResponse)}`;
