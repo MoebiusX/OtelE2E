@@ -1,4 +1,6 @@
 import { users, payments, traces, spans, type User, type InsertUser, type Payment, type InsertPayment, type Trace, type InsertTrace, type Span, type InsertSpan } from "@shared/schema";
+import { db } from "./db";
+import { eq } from "drizzle-orm";
 
 export interface IStorage {
   // User operations
@@ -25,150 +27,134 @@ export interface IStorage {
   updateSpan(spanId: string, updates: Partial<Span>): Promise<Span | undefined>;
 }
 
-export class MemStorage implements IStorage {
-  private users: Map<number, User>;
-  private payments: Map<number, Payment>;
-  private traces: Map<string, Trace>;
-  private spans: Map<string, Span>;
-  private currentUserId: number;
-  private currentPaymentId: number;
-  private currentTraceId: number;
-  private currentSpanId: number;
-
-  constructor() {
-    this.users = new Map();
-    this.payments = new Map();
-    this.traces = new Map();
-    this.spans = new Map();
-    this.currentUserId = 1;
-    this.currentPaymentId = 1;
-    this.currentTraceId = 1;
-    this.currentSpanId = 1;
-  }
-
-  // User operations
+export class DatabaseStorage implements IStorage {
   async getUser(id: number): Promise<User | undefined> {
-    return this.users.get(id);
+    const [user] = await db.select().from(users).where(eq(users.id, id));
+    return user || undefined;
   }
 
   async getUserByUsername(username: string): Promise<User | undefined> {
-    return Array.from(this.users.values()).find(
-      (user) => user.username === username,
-    );
+    const [user] = await db.select().from(users).where(eq(users.username, username));
+    return user || undefined;
   }
 
   async createUser(insertUser: InsertUser): Promise<User> {
-    const id = this.currentUserId++;
-    const user: User = { ...insertUser, id };
-    this.users.set(id, user);
+    const [user] = await db
+      .insert(users)
+      .values(insertUser)
+      .returning();
     return user;
   }
 
-  // Payment operations
   async createPayment(paymentData: InsertPayment & { traceId: string; spanId: string }): Promise<Payment> {
-    const id = this.currentPaymentId++;
-    const payment: Payment = {
-      ...paymentData,
-      id,
-      currency: paymentData.currency || "USD",
-      status: "pending",
-      createdAt: new Date(),
-    };
-    this.payments.set(id, payment);
+    const [payment] = await db
+      .insert(payments)
+      .values({
+        ...paymentData,
+        currency: paymentData.currency || "USD",
+        status: "pending",
+      })
+      .returning();
     return payment;
   }
 
   async getPayment(id: number): Promise<Payment | undefined> {
-    return this.payments.get(id);
+    const [payment] = await db.select().from(payments).where(eq(payments.id, id));
+    return payment || undefined;
   }
 
   async getPayments(limit: number = 10): Promise<Payment[]> {
-    const allPayments = Array.from(this.payments.values());
-    return allPayments
-      .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime())
-      .slice(0, limit);
+    const result = await db
+      .select()
+      .from(payments)
+      .orderBy(payments.createdAt)
+      .limit(limit);
+    return result;
   }
 
   async updatePaymentStatus(id: number, status: string): Promise<Payment | undefined> {
-    const payment = this.payments.get(id);
-    if (payment) {
-      const updatedPayment = { ...payment, status };
-      this.payments.set(id, updatedPayment);
-      return updatedPayment;
-    }
-    return undefined;
+    const [payment] = await db
+      .update(payments)
+      .set({ status })
+      .where(eq(payments.id, id))
+      .returning();
+    return payment || undefined;
   }
 
-  // Trace operations
   async createTrace(traceData: InsertTrace): Promise<Trace> {
-    const id = this.currentTraceId++;
-    const trace: Trace = {
-      ...traceData,
-      id,
-      status: "active",
-      duration: null,
-      createdAt: new Date(),
-    };
-    this.traces.set(traceData.traceId, trace);
+    const [trace] = await db
+      .insert(traces)
+      .values({
+        ...traceData,
+        status: "active",
+        duration: null,
+      })
+      .returning();
     return trace;
   }
 
   async getTrace(traceId: string): Promise<Trace | undefined> {
-    return this.traces.get(traceId);
+    const [trace] = await db.select().from(traces).where(eq(traces.traceId, traceId));
+    return trace || undefined;
   }
 
   async getTraces(limit: number = 10): Promise<Trace[]> {
-    const allTraces = Array.from(this.traces.values());
-    return allTraces
-      .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime())
-      .slice(0, limit);
+    const result = await db
+      .select()
+      .from(traces)
+      .orderBy(traces.createdAt)
+      .limit(limit);
+    return result;
   }
 
   async updateTraceStatus(traceId: string, status: string, duration?: number): Promise<Trace | undefined> {
-    const trace = this.traces.get(traceId);
-    if (trace) {
-      const updatedTrace = { ...trace, status, duration: duration || trace.duration };
-      this.traces.set(traceId, updatedTrace);
-      return updatedTrace;
-    }
-    return undefined;
+    const [trace] = await db
+      .update(traces)
+      .set({ 
+        status, 
+        duration: duration !== undefined ? duration : undefined
+      })
+      .where(eq(traces.traceId, traceId))
+      .returning();
+    return trace || undefined;
   }
 
-  // Span operations
   async createSpan(spanData: InsertSpan): Promise<Span> {
-    const id = this.currentSpanId++;
-    const span: Span = {
-      ...spanData,
-      id,
-      status: spanData.status || "active",
-      parentSpanId: spanData.parentSpanId || null,
-      tags: spanData.tags || null,
-      endTime: spanData.endTime || null,
-    };
-    this.spans.set(spanData.spanId, span);
+    const [span] = await db
+      .insert(spans)
+      .values({
+        ...spanData,
+        status: spanData.status || "active",
+        parentSpanId: spanData.parentSpanId || null,
+        tags: spanData.tags || null,
+        endTime: spanData.endTime || null,
+      })
+      .returning();
     return span;
   }
 
   async getSpan(spanId: string): Promise<Span | undefined> {
-    return this.spans.get(spanId);
+    const [span] = await db.select().from(spans).where(eq(spans.spanId, spanId));
+    return span || undefined;
   }
 
   async getSpansByTrace(traceId: string): Promise<Span[]> {
-    const allSpans = Array.from(this.spans.values());
-    return allSpans
-      .filter(span => span.traceId === traceId)
-      .sort((a, b) => a.startTime.getTime() - b.startTime.getTime());
+    const result = await db
+      .select()
+      .from(spans)
+      .where(eq(spans.traceId, traceId))
+      .orderBy(spans.startTime);
+    return result;
   }
 
   async updateSpan(spanId: string, updates: Partial<Span>): Promise<Span | undefined> {
-    const span = this.spans.get(spanId);
-    if (span) {
-      const updatedSpan = { ...span, ...updates };
-      this.spans.set(spanId, updatedSpan);
-      return updatedSpan;
-    }
-    return undefined;
+    const [span] = await db
+      .update(spans)
+      .set(updates)
+      .where(eq(spans.spanId, spanId))
+      .returning();
+    return span || undefined;
   }
 }
 
-export const storage = new MemStorage();
+export const storage = new DatabaseStorage();
