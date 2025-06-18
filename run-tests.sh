@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# OpenTelemetry Context Propagation Demo - Automated Test Runner
+# OpenTelemetry Context Propagation PoC - Automated Test Runner
 # This script executes the complete test plan with automated validation
 
 set -e
@@ -62,7 +62,7 @@ verify_span_count() {
     fi
 }
 
-echo -e "${BLUE}OpenTelemetry Context Propagation Demo - Test Runner${NC}"
+echo -e "${BLUE}OpenTelemetry Context Propagation PoC - Test Runner${NC}"
 echo "============================================================"
 
 # Phase 1: Basic Functionality Tests
@@ -300,7 +300,7 @@ echo -e "${GREEN}Passed: $PASSED_TESTS${NC}"
 echo -e "${RED}Failed: $FAILED_TESTS${NC}"
 
 if [[ $FAILED_TESTS -eq 0 ]]; then
-    echo -e "\n${GREEN}All tests passed! OpenTelemetry demo is working correctly.${NC}"
+    echo -e "\n${GREEN}All tests passed! OpenTelemetry PoC is working correctly.${NC}"
     exit 0
 else
     echo -e "\n${RED}Some tests failed. Please review the results above.${NC}"

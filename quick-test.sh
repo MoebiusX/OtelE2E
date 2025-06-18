@@ -1,11 +1,11 @@
 #!/bin/bash
 
-# Quick OpenTelemetry Demo Test - Essential validation only
+# Quick OpenTelemetry PoC Test - Essential validation only
 # Use this for rapid testing during development
 
 BASE_URL="http://localhost:5000"
 
-echo "OpenTelemetry Demo - Quick Test"
+echo "OpenTelemetry PoC - Quick Test"
 echo "==============================="
 
 # Basic health check

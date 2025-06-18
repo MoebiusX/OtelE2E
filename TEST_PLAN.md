@@ -2,7 +2,7 @@
 
 ## Test Overview
 
-This comprehensive test plan validates the OpenTelemetry distributed tracing demonstration across all system components, ensuring authentic instrumentation and proper context propagation in enterprise scenarios.
+This comprehensive test plan validates the OpenTelemetry distributed tracing PoC across all system components, ensuring authentic instrumentation and proper context propagation in enterprise scenarios.
 
 ## Test Environment Setup
 
