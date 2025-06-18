@@ -33,10 +33,15 @@ export function generateSpanId(): string {
   return uuidv4().replace(/-/g, '').substring(0, 16);
 }
 
-export function createSpan(name: string, parentSpanId?: string) {
+export function createSpan(name: string, parentSpanId?: string, attributes?: Record<string, string | number | boolean>) {
   const span = tracer.startSpan(name, {
     kind: SpanKind.SERVER,
   });
+  
+  // Set initial attributes if provided
+  if (attributes) {
+    span.setAttributes(attributes);
+  }
   
   return {
     span,

@@ -34,7 +34,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         traceId: traceId,
         spanId: spanId,
         parentSpanId: null,
-        operationName: "payment.submit",
+        operationName: "Payment Request Received",
         serviceName: "payment-api",
         status: "active",
         duration: 0,

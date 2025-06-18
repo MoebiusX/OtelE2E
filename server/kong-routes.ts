@@ -8,7 +8,7 @@ export function createKongRouter(): Router {
 
   // Kong Gateway middleware for all Kong routes
   router.use((req: Request, res: Response, next) => {
-    const { span, finish } = createSpan('kong.gateway.request');
+    const { span, finish } = createSpan('kong.gateway.route');
     const startTime = Date.now();
 
     // Add Kong headers
