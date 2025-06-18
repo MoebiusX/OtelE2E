@@ -178,7 +178,9 @@ export function TraceVisualization() {
                       <div className="flex items-center space-x-3">
                         <div className="flex items-center space-x-2">
                           {getSpanIcon(span.serviceName)}
-                          <span className="font-medium text-slate-800">{span.operationName}</span>
+                          <span className="font-medium text-slate-800">
+                            {span.operationName || `[${span.serviceName}] Operation`}
+                          </span>
                         </div>
                       </div>
                       <div className="flex items-center space-x-4 text-xs text-slate-500">
