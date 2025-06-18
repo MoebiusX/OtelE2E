@@ -27,24 +27,10 @@ export function SimpleTraceViewer() {
     }
   };
 
-  const groupedTraces = (traces as any[])?.reduce((acc: any, trace: any) => {
-    if (!acc[trace.traceId]) {
-      acc[trace.traceId] = {
-        traceId: trace.traceId,
-        spans: [],
-        latestTime: trace.startTime
-      };
-    }
-    acc[trace.traceId].spans.push(trace);
-    if (new Date(trace.startTime) > new Date(acc[trace.traceId].latestTime)) {
-      acc[trace.traceId].latestTime = trace.startTime;
-    }
-    return acc;
-  }, {}) || {};
-
-  const traceList = Object.values(groupedTraces).sort((a: any, b: any) => 
-    new Date(b.latestTime).getTime() - new Date(a.latestTime).getTime()
-  );
+  // Display traces as individual trace records showing payment processing flows
+  const traceList = (traces as any[])?.filter(trace => trace.traceId).sort((a: any, b: any) => 
+    new Date(b.startTime).getTime() - new Date(a.startTime).getTime()
+  ) || [];
 
   return (
     <Card className="w-full">
@@ -69,50 +55,7 @@ export function SimpleTraceViewer() {
         {traceList.length > 0 ? (
           <div className="space-y-3">
             {traceList.slice(0, 10).map((trace: any) => (
-              <div
-                key={trace.traceId}
-                className="p-4 border rounded-lg bg-gradient-to-r from-blue-50 to-transparent"
-              >
-                <div className="flex items-center justify-between mb-3">
-                  <div className="flex items-center space-x-2">
-                    <Globe className="w-4 h-4 text-blue-600" />
-                    <code className="text-sm font-mono bg-slate-100 px-2 py-1 rounded">
-                      {truncateId(trace.traceId, 16)}
-                    </code>
-                  </div>
-                  <div className="flex items-center space-x-2 text-sm text-slate-500">
-                    <span>{formatTimeAgo(new Date(trace.latestTime))}</span>
-                    <Badge variant="outline">{trace.spans.length} spans</Badge>
-                  </div>
-                </div>
-                
-                <div className="space-y-2">
-                  {trace.spans.slice(0, 3).map((span: any, index: number) => (
-                    <div
-                      key={span.spanId}
-                      className="flex items-center justify-between text-sm"
-                    >
-                      <div className="flex items-center space-x-2">
-                        <div className="w-2 h-2 bg-blue-400 rounded-full"></div>
-                        <span className="font-medium">{span.name}</span>
-                        <span className="text-slate-500">({span.serviceName})</span>
-                      </div>
-                      <div className="flex items-center space-x-2">
-                        <div className="flex items-center space-x-1">
-                          <Clock className="w-3 h-3" />
-                          <span className="text-xs">{Math.round(span.duration || 0)}ms</span>
-                        </div>
-                        {getStatusBadge(span.status)}
-                      </div>
-                    </div>
-                  ))}
-                  {trace.spans.length > 3 && (
-                    <div className="text-xs text-slate-500 pl-4">
-                      ... and {trace.spans.length - 3} more spans
-                    </div>
-                  )}
-                </div>
-              </div>
+              <TraceCard key={trace.traceId} trace={trace} />
             ))}
           </div>
         ) : (
