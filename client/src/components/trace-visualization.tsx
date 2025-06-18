@@ -19,9 +19,14 @@ import type { Trace, Span } from "@shared/schema";
 export function TraceVisualization() {
   const { data: traces, isLoading: tracesLoading, refetch: refetchTraces } = useQuery<Trace[]>({
     queryKey: ["/api/traces"],
+    refetchInterval: 2000, // Refresh every 2 seconds to show latest traces
   });
 
-  const activeTrace = traces?.[0];
+  // Sort traces by creation date (most recent first) and select the latest one
+  const sortedTraces = traces ? [...traces].sort((a, b) => 
+    new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+  ) : [];
+  const activeTrace = sortedTraces[0];
 
   const { data: spans, isLoading: spansLoading } = useQuery<Span[]>({
     queryKey: ["/api/traces", activeTrace?.traceId, "spans"],
