@@ -95,9 +95,7 @@ export function SimpleTraceViewer() {
 
   const clearMutation = useMutation({
     mutationFn: async () => {
-      return await apiRequest('/api/clear', {
-        method: 'DELETE'
-      });
+      return await apiRequest('DELETE', '/api/clear');
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/traces'] });
