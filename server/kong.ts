@@ -60,7 +60,7 @@ export class KongGateway {
         id: 'payment-route',
         name: 'payment-operations',
         methods: ['GET', 'POST', 'PUT', 'DELETE'],
-        paths: ['/kong/payments', '/kong/payments/*'],
+        paths: ['/payments', '/payments/*'],
         service: 'payment-api-service',
         plugins: ['rate-limiting', 'opentelemetry', 'cors']
       },
@@ -68,7 +68,7 @@ export class KongGateway {
         id: 'trace-route',
         name: 'trace-operations',
         methods: ['GET'],
-        paths: ['/kong/traces', '/kong/traces/*'],
+        paths: ['/traces', '/traces/*'],
         service: 'payment-api-service',
         plugins: ['opentelemetry', 'cors']
       },
@@ -76,7 +76,7 @@ export class KongGateway {
         id: 'metrics-route',
         name: 'metrics-operations',
         methods: ['GET'],
-        paths: ['/kong/metrics'],
+        paths: ['/metrics'],
         service: 'payment-api-service',
         plugins: ['opentelemetry', 'cors']
       }
