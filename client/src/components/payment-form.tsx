@@ -42,7 +42,13 @@ export function PaymentForm() {
 
       const headers = useEmptyTrace 
         ? {} // No trace headers - let Kong Gateway inject context
-        : createTraceHeaders(currentTraceId, currentSpanId);
+        : {
+            'x-trace-id': currentTraceId,
+            'x-span-id': currentSpanId,
+            ...createTraceHeaders(currentTraceId, currentSpanId)
+          };
+      
+      console.log('Payment submission - useEmptyTrace:', useEmptyTrace, 'headers:', headers);
       const response = await apiRequest("POST", "/api/payments", data, headers);
       return response.json();
     },
