@@ -16,10 +16,10 @@ export function SystemMetrics() {
   });
 
   const services = [
-    { name: "Frontend", status: "healthy", color: "bg-otel-green" },
-    { name: "Kong Gateway", status: "healthy", color: "bg-otel-green" },
-    { name: "Payment API", status: "healthy", color: "bg-otel-green" },
-    { name: "Solace Queue", status: "high load", color: "bg-otel-amber" },
+    { name: "Frontend", status: "healthy", color: "bg-slate-100" },
+    { name: "Kong Gateway", status: "healthy", color: "bg-slate-100" },
+    { name: "Payment API", status: "healthy", color: "bg-slate-100" },
+    { name: "Solace Queue", status: "active", color: "bg-slate-200" },
   ];
 
   if (isLoading) {
@@ -53,19 +53,19 @@ export function SystemMetrics() {
       <CardContent className="space-y-6">
         <div className="grid grid-cols-2 gap-4">
           <div className="text-center p-4 bg-slate-50 rounded-lg">
-            <div className="text-2xl font-bold text-otel-blue">
+            <div className="text-2xl font-bold text-slate-700">
               {metrics?.totalRequests || 0}
             </div>
             <div className="text-sm text-slate-600">Total Requests</div>
           </div>
           <div className="text-center p-4 bg-slate-50 rounded-lg">
-            <div className="text-2xl font-bold text-otel-green">
+            <div className="text-2xl font-bold text-slate-700">
               {metrics?.successRate || "0%"}
             </div>
             <div className="text-sm text-slate-600">Success Rate</div>
           </div>
           <div className="text-center p-4 bg-slate-50 rounded-lg">
-            <div className="text-2xl font-bold text-otel-amber">
+            <div className="text-2xl font-bold text-slate-700">
               {metrics?.avgLatency || "0ms"}
             </div>
             <div className="text-sm text-slate-600">Avg Latency</div>

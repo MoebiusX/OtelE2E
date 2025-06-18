@@ -24,11 +24,11 @@
   --ring: hsl(20, 14.3%, 4.1%);
   --radius: 0.5rem;
   
-  /* Custom OpenTelemetry colors */
-  --otel-blue: hsl(207, 90%, 54%);
-  --otel-green: hsl(142, 76%, 36%);
-  --otel-amber: hsl(43, 96%, 56%);
-  --trace-bg: hsl(210, 40%, 98%);
+  /* Professional color palette */
+  --otel-blue: hsl(215, 20%, 30%);
+  --otel-green: hsl(160, 25%, 40%);
+  --otel-amber: hsl(35, 30%, 45%);
+  --trace-bg: hsl(220, 10%, 98%);
 }
 
 .dark {
@@ -53,10 +53,10 @@
   --ring: hsl(240, 4.9%, 83.9%);
   --radius: 0.5rem;
   
-  /* Custom OpenTelemetry colors for dark mode */
-  --otel-blue: hsl(207, 90%, 54%);
-  --otel-green: hsl(142, 76%, 36%);
-  --otel-amber: hsl(43, 96%, 56%);
+  /* Professional colors for dark mode */
+  --otel-blue: hsl(215, 30%, 60%);
+  --otel-green: hsl(160, 35%, 55%);
+  --otel-amber: hsl(35, 40%, 60%);
   --trace-bg: hsl(240, 10%, 3.9%);
 }
 

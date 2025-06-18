@@ -37,17 +37,17 @@ export function TraceVisualization() {
       case 'payment-api':
         return <Globe className="w-4 h-4 text-otel-blue" />;
       case 'kong-gateway':
-        return <Shield className="w-4 h-4 text-purple-500" />;
+        return <Shield className="w-4 h-4 text-slate-600" />;
       case 'solace-queue':
         return <List className="w-4 h-4 text-otel-amber" />;
       case 'payment-processor':
-        return <Server className="w-4 h-4 text-green-600" />;
+        return <Server className="w-4 h-4 text-otel-green" />;
       case 'notification-service':
-        return <ExternalLink className="w-4 h-4 text-blue-600" />;
+        return <ExternalLink className="w-4 h-4 text-slate-600" />;
       case 'audit-service':
-        return <Clock className="w-4 h-4 text-purple-600" />;
+        return <Clock className="w-4 h-4 text-slate-600" />;
       case 'database':
-        return <Database className="w-4 h-4 text-blue-500" />;
+        return <Database className="w-4 h-4 text-otel-blue" />;
       default:
         return <Server className="w-4 h-4 text-otel-green" />;
     }
@@ -58,11 +58,11 @@ export function TraceVisualization() {
       case 'payment-api':
         return 'border-otel-blue bg-gradient-to-r from-otel-blue/10 to-transparent';
       case 'kong-gateway':
-        return 'border-purple-500 bg-gradient-to-r from-purple-500/10 to-transparent';
+        return 'border-slate-400 bg-gradient-to-r from-slate-100 to-transparent';
       case 'solace-queue':
         return 'border-otel-amber bg-gradient-to-r from-otel-amber/10 to-transparent';
       case 'database':
-        return 'border-blue-500 bg-gradient-to-r from-blue-500/10 to-transparent';
+        return 'border-otel-blue bg-gradient-to-r from-otel-blue/10 to-transparent';
       default:
         return 'border-otel-green bg-gradient-to-r from-otel-green/10 to-transparent';
     }
