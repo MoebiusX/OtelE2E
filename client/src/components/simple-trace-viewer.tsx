@@ -2,30 +2,95 @@ import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { RefreshCw, Globe, Clock } from "lucide-react";
+import { RefreshCw, Globe, Clock, Shield, List, Server } from "lucide-react";
 import { formatTimeAgo, truncateId } from "@/lib/utils";
+import { useState } from "react";
+
+function TraceCard({ trace }: { trace: any }) {
+  const [expanded, setExpanded] = useState(false);
+  const { data: spans } = useQuery({
+    queryKey: [`/api/traces/${trace.traceId}/spans`],
+    enabled: expanded
+  });
+
+  const getServiceIcon = (serviceName: string) => {
+    switch (serviceName) {
+      case 'kong-gateway':
+        return <Shield className="w-4 h-4 text-slate-600" />;
+      case 'payment-api':
+        return <Globe className="w-4 h-4 text-blue-600" />;
+      case 'solace-queue':
+        return <List className="w-4 h-4 text-amber-600" />;
+      case 'payment-processor':
+        return <Server className="w-4 h-4 text-green-600" />;
+      default:
+        return <Server className="w-4 h-4 text-slate-500" />;
+    }
+  };
+
+  const getStatusBadge = (status: string) => {
+    switch (status) {
+      case 'success':
+        return <Badge className="bg-green-500/20 text-green-500">Success</Badge>;
+      case 'active':
+        return <Badge className="bg-blue-500/20 text-blue-500">Active</Badge>;
+      default:
+        return <Badge variant="secondary">{status}</Badge>;
+    }
+  };
+
+  return (
+    <div
+      className="p-4 border rounded-lg bg-gradient-to-r from-blue-50 to-transparent cursor-pointer hover:shadow-md transition-shadow"
+      onClick={() => setExpanded(!expanded)}
+    >
+      <div className="flex items-center justify-between mb-3">
+        <div className="flex items-center space-x-2">
+          <Globe className="w-4 h-4 text-blue-600" />
+          <code className="text-sm font-mono bg-slate-100 px-2 py-1 rounded">
+            {truncateId(trace.traceId, 16)}
+          </code>
+        </div>
+        <div className="flex items-center space-x-2 text-sm text-slate-500">
+          <span>{formatTimeAgo(new Date(trace.startTime))}</span>
+          {getStatusBadge(trace.status)}
+          <span className="text-xs">{trace.duration || 0}ms</span>
+        </div>
+      </div>
+      
+      {expanded && spans && (
+        <div className="mt-3 space-y-2 border-t pt-3">
+          <h4 className="text-sm font-medium text-slate-700">Payment Processing Flow:</h4>
+          {spans.slice(0, 5).map((span: any) => (
+            <div key={span.id} className="flex items-center justify-between text-sm">
+              <div className="flex items-center space-x-2">
+                {getServiceIcon(span.serviceName)}
+                <span className="font-medium">{span.operationName}</span>
+                <span className="text-slate-500">({span.serviceName})</span>
+              </div>
+              <div className="flex items-center space-x-2">
+                <Clock className="w-3 h-3" />
+                <span className="text-xs">{span.duration}ms</span>
+                {getStatusBadge(span.status)}
+              </div>
+            </div>
+          ))}
+          {spans.length > 5 && (
+            <div className="text-xs text-slate-500 pl-6">
+              ... and {spans.length - 5} more operations
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
 
 export function SimpleTraceViewer() {
   const { data: traces, isLoading, refetch } = useQuery({
     queryKey: ['/api/traces'],
     refetchInterval: 3000
   });
-
-  const getStatusBadge = (status: any) => {
-    const statusCode = typeof status === 'object' ? status?.code : status;
-    const statusText = typeof status === 'object' ? 
-      (statusCode === 1 ? 'OK' : statusCode === 2 ? 'ERROR' : 'UNSET') : 
-      status;
-
-    switch (statusText) {
-      case 'OK':
-        return <Badge className="bg-green-500/20 text-green-500">OK</Badge>;
-      case 'ERROR':
-        return <Badge className="bg-red-500/20 text-red-500">Error</Badge>;
-      default:
-        return <Badge variant="secondary">Running</Badge>;
-    }
-  };
 
   // Display traces as individual trace records showing payment processing flows
   const traceList = (traces as any[])?.filter(trace => trace.traceId).sort((a: any, b: any) => 
