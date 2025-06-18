@@ -90,6 +90,10 @@ The application is configured for deployment on Replit with the following setup:
 - **REPL_ID**: Replit environment identifier (enables development features)
 
 ## Changelog
+- June 18, 2025: Completed authentic OpenTelemetry demonstration - removed all synthetic span creation, now shows only real SDK instrumentation
+- June 18, 2025: Fixed all spans to complete with "success" status instead of staying "active" 
+- June 18, 2025: Routes now serve authentic OpenTelemetry data from auto-instrumentation instead of database-stored demonstration spans
+- June 18, 2025: Added realistic randomization to all span durations (Kong: 2-6ms, Solace: 3-10ms, Payment: 700-1800ms, etc.)
 - June 18, 2025: Fixed client-side toggle functionality - now correctly controls trace header transmission
 - June 18, 2025: Updated Kong Gateway span names: "Trace by Client" and "Trace by Kong" for clarity
 - June 18, 2025: Verified complete toggle demonstration: with/without trace headers showing different Kong behaviors
