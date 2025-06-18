@@ -40,6 +40,12 @@ export function TraceVisualization() {
         return <Shield className="w-4 h-4 text-purple-500" />;
       case 'solace-queue':
         return <List className="w-4 h-4 text-otel-amber" />;
+      case 'payment-processor':
+        return <Server className="w-4 h-4 text-green-600" />;
+      case 'notification-service':
+        return <ExternalLink className="w-4 h-4 text-blue-600" />;
+      case 'audit-service':
+        return <Clock className="w-4 h-4 text-purple-600" />;
       case 'database':
         return <Database className="w-4 h-4 text-blue-500" />;
       default:

@@ -3,8 +3,11 @@ import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { insertPaymentSchema } from "@shared/schema";
 import { createSpan, generateTraceId, generateSpanId, addSpanAttributes } from "./tracing";
+import { queueSimulator, setupPaymentProcessor } from "./queue";
 
 export async function registerRoutes(app: Express): Promise<Server> {
+  // Initialize queue processor
+  await setupPaymentProcessor(queueSimulator);
   // Payment submission endpoint
   app.post("/api/payments", async (req, res) => {
     const { span, traceId, spanId, finish } = createSpan("payment.submit");
@@ -69,26 +72,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
       kongSpan.finish('success');
 
-      // Simulate queue operation
-      const queueSpan = createSpan("queue.enqueue", spanId);
-      addSpanAttributes(queueSpan.span, {
-        'queue.name': 'payment-queue',
-        'queue.operation': 'enqueue',
-      });
-
-      await storage.createSpan({
-        traceId: traceId,
-        spanId: queueSpan.spanId,
-        parentSpanId: spanId,
-        operationName: "queue.enqueue",
-        serviceName: "solace-queue",
-        status: "success",
-        duration: 45,
-        startTime: new Date(startTime.getTime() + 20),
-        endTime: new Date(startTime.getTime() + 65),
-        tags: JSON.stringify({ 'queue.name': 'payment-queue' }),
-      });
-      queueSpan.finish('success');
+      // Send to JMS queue for processing
+      await queueSimulator.publish('payment-queue', {
+        paymentId: payment.id,
+        amount: validatedData.amount,
+        currency: validatedData.currency || 'USD',
+        recipient: validatedData.recipient,
+        description: validatedData.description,
+      }, traceId, spanId);
 
       // Simulate database write
       const dbSpan = createSpan("database.write", spanId);
@@ -218,6 +209,47 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       finish('success');
       res.json(metrics);
+    } catch (error) {
+      finish('error');
+      res.status(500).json({ 
+        error: error instanceof Error ? error.message : "Unknown error" 
+      });
+    }
+  });
+
+  // Queue stats endpoint
+  app.get("/api/queues", async (req, res) => {
+    const { span, finish } = createSpan("queues.stats");
+    
+    try {
+      const queueStats = queueSimulator.getQueueStats();
+      finish('success');
+      res.json(queueStats);
+    } catch (error) {
+      finish('error');
+      res.status(500).json({ 
+        error: error instanceof Error ? error.message : "Unknown error" 
+      });
+    }
+  });
+
+  // Jaeger UI proxy endpoint
+  app.get("/api/jaeger", async (req, res) => {
+    const { span, finish } = createSpan("jaeger.redirect");
+    
+    try {
+      // In a real deployment, this would proxy to actual Jaeger instance
+      // For demo purposes, provide mock Jaeger interface or redirect
+      const jaegerConfig = {
+        ui_url: process.env.JAEGER_UI_URL || "http://localhost:16686",
+        query_url: process.env.JAEGER_QUERY_URL || "http://localhost:16686/api",
+        status: "demo_mode",
+        traces_available: true,
+        services: ["payment-api", "kong-gateway", "solace-queue", "payment-processor", "notification-service", "audit-service"]
+      };
+      
+      finish('success');
+      res.json(jaegerConfig);
     } catch (error) {
       finish('error');
       res.status(500).json({ 
