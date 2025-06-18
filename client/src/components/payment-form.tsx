@@ -37,30 +37,8 @@ export function PaymentForm() {
 
   const paymentMutation = useMutation({
     mutationFn: async (data: PaymentFormData) => {
-      if (!useEmptyTrace) {
-        // Create client-side span when including trace headers
-        const now = new Date();
-        const clientSpan = {
-          traceId: currentTraceId,
-          spanId: generateSpanId(),
-          parentSpanId: currentSpanId,
-          operationName: "Payment Form Submission",
-          serviceName: "payment-frontend",
-          status: "completed",
-          duration: 1,
-          startTime: now.toISOString(),
-          endTime: new Date(now.getTime() + 1).toISOString(),
-          tags: JSON.stringify({
-            "component": "payment-form",
-            "user.action": "submit-payment",
-            "payment.amount": data.amount,
-            "payment.currency": data.currency
-          })
-        };
-
-        // Store client span in database
-        await apiRequest("POST", "/api/spans", clientSpan);
-      }
+      // Note: With Jaeger integration, spans are automatically sent to Jaeger
+      // via OpenTelemetry SDK instrumentation, not stored in local database
 
       const headers = useEmptyTrace 
         ? {} // No trace headers - let Kong Gateway inject context
