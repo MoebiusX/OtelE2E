@@ -1,4 +1,4 @@
-# OpenTelemetry Context Propagation Demo
+# OpenTelemetry Context Propagation PoC
 
 ## Overview
 
@@ -49,7 +49,7 @@ Frontend (React) → Kong Gateway → Payment API → Solace Queue → Microserv
 - OpenTelemetry starts fresh trace from Kong's injected context
 - Demonstrates context injection for non-instrumented upstream systems
 
-## Demo Scenarios
+## PoC Scenarios
 
 ### Scenario 1: Complete Distributed Trace
 **Purpose**: Show full enterprise tracing flow
@@ -104,7 +104,7 @@ const span = tracer.startSpan('Solace Queue Publish', {
 ### OpenTelemetry Configuration
 - **Auto-Instrumentation**: HTTP, Express, and Node.js core modules
 - **Custom Spans**: Kong Gateway and Solace queue operations
-- **Trace Export**: In-memory collection for demonstration UI
+- **Trace Export**: In-memory collection for PoC UI
 - **Context Propagation**: W3C Trace Context standard
 
 ## Trace Data Structure
@@ -181,7 +181,7 @@ const span = tracer.startSpan('Solace Queue Publish', {
 - Node.js 18+ with TypeScript support
 - OpenTelemetry SDK and auto-instrumentation packages
 - React frontend with trace header generation
-- In-memory storage for demonstration purposes
+- In-memory storage for PoC purposes
 
 ### Production Environment
 - Kong Gateway with OpenTelemetry plugin

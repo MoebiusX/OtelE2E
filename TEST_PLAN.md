@@ -1,4 +1,4 @@
-# OpenTelemetry Context Propagation Demo - Test Plan
+# OpenTelemetry Context Propagation PoC - Test Plan
 
 ## Test Overview
 

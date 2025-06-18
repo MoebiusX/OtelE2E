@@ -1,4 +1,4 @@
-# OpenTelemetry Context Propagation Demo
+# OpenTelemetry Context Propagation PoC
 
 A comprehensive demonstration of enterprise-grade distributed tracing using OpenTelemetry in a microservices payment processing system, showcasing authentic context propagation with Kong Gateway serving as a context injection point for upstream systems without native tracing capability.
 
@@ -14,9 +14,9 @@ A comprehensive demonstration of enterprise-grade distributed tracing using Open
    ./quick-test.sh
    ```
 
-3. **Open the demo**: Navigate to `http://localhost:5000`
+3. **Open the PoC**: Navigate to `http://localhost:5000`
 
-## What This Demo Shows
+## What This PoC Shows
 
 ### Real Enterprise Context Propagation
 - **Kong Gateway Integration**: Authentic API gateway with context injection for non-instrumented systems
@@ -182,4 +182,4 @@ For questions about this demonstration or OpenTelemetry implementation:
 - Run the test suite with `./run-tests.sh` for validation
 - Check the project architecture details in `replit.md`
 
-This demo showcases real-world enterprise distributed tracing patterns that can be directly applied to production microservices environments.
+This PoC showcases real-world enterprise distributed tracing patterns that can be directly applied to production microservices environments.
