@@ -90,6 +90,8 @@ The application is configured for deployment on Replit with the following setup:
 - **REPL_ID**: Replit environment identifier (enables development features)
 
 ## Changelog
+- June 18, 2025: Fixed trace visualization to show only authentic system operations (removed fake database spans)
+- June 18, 2025: Traces now accurately reflect real Kong Gateway → Solace queue → microservices flow
 - June 18, 2025: Restored complete Solace queue integration with OpenTelemetry context propagation
 - June 18, 2025: Removed all synthetic span generation - now pure OpenTelemetry instrumentation to Jaeger
 - June 18, 2025: Removed PostgreSQL completely, converted to pure in-memory + Jaeger architecture

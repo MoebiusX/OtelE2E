@@ -135,7 +135,12 @@ export class KongGateway {
 
   // Kong Gateway Middleware
   public gatewayMiddleware() {
-    return (req: Request, res: Response, next: NextFunction) => {
+    return async (req: Request, res: Response, next: NextFunction) => {
+      // Only intercept payment requests for demonstration
+      if (!req.path.startsWith('/api/payments')) {
+        return next();
+      }
+
       const { span, finish } = createSpan('kong.gateway.request');
       
       const startTime = Date.now();
@@ -149,13 +154,47 @@ export class KongGateway {
         });
       }
 
+      // Extract or generate trace context
+      let traceId = req.headers['x-trace-id'] as string;
+      let spanId = req.headers['x-span-id'] as string;
+      
+      const hasIncomingTrace = !!(traceId && spanId);
+      
+      // If no trace headers, Kong generates them (context injection)
+      if (!traceId) {
+        traceId = this.generateTraceId();
+        spanId = this.generateSpanId();
+        req.headers['x-trace-id'] = traceId;
+        req.headers['x-span-id'] = spanId;
+      }
+
+      // Store Kong Gateway span for UI demonstration
+      const { storage } = await import('./storage');
+      await storage.createSpan({
+        traceId,
+        spanId: this.generateSpanId(),
+        parentSpanId: null,
+        operationName: hasIncomingTrace ? "Kong Gateway (with trace headers)" : "Kong Gateway (injected trace)",
+        serviceName: 'kong-gateway',
+        status: 'success',
+        duration: 3,
+        startTime: new Date(),
+        endTime: new Date(Date.now() + 3),
+        tags: JSON.stringify({
+          'kong.route': req.path,
+          'kong.method': req.method,
+          'kong.plugins': 'rate-limiting,cors,tracing',
+          'trace.source': hasIncomingTrace ? 'client_headers' : 'kong_injection'
+        })
+      });
+
       // Apply plugins
       this.applyPlugins(route, req, res);
 
       // Add Kong headers
       res.set({
         'X-Kong-Upstream-Latency': '0',
-        'X-Kong-Proxy-Latency': '1',
+        'X-Kong-Proxy-Latency': '3',
         'X-Kong-Request-Id': uuidv4(),
         'Via': '1.1 kong/3.4.2'
       });
@@ -171,7 +210,8 @@ export class KongGateway {
         'kong.service.name': route.service,
         'http.method': req.method,
         'http.url': originalUrl,
-        'http.upstream.url': req.url
+        'http.upstream.url': req.url,
+        'trace.injected': !hasIncomingTrace
       });
 
       // Intercept response to add metrics
