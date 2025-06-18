@@ -10,8 +10,10 @@ import { generateTraceId, generateSpanId } from "./tracing";
 import { kongGateway } from "./kong";
 
 export function registerRoutes(app: Express) {
-  // Kong Gateway middleware
-  app.use(kongGateway.gatewayMiddleware());
+  // Note: Kong Gateway middleware is applied only to /kong routes
+  // API routes go directly to the backend for authentic OpenTelemetry tracing
+  
+  console.log("Registering API routes...");
 
   // Payment submission endpoint
   app.post("/api/payments", async (req: Request, res: Response) => {
