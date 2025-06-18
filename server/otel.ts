@@ -14,14 +14,17 @@ class TraceCollector implements SpanExporter {
     spans.forEach(span => {
       // Filter out GET requests to payment-api endpoints to reduce noise
       const httpMethod = span.attributes?.['http.method'];
-      const httpRoute = span.attributes?.['http.route'] || span.attributes?.['http.target'];
+      const httpRoute = span.attributes?.['http.route'] || span.attributes?.['http.target'] || span.attributes?.['http.url'];
+      const spanName = span.name || '';
       
-      if (httpMethod === 'GET' && (
-        httpRoute?.includes('/api/payments') || 
-        httpRoute?.includes('/api/traces') ||
-        span.name.includes('GET /api/')
-      )) {
-        return; // Skip these spans
+      // Skip GET requests entirely - they're just frontend polling
+      if (httpMethod === 'GET' || spanName.includes('GET ')) {
+        return; // Skip all GET requests
+      }
+      
+      // Also skip any spans that mention payment-api in parentheses (these are the noise spans)
+      if (spanName.includes('(payment-api)')) {
+        return;
       }
       
       const traceData = {
