@@ -135,6 +135,7 @@ export class SolaceQueueSimulator extends EventEmitter {
         // Real operation: Message consumed from queue (OpenTelemetry auto-instruments this)
 
         // Simulate processing delay
+        const processingDelay = Math.floor(Math.random() * config.processingDelay) + (config.processingDelay / 2);
         await new Promise(resolve => setTimeout(resolve, processingDelay));
 
         // Process message
@@ -222,22 +223,7 @@ export async function setupPaymentProcessor(queueSimulator: SolaceQueueSimulator
       const processingTime2 = Math.floor(Math.random() * 800) + 300; // 300-1100ms
       const totalProcessingTime = processingTime1 + processingTime2;
       
-      await storage.createSpan({
-        traceId: message.traceId,
-        spanId,
-        parentSpanId: message.spanId,
-        operationName: 'Payment Processing Complete',
-        serviceName: 'payment-processor',
-        status: 'success',
-        duration: totalProcessingTime,
-        startTime: new Date(),
-        endTime: new Date(Date.now() + totalProcessingTime),
-        tags: JSON.stringify({
-          'payment.id': paymentId,
-          'payment.amount': amount,
-          'processor.name': 'payment-processor',
-        }),
-      });
+      // Real operation: Payment processing complete (OpenTelemetry auto-instruments this)
 
       // Simulate payment processing steps
       await new Promise(resolve => setTimeout(resolve, processingTime1));
@@ -300,23 +286,8 @@ export async function setupPaymentProcessor(queueSimulator: SolaceQueueSimulator
         'notification.payment_id': message.payload.paymentId,
       });
 
-      // Store notification span with randomized duration
+      // Real operation: Send notification (OpenTelemetry auto-instruments this)
       const notificationDuration = Math.floor(Math.random() * 400) + 200; // 200-600ms
-      await storage.createSpan({
-        traceId: message.traceId,
-        spanId,
-        parentSpanId: message.spanId,
-        operationName: 'notification.send',
-        serviceName: 'notification-service',
-        status: 'success',
-        duration: notificationDuration,
-        startTime: new Date(),
-        endTime: new Date(Date.now() + notificationDuration),
-        tags: JSON.stringify({
-          'notification.type': message.payload.type,
-          'notification.channel': 'email',
-        }),
-      });
 
       // Simulate notification sending
       await new Promise(resolve => setTimeout(resolve, notificationDuration));
@@ -338,23 +309,8 @@ export async function setupPaymentProcessor(queueSimulator: SolaceQueueSimulator
         'audit.payment_id': message.payload.paymentId,
       });
 
-      // Store audit span with randomized duration
+      // Real operation: Audit logging (OpenTelemetry auto-instruments this)
       const auditDuration = Math.floor(Math.random() * 200) + 100; // 100-300ms
-      await storage.createSpan({
-        traceId: message.traceId,
-        spanId,
-        parentSpanId: message.spanId,
-        operationName: 'audit.log',
-        serviceName: 'audit-service',
-        status: 'success',
-        duration: auditDuration,
-        startTime: new Date(),
-        endTime: new Date(Date.now() + auditDuration),
-        tags: JSON.stringify({
-          'audit.type': message.payload.type,
-          'audit.stored': true,
-        }),
-      });
 
       // Simulate audit logging
       await new Promise(resolve => setTimeout(resolve, auditDuration));
