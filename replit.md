@@ -27,15 +27,15 @@ The application follows a modern full-stack architecture with clear separation b
 ### Backend Architecture
 - **Express.js** server with TypeScript
 - **OpenTelemetry SDK** with auto-instrumentation for Node.js
-- **Drizzle ORM** for database operations with PostgreSQL
+- **In-memory storage** for demonstration data and UI display
+- **Kong Gateway simulation** for API routing and context injection
 - **Custom tracing utilities** for span creation and context propagation
-- **Memory storage fallback** for development without database
 
-### Database Schema
+### Data Schema
 - **users**: User authentication (id, username, password)
 - **payments**: Payment records with trace correlation (amount, currency, recipient, status, traceId, spanId)
-- **traces**: Distributed trace metadata (traceId, rootSpanId, status, duration)
-- **spans**: Individual span records (traceId, spanId, parentSpanId, operationName, serviceName, duration, tags)
+- **traces**: Distributed trace metadata (traceId, rootSpanId, status, duration) - for UI demonstration only
+- **spans**: Individual span records (traceId, spanId, parentSpanId, operationName, serviceName, duration, tags) - for UI demonstration only
 
 ### Tracing Implementation
 - **Automatic instrumentation** for HTTP requests, database queries, and system calls
@@ -90,6 +90,7 @@ The application is configured for deployment on Replit with the following setup:
 - **REPL_ID**: Replit environment identifier (enables development features)
 
 ## Changelog
+- June 18, 2025: Removed PostgreSQL completely, converted to pure in-memory + Jaeger architecture
 - June 18, 2025: Added client-side span creation toggle to demonstrate Kong Gateway context injection
 - June 18, 2025: Integrated Jaeger as trace backend with OpenTelemetry SDK configuration  
 - June 18, 2025: Fixed Recent Payments ordering to show newest submissions first
