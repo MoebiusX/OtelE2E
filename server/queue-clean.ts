@@ -62,7 +62,7 @@ export class SolaceQueueSimulator extends EventEmitter {
       topic: queueName,
       payload,
       traceId,
-      spanId: parentSpanId,
+      spanId: parentSpanId || 'auto-generated',
       timestamp: new Date(),
       retryCount: 0,
     };

@@ -48,6 +48,7 @@ app.use((req, res, next) => {
 
 (async () => {
   // Initialize Solace queue processors for payment processing
+  const { setupPaymentProcessor } = await import('./queue-clean');
   await setupPaymentProcessor(queueSimulator);
 
   // Kong Gateway middleware - intercepts ALL requests to demonstrate tracing

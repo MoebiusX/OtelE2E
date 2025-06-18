@@ -8,7 +8,7 @@ import { storage } from "./storage";
 import { insertPaymentSchema } from "@shared/schema";
 // Removed synthetic tracing - using only authentic OpenTelemetry instrumentation
 import { kongGateway } from "./kong";
-import { queueSimulator } from "./queue";
+import { queueSimulator } from "./queue-clean";
 import { traces } from "./otel";
 
 export function registerRoutes(app: Express) {
@@ -20,9 +20,9 @@ export function registerRoutes(app: Express) {
   // Payment submission endpoint
   app.post("/api/payments", async (req: Request, res: Response) => {
     try {
-      const traceId = req.headers['x-trace-id'] as string || generateTraceId();
-      const parentSpanId = req.headers['x-span-id'] as string;
-      const spanId = generateSpanId();
+      // Real payment processing - OpenTelemetry auto-instruments this
+      const traceId = req.headers['x-trace-id'] as string || 'auto-generated';
+      const spanId = req.headers['x-span-id'] as string || 'auto-generated';
 
       // Validate payment data
       const result = insertPaymentSchema.safeParse(req.body);
@@ -33,7 +33,7 @@ export function registerRoutes(app: Express) {
 
       const validatedData = result.data;
 
-      // Create payment record with trace correlation (actual operation)
+      // Create payment record - OpenTelemetry auto-instruments this database operation
       const payment = await storage.createPayment({
         ...validatedData,
         traceId: traceId,
