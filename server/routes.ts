@@ -77,20 +77,13 @@ export function registerRoutes(app: Express) {
     try {
       const { traces } = await import('./otel');
       
-      // Filter out GET requests and polling operations to show only meaningful business operations
+      // Filter out only GET requests - preserve all business operations
       const filteredTraces = traces.filter(span => {
         const httpMethod = span.attributes?.['http.method'];
         const spanName = span.name || '';
         
-        // Skip GET requests - they're just frontend polling
+        // Skip only GET requests - they're frontend polling
         if (httpMethod === 'GET' || spanName.includes('GET ')) {
-          return false;
-        }
-        
-        // Skip internal polling operations
-        if (spanName.includes('(payment-api)') || 
-            spanName.includes('/api/payments') || 
-            spanName.includes('/api/traces')) {
           return false;
         }
         
@@ -145,7 +138,7 @@ export function registerRoutes(app: Express) {
       const { traceId } = req.params;
       const { traces } = await import('./otel');
       
-      // Filter spans for this trace to show only meaningful business operations
+      // Filter spans for this trace - keep all business operations, remove only GET requests
       const spans = traces
         .filter(span => {
           if (span.traceId !== traceId) return false;
@@ -153,11 +146,8 @@ export function registerRoutes(app: Express) {
           const httpMethod = span.attributes?.['http.method'];
           const spanName = span.name || '';
           
-          // Skip GET requests and polling operations
-          if (httpMethod === 'GET' || spanName.includes('GET ') || 
-              spanName.includes('(payment-api)') ||
-              spanName.includes('/api/payments') || 
-              spanName.includes('/api/traces')) {
+          // Skip only GET requests
+          if (httpMethod === 'GET' || spanName.includes('GET ')) {
             return false;
           }
           
