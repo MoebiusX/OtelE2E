@@ -83,7 +83,7 @@ export function PaymentForm() {
         <div className="flex items-center justify-between">
           <CardTitle className="text-lg font-semibold text-slate-800">Submit Payment Request</CardTitle>
           <Badge variant="secondary" className="text-xs">
-            Demo Mode
+            PoC Mode
           </Badge>
         </div>
       </CardHeader>

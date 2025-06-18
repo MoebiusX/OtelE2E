@@ -38,7 +38,7 @@ export default function Dashboard() {
             <div className="flex items-center space-x-4">
               <div className="flex items-center space-x-2">
                 <ChartLine className="text-otel-blue text-xl" />
-                <h1 className="text-xl font-semibold text-slate-800">OpenTelemetry Payment Demo</h1>
+                <h1 className="text-xl font-semibold text-slate-800">OpenTelemetry Payment PoC</h1>
               </div>
               <Badge className="px-2 py-1 bg-otel-blue/10 text-otel-blue text-xs font-medium">
                 Context Propagation
