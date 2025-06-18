@@ -31,6 +31,8 @@ export function TraceVisualization() {
   const { data: spans, isLoading: spansLoading } = useQuery<Span[]>({
     queryKey: ["/api/traces", activeTrace?.traceId, "spans"],
     enabled: !!activeTrace?.traceId,
+    refetchInterval: 2000, // Keep spans in sync with traces
+    staleTime: 0, // Always fetch fresh span data
   });
 
   const handleRefresh = () => {

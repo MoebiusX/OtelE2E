@@ -1,6 +1,6 @@
 import { users, payments, traces, spans, type User, type InsertUser, type Payment, type InsertPayment, type Trace, type InsertTrace, type Span, type InsertSpan } from "@shared/schema";
 import { db } from "./db";
-import { eq } from "drizzle-orm";
+import { eq, desc } from "drizzle-orm";
 
 export interface IStorage {
   // User operations
@@ -102,7 +102,7 @@ export class DatabaseStorage implements IStorage {
     const result = await db
       .select()
       .from(traces)
-      .orderBy(traces.createdAt)
+      .orderBy(desc(traces.createdAt))
       .limit(limit);
     return result;
   }
