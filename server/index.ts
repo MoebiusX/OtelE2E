@@ -51,7 +51,7 @@ app.use((req, res, next) => {
   await setupPaymentProcessor(queueSimulator);
 
   // Kong Gateway middleware - intercepts ALL requests to demonstrate tracing
-  const { kongGateway } = await import('./kong');
+  const { kongGateway } = await import('./kong-clean');
   app.use(kongGateway.gatewayMiddleware());
 
   // Register API routes

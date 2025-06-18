@@ -6,7 +6,7 @@ import { fromZodError } from "zod-validation-error";
 import { setupVite, serveStatic, log } from "./vite";
 import { storage } from "./storage";
 import { insertPaymentSchema } from "@shared/schema";
-import { generateTraceId, generateSpanId } from "./tracing";
+// Removed synthetic tracing - using only authentic OpenTelemetry instrumentation
 import { kongGateway } from "./kong";
 import { queueSimulator } from "./queue";
 import { traces } from "./otel";

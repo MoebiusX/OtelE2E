@@ -154,9 +154,9 @@ export class KongGateway {
   }
 
   private matchRoute(req: Request): KongRoute | null {
-    for (const route of this.routes.values()) {
+    for (const route of Array.from(this.routes.values())) {
       if (route.methods.includes(req.method) && 
-          route.paths.some(path => req.path.startsWith(path))) {
+          route.paths.some((path: string) => req.path.startsWith(path))) {
         return route;
       }
     }
