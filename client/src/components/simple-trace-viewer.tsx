@@ -48,8 +48,8 @@ function TraceCard({ trace }: { trace: any }) {
       <div className="flex items-center justify-between mb-3">
         <div className="flex items-center space-x-2">
           <Globe className="w-4 h-4 text-blue-600" />
-          <code className="text-sm font-mono bg-slate-100 px-2 py-1 rounded">
-            {truncateId(trace.traceId, 16)}
+          <code className="text-xs font-mono bg-slate-100 px-2 py-1 rounded break-all">
+            {trace.traceId}
           </code>
         </div>
         <div className="flex items-center space-x-2 text-sm text-slate-500">
