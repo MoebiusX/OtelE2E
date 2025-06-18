@@ -70,6 +70,7 @@ export class MemStorage implements IStorage {
     const payment: Payment = {
       ...paymentData,
       id,
+      currency: paymentData.currency || "USD",
       status: "pending",
       createdAt: new Date(),
     };
@@ -139,6 +140,9 @@ export class MemStorage implements IStorage {
     const span: Span = {
       ...spanData,
       id,
+      status: spanData.status || "active",
+      parentSpanId: spanData.parentSpanId || null,
+      tags: spanData.tags || null,
       endTime: spanData.endTime || null,
     };
     this.spans.set(spanData.spanId, span);

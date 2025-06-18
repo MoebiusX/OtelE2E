@@ -14,7 +14,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       addSpanAttributes(span, {
         'payment.amount': validatedData.amount,
-        'payment.currency': validatedData.currency,
+        'payment.currency': validatedData.currency || 'USD',
         'payment.recipient': validatedData.recipient,
       });
 

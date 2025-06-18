@@ -53,6 +53,8 @@ export const insertPaymentSchema = createInsertSchema(payments).pick({
   currency: true,
   recipient: true,
   description: true,
+}).extend({
+  currency: z.string().default("USD"),
 });
 
 export const insertTraceSchema = createInsertSchema(traces).pick({
