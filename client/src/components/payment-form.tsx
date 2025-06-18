@@ -11,6 +11,7 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
+import { Switch } from "@/components/ui/switch";
 import { useToast } from "@/hooks/use-toast";
 import { DollarSign, User, MessageSquare, Coins, Route, Send, CheckCircle, Loader2 } from "lucide-react";
 import type { z } from "zod";
@@ -20,6 +21,7 @@ type PaymentFormData = z.infer<typeof insertPaymentSchema>;
 export function PaymentForm() {
   const [currentTraceId, setCurrentTraceId] = useState(generateTraceId());
   const [currentSpanId, setCurrentSpanId] = useState(generateSpanId());
+  const [useEmptyTrace, setUseEmptyTrace] = useState(false);
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
@@ -35,8 +37,10 @@ export function PaymentForm() {
 
   const paymentMutation = useMutation({
     mutationFn: async (data: PaymentFormData) => {
-      const headers = createTraceHeaders(currentTraceId, currentSpanId);
-      const response = await apiRequest("POST", "/api/payments", data);
+      const headers = useEmptyTrace 
+        ? {} // No trace headers - let Kong Gateway inject context
+        : createTraceHeaders(currentTraceId, currentSpanId);
+      const response = await apiRequest("POST", "/api/payments", data, headers);
       return response.json();
     },
     onSuccess: (data) => {
@@ -179,24 +183,44 @@ export function PaymentForm() {
                 <Route className="w-4 h-4 text-otel-blue mr-2" />
                 OpenTelemetry Configuration
               </h3>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+              
+              <div className="mb-4 flex items-center justify-between">
                 <div>
-                  <label className="block text-xs font-medium text-slate-600 mb-1">Trace ID</label>
-                  <Input
-                    value={currentTraceId}
-                    readOnly
-                    className="text-xs bg-white font-mono"
-                  />
+                  <label className="text-xs font-medium text-slate-600">Empty Trace Headers</label>
+                  <p className="text-xs text-slate-500">Test Kong Gateway context injection</p>
                 </div>
-                <div>
-                  <label className="block text-xs font-medium text-slate-600 mb-1">Span ID</label>
-                  <Input
-                    value={currentSpanId}
-                    readOnly
-                    className="text-xs bg-white font-mono"
-                  />
-                </div>
+                <Switch
+                  checked={useEmptyTrace}
+                  onCheckedChange={setUseEmptyTrace}
+                />
               </div>
+
+              {!useEmptyTrace && (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-xs font-medium text-slate-600 mb-1">Trace ID</label>
+                    <Input
+                      value={currentTraceId}
+                      readOnly
+                      className="text-xs bg-white font-mono"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium text-slate-600 mb-1">Span ID</label>
+                    <Input
+                      value={currentSpanId}
+                      readOnly
+                      className="text-xs bg-white font-mono"
+                    />
+                  </div>
+                </div>
+              )}
+
+              {useEmptyTrace && (
+                <div className="text-center py-3 text-xs text-slate-500 bg-amber-50 border border-amber-200 rounded">
+                  No trace headers will be sent - Kong Gateway will inject context
+                </div>
+              )}
             </div>
 
             <Button
