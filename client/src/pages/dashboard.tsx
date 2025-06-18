@@ -147,7 +147,7 @@ export default function Dashboard() {
               <div className="text-sm text-slate-600 space-y-2">
                 <p>• Automatic HTTP instrumentation</p>
                 <p>• Custom span creation</p>
-                <p>• Queue operation tracking</p>
+                <p>• Database operation tracking</p>
                 <p>• Error span recording</p>
               </div>
             </div>
@@ -155,13 +155,13 @@ export default function Dashboard() {
             <div className="space-y-4">
               <h3 className="font-medium text-slate-700 flex items-center">
                 <ChartLine className="w-4 h-4 text-otel-amber mr-2" />
-                Exporters
+                Backend Integration
               </h3>
               <div className="text-sm text-slate-600 space-y-2">
-                <p>• Jaeger trace exporter</p>
-                <p>• Console debugging output</p>
-                <p>• OTLP protocol support</p>
-                <p>• Prometheus metrics</p>
+                <p>• Jaeger trace backend</p>
+                <p>• Kong Gateway integration</p>
+                <p>• PostgreSQL trace storage</p>
+                <p>• Real-time visualization</p>
               </div>
             </div>
           </div>
