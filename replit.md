@@ -90,6 +90,7 @@ The application is configured for deployment on Replit with the following setup:
 - **REPL_ID**: Replit environment identifier (enables development features)
 
 ## Changelog
+- June 18, 2025: Removed all synthetic span generation - now pure OpenTelemetry instrumentation to Jaeger
 - June 18, 2025: Removed PostgreSQL completely, converted to pure in-memory + Jaeger architecture
 - June 18, 2025: Added client-side span creation toggle to demonstrate Kong Gateway context injection
 - June 18, 2025: Integrated Jaeger as trace backend with OpenTelemetry SDK configuration  

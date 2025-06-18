@@ -1,359 +1,86 @@
 import type { Express } from "express";
-import { createServer, type Server } from "http";
+import { Request, Response } from "express";
+import { createServer } from "http";
+import { z } from "zod";
+import { fromZodError } from "zod-validation-error";
+import { setupVite, serveStatic, log } from "./vite";
 import { storage } from "./storage";
 import { insertPaymentSchema } from "@shared/schema";
-import { createSpan, generateTraceId, generateSpanId, addSpanAttributes } from "./tracing";
-import { queueSimulator, setupPaymentProcessor } from "./queue";
+import { generateTraceId, generateSpanId } from "./tracing";
 import { kongGateway } from "./kong";
 
-export async function registerRoutes(app: Express): Promise<Server> {
-  // Initialize queue processor
-  await setupPaymentProcessor(queueSimulator);
+export function registerRoutes(app: Express) {
+  // Kong Gateway middleware
+  app.use(kongGateway.gatewayMiddleware());
+
   // Payment submission endpoint
-  app.post("/api/payments", async (req, res) => {
-    // Extract trace context from Kong Gateway if available, otherwise generate new
-    let traceId: string;
-    let spanId: string;
-    
-    if (req.headers['traceparent']) {
-      const traceparent = req.headers['traceparent'] as string;
-      const parts = traceparent.split('-');
-      traceId = parts[1];
-      spanId = parts[2];
-    } else {
-      traceId = generateTraceId();
-      spanId = generateSpanId();
-    }
-    
-    const { span, finish } = createSpan("payment.submit");
-    
+  app.post("/api/payments", async (req: Request, res: Response) => {
     try {
-      const validatedData = insertPaymentSchema.parse(req.body);
-      
-      addSpanAttributes(span, {
-        'payment.amount': validatedData.amount,
-        'payment.currency': validatedData.currency || 'USD',
-        'payment.recipient': validatedData.recipient,
-      });
+      const traceId = req.headers['x-trace-id'] as string || generateTraceId();
+      const parentSpanId = req.headers['x-span-id'] as string;
+      const spanId = generateSpanId();
 
-      // Create trace record
-      await storage.createTrace({
-        traceId: traceId,
-        rootSpanId: spanId,
-      });
+      // Validate payment data
+      const result = insertPaymentSchema.safeParse(req.body);
+      if (!result.success) {
+        const validationError = fromZodError(result.error);
+        return res.status(400).json({ error: validationError.message });
+      }
 
-      // Create root span record
-      const startTime = new Date();
-      await storage.createSpan({
-        traceId: traceId,
-        spanId: spanId,
-        parentSpanId: null,
-        operationName: "Payment Request Received",
-        serviceName: "payment-api",
-        status: "active",
-        duration: 0,
-        startTime: startTime,
-        tags: JSON.stringify({
-          'payment.amount': validatedData.amount,
-          'payment.currency': validatedData.currency,
-        }),
-      });
+      const validatedData = result.data;
 
-      // Create payment record
+      // Create payment record with trace correlation
       const payment = await storage.createPayment({
         ...validatedData,
         traceId: traceId,
         spanId: spanId,
       });
 
-      // Kong Gateway routing span
-      const kongSpan = createSpan("kong.gateway.route", spanId);
-      addSpanAttributes(kongSpan.span, {
-        'gateway.service': 'payment-api',
-        'gateway.route': '/payments',
-        'gateway.plugins': 'rate-limiting,cors,opentelemetry',
-      });
-      
-      await storage.createSpan({
-        traceId: traceId,
-        spanId: kongSpan.spanId,
-        parentSpanId: spanId,
-        operationName: "Kong Gateway Route",
-        serviceName: "kong-gateway",
-        status: "success",
-        duration: 12,
-        startTime: new Date(startTime.getTime() + 5),
-        endTime: new Date(startTime.getTime() + 17),
-        tags: JSON.stringify({ 
-          'gateway.service': 'payment-api',
-          'gateway.route': '/payments',
-          'kong.plugins.applied': 'rate-limiting,cors,opentelemetry'
-        }),
-      });
-      kongSpan.finish('success');
+      // Note: OpenTelemetry automatic instrumentation will create actual spans 
+      // that are sent to Jaeger. No synthetic spans are created here.
 
-      // Send to JMS queue for processing
-      await queueSimulator.publish('payment-queue', {
-        paymentId: payment.id,
-        amount: validatedData.amount,
-        currency: validatedData.currency || 'USD',
-        recipient: validatedData.recipient,
-        description: validatedData.description,
-      }, traceId, spanId);
-
-      // Simulate database write
-      const dbSpan = createSpan("database.write", spanId);
-      addSpanAttributes(dbSpan.span, {
-        'db.operation': 'INSERT',
-        'db.table': 'payments',
-      });
-
-      await storage.createSpan({
-        traceId: traceId,
-        spanId: dbSpan.spanId,
-        parentSpanId: spanId,
-        operationName: "Save Payment to Database",
-        serviceName: "database",
-        status: "success",
-        duration: 78,
-        startTime: new Date(startTime.getTime() + 70),
-        endTime: new Date(startTime.getTime() + 148),
-        tags: JSON.stringify({ 'db.operation': 'INSERT' }),
-      });
-      dbSpan.finish('success');
-
-      // Update payment status
-      setTimeout(async () => {
-        await storage.updatePaymentStatus(payment.id, "completed");
-        await storage.updateTraceStatus(traceId, "completed", 245);
-        
-        // Update root span
-        await storage.updateSpan(spanId, {
-          status: "success",
-          duration: 245,
-          endTime: new Date(startTime.getTime() + 245),
-        });
-      }, 100);
-
-      finish('success');
-      
-      res.json({
-        success: true,
+      res.json({ 
+        success: true, 
         payment,
-        traceId: traceId,
-        spanId: spanId,
+        traceId,
+        spanId
       });
-
-    } catch (error) {
-      finish('error');
-      res.status(400).json({ 
-        success: false, 
-        error: error instanceof Error ? error.message : "Unknown error" 
-      });
+    } catch (error: any) {
+      log(`Payment creation error: ${error.message}`, "error");
+      res.status(500).json({ error: "Failed to process payment" });
     }
   });
 
-  // Get recent payments
-  app.get("/api/payments", async (req, res) => {
-    const { span, finish } = createSpan("payments.list");
-    
+  // Get payments
+  app.get("/api/payments", async (req: Request, res: Response) => {
     try {
       const payments = await storage.getPayments(10);
-      finish('success');
       res.json(payments);
-    } catch (error) {
-      finish('error');
-      res.status(500).json({ 
-        error: error instanceof Error ? error.message : "Unknown error" 
-      });
+    } catch (error: any) {
+      log(`Error fetching payments: ${error.message}`, "error");
+      res.status(500).json({ error: "Failed to fetch payments" });
     }
   });
 
-  // Get traces
-  app.get("/api/traces", async (req, res) => {
-    const { span, finish } = createSpan("traces.list");
-    
+  // Get traces (for UI demonstration only - real traces go to Jaeger)
+  app.get("/api/traces", async (req: Request, res: Response) => {
     try {
       const traces = await storage.getTraces(10);
-      finish('success');
       res.json(traces);
-    } catch (error) {
-      finish('error');
-      res.status(500).json({ 
-        error: error instanceof Error ? error.message : "Unknown error" 
-      });
+    } catch (error: any) {
+      log(`Error fetching traces: ${error.message}`, "error");
+      res.status(500).json({ error: "Failed to fetch traces" });
     }
   });
 
-  // Get spans for a trace
-  app.get("/api/traces/:traceId/spans", async (req, res) => {
-    const { span, finish } = createSpan("trace.spans");
-    
+  // Get spans for a trace (for UI demonstration only - real spans go to Jaeger)
+  app.get("/api/traces/:traceId/spans", async (req: Request, res: Response) => {
     try {
-      const { traceId } = req.params;
-      const spans = await storage.getSpansByTrace(traceId);
-      finish('success');
+      const spans = await storage.getSpansByTrace(req.params.traceId);
       res.json(spans);
-    } catch (error) {
-      finish('error');
-      res.status(500).json({ 
-        error: error instanceof Error ? error.message : "Unknown error" 
-      });
+    } catch (error: any) {
+      log(`Error fetching spans: ${error.message}`, "error");
+      res.status(500).json({ error: "Failed to fetch spans" });
     }
   });
-
-  // Create a new span
-  app.post("/api/spans", async (req, res) => {
-    const { span, finish } = createSpan("span.create");
-    
-    try {
-      const spanData = req.body;
-      const newSpan = await storage.createSpan(spanData);
-      finish('success');
-      res.json(newSpan);
-    } catch (error) {
-      finish('error');
-      res.status(500).json({ 
-        error: error instanceof Error ? error.message : "Unknown error" 
-      });
-    }
-  });
-
-
-
-
-
-  // Kong Admin API endpoints
-  app.get("/admin/services", async (req, res) => {
-    const { span, finish } = createSpan("kong.admin.services");
-    
-    try {
-      const services = kongGateway.getServices();
-      finish('success');
-      res.json({
-        data: services,
-        total: services.length
-      });
-    } catch (error) {
-      finish('error');
-      res.status(500).json({ 
-        error: error instanceof Error ? error.message : "Unknown error" 
-      });
-    }
-  });
-
-  app.get("/admin/routes", async (req, res) => {
-    const { span, finish } = createSpan("kong.admin.routes");
-    
-    try {
-      const routes = kongGateway.getRoutes();
-      finish('success');
-      res.json({
-        data: routes,
-        total: routes.length
-      });
-    } catch (error) {
-      finish('error');
-      res.status(500).json({ 
-        error: error instanceof Error ? error.message : "Unknown error" 
-      });
-    }
-  });
-
-  app.get("/admin/plugins", async (req, res) => {
-    const { span, finish } = createSpan("kong.admin.plugins");
-    
-    try {
-      const plugins = kongGateway.getPlugins();
-      finish('success');
-      res.json({
-        data: plugins,
-        total: plugins.length
-      });
-    } catch (error) {
-      finish('error');
-      res.status(500).json({ 
-        error: error instanceof Error ? error.message : "Unknown error" 
-      });
-    }
-  });
-
-  app.post("/admin/services", async (req, res) => {
-    const { span, finish } = createSpan("kong.admin.create_service");
-    
-    try {
-      const newService = kongGateway.addService(req.body);
-      finish('success');
-      res.status(201).json(newService);
-    } catch (error) {
-      finish('error');
-      res.status(400).json({ 
-        error: error instanceof Error ? error.message : "Invalid service data" 
-      });
-    }
-  });
-
-  app.post("/admin/routes", async (req, res) => {
-    const { span, finish } = createSpan("kong.admin.create_route");
-    
-    try {
-      const newRoute = kongGateway.addRoute(req.body);
-      finish('success');
-      res.status(201).json(newRoute);
-    } catch (error) {
-      finish('error');
-      res.status(400).json({ 
-        error: error instanceof Error ? error.message : "Invalid route data" 
-      });
-    }
-  });
-
-  // Kong status endpoint
-  app.get("/admin/status", async (req, res) => {
-    const { span, finish } = createSpan("kong.admin.status");
-    
-    try {
-      const status = {
-        database: {
-          reachable: true
-        },
-        memory: {
-          workers_lua_vms: [
-            {
-              http_allocated_gc: "0.02 MiB",
-              pid: process.pid
-            }
-          ]
-        },
-        server: {
-          connections_accepted: 42,
-          connections_active: 1,
-          connections_handled: 42,
-          connections_reading: 0,
-          connections_waiting: 0,
-          connections_writing: 1,
-          total_requests: 42
-        },
-        configuration_hash: "a9a166c59873245db8f1a747ba9a80a7",
-        version: "3.4.2",
-        hostname: "kong-gateway",
-        lua_version: "LuaJIT 2.1.0-beta3",
-        plugins: {
-          available_on_server: kongGateway.getPlugins().map(p => p.name),
-          enabled_in_cluster: kongGateway.getPlugins().filter(p => p.enabled).map(p => p.name)
-        }
-      };
-      
-      finish('success');
-      res.json(status);
-    } catch (error) {
-      finish('error');
-      res.status(500).json({ 
-        error: error instanceof Error ? error.message : "Unknown error" 
-      });
-    }
-  });
-
-  const httpServer = createServer(app);
-  return httpServer;
 }

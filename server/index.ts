@@ -41,7 +41,8 @@ app.use((req, res, next) => {
 });
 
 (async () => {
-  const server = await registerRoutes(app);
+  // Register API routes
+  registerRoutes(app);
 
   // Kong Gateway router for /kong routes - after API routes but before Vite
   app.use('/kong', createKongRouter());
@@ -54,9 +55,11 @@ app.use((req, res, next) => {
     throw err;
   });
 
-  // importantly only setup vite in development and after
-  // setting up all the other routes so the catch-all route
-  // doesn't interfere with the other routes
+  // Create server
+  const { createServer } = await import("http");
+  const server = createServer(app);
+
+  // Setup Vite in development or serve static in production
   if (app.get("env") === "development") {
     await setupVite(app, server);
   } else {
