@@ -12,7 +12,7 @@ The application follows a modern full-stack architecture with clear separation b
 **Backend**: Express.js REST API with TypeScript
 **Database**: PostgreSQL with Drizzle ORM
 **UI Framework**: shadcn/ui components with Tailwind CSS
-**Tracing**: OpenTelemetry instrumentation throughout the stack
+**Tracing**: OpenTelemetry instrumentation with Jaeger backend integration
 
 ## Key Components
 
@@ -90,6 +90,8 @@ The application is configured for deployment on Replit with the following setup:
 - **REPL_ID**: Replit environment identifier (enables development features)
 
 ## Changelog
+- June 18, 2025: Integrated Jaeger as trace backend with OpenTelemetry SDK configuration
+- June 18, 2025: Fixed Recent Payments ordering to show newest submissions first
 - June 18, 2025: Removed Grafana Tempo integration, System Metrics, and Solace Queue Monitor components
 - June 18, 2025: Enhanced with comprehensive JMS queue simulation using Solace message broker patterns
 - June 18, 2025: Added real-time queue monitoring dashboard with message processing visualization

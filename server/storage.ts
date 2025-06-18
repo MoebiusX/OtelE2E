@@ -67,7 +67,7 @@ export class DatabaseStorage implements IStorage {
     const result = await db
       .select()
       .from(payments)
-      .orderBy(payments.createdAt)
+      .orderBy(desc(payments.createdAt))
       .limit(limit);
     return result;
   }
