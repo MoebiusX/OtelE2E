@@ -161,6 +161,7 @@ export class KongGateway {
 
       // Store Kong Gateway span for UI demonstration
       const { storage } = await import('./storage');
+      const kongDuration = Math.floor(Math.random() * 5) + 2; // 2-6ms
       await storage.createSpan({
         traceId,
         spanId: this.generateSpanId(),
@@ -168,9 +169,9 @@ export class KongGateway {
         operationName: hasIncomingTrace ? "Trace by Client" : "Trace by Kong",
         serviceName: 'kong-gateway',
         status: 'success',
-        duration: 3,
+        duration: kongDuration,
         startTime: new Date(),
-        endTime: new Date(Date.now() + 3),
+        endTime: new Date(Date.now() + kongDuration),
         tags: JSON.stringify({
           'kong.route': req.path,
           'kong.method': req.method,

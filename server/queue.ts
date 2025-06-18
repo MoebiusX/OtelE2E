@@ -84,6 +84,7 @@ export class SolaceQueueSimulator extends EventEmitter {
       queue.push(message);
 
       // Store actual queue publish operation
+      const publishDuration = Math.floor(Math.random() * 8) + 3; // 3-10ms
       await storage.createSpan({
         traceId,
         spanId,
@@ -91,9 +92,9 @@ export class SolaceQueueSimulator extends EventEmitter {
         operationName: `Solace Queue Publish`,
         serviceName: 'solace-queue',
         status: 'success',
-        duration: 5,
+        duration: publishDuration,
         startTime: new Date(),
-        endTime: new Date(Date.now() + 5),
+        endTime: new Date(Date.now() + publishDuration),
         tags: JSON.stringify({
           'queue.name': queueName,
           'queue.operation': 'publish',
@@ -149,7 +150,8 @@ export class SolaceQueueSimulator extends EventEmitter {
           'message.retry_count': message.retryCount,
         });
 
-        // Store consume span
+        // Store consume span with randomized duration
+        const processingDelay = Math.floor(Math.random() * config.processingDelay) + (config.processingDelay / 2);
         await storage.createSpan({
           traceId: message.traceId,
           spanId,
@@ -157,7 +159,7 @@ export class SolaceQueueSimulator extends EventEmitter {
           operationName: "Payment Reached Queue",
           serviceName: 'solace-queue',
           status: 'active',
-          duration: config.processingDelay,
+          duration: processingDelay,
           startTime: new Date(),
           tags: JSON.stringify({
             'queue.name': queueName,
@@ -167,7 +169,7 @@ export class SolaceQueueSimulator extends EventEmitter {
         });
 
         // Simulate processing delay
-        await new Promise(resolve => setTimeout(resolve, config.processingDelay));
+        await new Promise(resolve => setTimeout(resolve, processingDelay));
 
         // Process message
         await consumer(message);
@@ -249,7 +251,11 @@ export async function setupPaymentProcessor(queueSimulator: SolaceQueueSimulator
         'processor.name': 'payment-processor',
       });
 
-      // Store payment processing span
+      // Store payment processing span with randomized duration
+      const processingTime1 = Math.floor(Math.random() * 600) + 400; // 400-1000ms
+      const processingTime2 = Math.floor(Math.random() * 800) + 300; // 300-1100ms
+      const totalProcessingTime = processingTime1 + processingTime2;
+      
       await storage.createSpan({
         traceId: message.traceId,
         spanId,
@@ -257,7 +263,7 @@ export async function setupPaymentProcessor(queueSimulator: SolaceQueueSimulator
         operationName: 'Payment Processing Complete',
         serviceName: 'payment-processor',
         status: 'active',
-        duration: 0,
+        duration: totalProcessingTime,
         startTime: new Date(),
         tags: JSON.stringify({
           'payment.id': paymentId,
@@ -267,13 +273,13 @@ export async function setupPaymentProcessor(queueSimulator: SolaceQueueSimulator
       });
 
       // Simulate payment processing steps
-      await new Promise(resolve => setTimeout(resolve, 800));
+      await new Promise(resolve => setTimeout(resolve, processingTime1));
 
       // Update payment status
       await storage.updatePaymentStatus(paymentId, 'processing');
       
       // Simulate additional processing time
-      await new Promise(resolve => setTimeout(resolve, 700));
+      await new Promise(resolve => setTimeout(resolve, processingTime2));
 
       // Finalize payment
       await storage.updatePaymentStatus(paymentId, 'completed');
@@ -327,7 +333,8 @@ export async function setupPaymentProcessor(queueSimulator: SolaceQueueSimulator
         'notification.payment_id': message.payload.paymentId,
       });
 
-      // Store notification span
+      // Store notification span with randomized duration
+      const notificationDuration = Math.floor(Math.random() * 400) + 200; // 200-600ms
       await storage.createSpan({
         traceId: message.traceId,
         spanId,
@@ -335,9 +342,9 @@ export async function setupPaymentProcessor(queueSimulator: SolaceQueueSimulator
         operationName: 'notification.send',
         serviceName: 'notification-service',
         status: 'success',
-        duration: 300,
+        duration: notificationDuration,
         startTime: new Date(),
-        endTime: new Date(Date.now() + 300),
+        endTime: new Date(Date.now() + notificationDuration),
         tags: JSON.stringify({
           'notification.type': message.payload.type,
           'notification.channel': 'email',
@@ -345,7 +352,7 @@ export async function setupPaymentProcessor(queueSimulator: SolaceQueueSimulator
       });
 
       // Simulate notification sending
-      await new Promise(resolve => setTimeout(resolve, 300));
+      await new Promise(resolve => setTimeout(resolve, notificationDuration));
       
       finish('success');
     } catch (error) {
@@ -364,7 +371,8 @@ export async function setupPaymentProcessor(queueSimulator: SolaceQueueSimulator
         'audit.payment_id': message.payload.paymentId,
       });
 
-      // Store audit span
+      // Store audit span with randomized duration
+      const auditDuration = Math.floor(Math.random() * 200) + 100; // 100-300ms
       await storage.createSpan({
         traceId: message.traceId,
         spanId,
@@ -372,9 +380,9 @@ export async function setupPaymentProcessor(queueSimulator: SolaceQueueSimulator
         operationName: 'audit.log',
         serviceName: 'audit-service',
         status: 'success',
-        duration: 150,
+        duration: auditDuration,
         startTime: new Date(),
-        endTime: new Date(Date.now() + 150),
+        endTime: new Date(Date.now() + auditDuration),
         tags: JSON.stringify({
           'audit.type': message.payload.type,
           'audit.stored': true,
@@ -382,7 +390,7 @@ export async function setupPaymentProcessor(queueSimulator: SolaceQueueSimulator
       });
 
       // Simulate audit logging
-      await new Promise(resolve => setTimeout(resolve, 150));
+      await new Promise(resolve => setTimeout(resolve, auditDuration));
       
       finish('success');
     } catch (error) {

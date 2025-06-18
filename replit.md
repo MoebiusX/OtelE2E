@@ -90,6 +90,9 @@ The application is configured for deployment on Replit with the following setup:
 - **REPL_ID**: Replit environment identifier (enables development features)
 
 ## Changelog
+- June 18, 2025: Fixed client-side toggle functionality - now correctly controls trace header transmission
+- June 18, 2025: Updated Kong Gateway span names: "Trace by Client" and "Trace by Kong" for clarity
+- June 18, 2025: Verified complete toggle demonstration: with/without trace headers showing different Kong behaviors
 - June 18, 2025: Fixed trace visualization to show only authentic system operations (removed fake database spans)
 - June 18, 2025: Traces now accurately reflect real Kong Gateway → Solace queue → microservices flow
 - June 18, 2025: Restored complete Solace queue integration with OpenTelemetry context propagation
