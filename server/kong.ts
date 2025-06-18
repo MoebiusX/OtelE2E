@@ -141,22 +141,29 @@ export class KongGateway {
         return next();
       }
 
-      const { span, finish } = createSpan('kong.gateway.request');
-      
-      const startTime = Date.now();
-
-      // Extract or generate trace context
+      // Extract trace context first to determine behavior
       let traceId = req.headers['x-trace-id'] as string;
       let spanId = req.headers['x-span-id'] as string;
+      const traceparent = req.headers['traceparent'] as string;
       
-      const hasIncomingTrace = !!(traceId && spanId);
+      const hasIncomingTrace = !!(traceId && spanId) || !!traceparent;
+      
+      // Create different span names based on trace source
+      const spanName = hasIncomingTrace ? 'kong.client.proxy' : 'kong.gateway.inject';
+      const { span, finish } = createSpan(spanName);
+      
+      const startTime = Date.now();
       
       // If no trace headers, Kong generates them (context injection)
-      if (!traceId) {
+      if (!hasIncomingTrace) {
         traceId = this.generateTraceId();
         spanId = this.generateSpanId();
         req.headers['x-trace-id'] = traceId;
         req.headers['x-span-id'] = spanId;
+        
+        // Add OpenTelemetry traceparent header for proper context propagation
+        const traceFlags = '01';
+        req.headers['traceparent'] = `00-${traceId}-${spanId}-${traceFlags}`;
       }
 
       // Store Kong Gateway span for UI demonstration
