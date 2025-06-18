@@ -90,6 +90,7 @@ The application is configured for deployment on Replit with the following setup:
 - **REPL_ID**: Replit environment identifier (enables development features)
 
 ## Changelog
+- June 18, 2025: Fixed span mixing issue - implemented proper trace isolation with duplicate detection ensuring each payment shows consistent 11-span flow
 - June 18, 2025: Enhanced filtering to show only meaningful business operations - eliminated GET request noise from traces completely
 - June 18, 2025: Implemented three-layer GET request filtering - console logging, API responses, and OpenTelemetry collection completely clean
 - June 18, 2025: Completed authentic OpenTelemetry demonstration - removed all synthetic span creation, now shows only real SDK instrumentation
