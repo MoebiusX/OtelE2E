@@ -34,7 +34,7 @@ export function TempoDashboard() {
     queryKey: ["/api/traces"],
   });
 
-  const { data: metrics } = useQuery({
+  const { data: metrics } = useQuery<{totalRequests: number; successRate: string; avgLatency: string; activeTraces: number}>({
     queryKey: ["/api/metrics"],
   });
 
@@ -205,7 +205,7 @@ export function TempoDashboard() {
                   <Activity className="w-4 h-4 text-otel-green" />
                 </div>
                 <div className="text-2xl font-bold text-otel-green">
-                  {metrics?.totalRequests || 0}/min
+                  {(metrics?.totalRequests || 0)}/min
                 </div>
                 <div className="text-xs text-slate-600">OTLP HTTP exports</div>
               </div>
