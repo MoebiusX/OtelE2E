@@ -1,5 +1,4 @@
 import { Request, Response, NextFunction } from 'express';
-import { createSpan } from './tracing';
 import { v4 as uuidv4 } from 'uuid';
 
 interface KongRoute {

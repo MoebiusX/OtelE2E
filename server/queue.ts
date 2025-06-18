@@ -1,7 +1,6 @@
 import { EventEmitter } from 'events';
 import { v4 as uuidv4 } from 'uuid';
 import { storage } from './storage';
-import { createSpan, addSpanAttributes } from './tracing';
 
 interface QueueMessage {
   id: string;
