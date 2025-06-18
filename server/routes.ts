@@ -52,24 +52,29 @@ export async function registerRoutes(app: Express): Promise<Server> {
         spanId: spanId,
       });
 
-      // Simulate Kong Gateway span
-      const kongSpan = createSpan("kong.gateway", spanId);
+      // Kong Gateway routing span
+      const kongSpan = createSpan("kong.gateway.route", spanId);
       addSpanAttributes(kongSpan.span, {
         'gateway.service': 'payment-api',
-        'gateway.duration': 12,
+        'gateway.route': '/payments',
+        'gateway.plugins': 'rate-limiting,cors,opentelemetry',
       });
       
       await storage.createSpan({
         traceId: traceId,
         spanId: kongSpan.spanId,
         parentSpanId: spanId,
-        operationName: "kong.gateway",
+        operationName: "Kong Gateway Route",
         serviceName: "kong-gateway",
         status: "success",
         duration: 12,
         startTime: new Date(startTime.getTime() + 5),
         endTime: new Date(startTime.getTime() + 17),
-        tags: JSON.stringify({ 'gateway.service': 'payment-api' }),
+        tags: JSON.stringify({ 
+          'gateway.service': 'payment-api',
+          'gateway.route': '/payments',
+          'kong.plugins.applied': 'rate-limiting,cors,opentelemetry'
+        }),
       });
       kongSpan.finish('success');
 
@@ -93,7 +98,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         traceId: traceId,
         spanId: dbSpan.spanId,
         parentSpanId: spanId,
-        operationName: "database.write",
+        operationName: "Save Payment to Database",
         serviceName: "database",
         status: "success",
         duration: 78,
