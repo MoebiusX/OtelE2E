@@ -20,11 +20,11 @@ export default function Dashboard() {
   const getStatusColor = (status: string) => {
     switch (status) {
       case 'completed':
-        return 'bg-otel-green';
+        return 'bg-slate-400';
       case 'pending':
-        return 'bg-otel-amber';
+        return 'bg-slate-300';
       case 'failed':
-        return 'bg-red-500';
+        return 'bg-slate-500';
       default:
         return 'bg-slate-400';
     }

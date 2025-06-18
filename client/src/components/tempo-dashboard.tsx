@@ -40,22 +40,22 @@ export function TempoDashboard() {
 
   const tempoFeatures = [
     {
-      icon: <Zap className="w-5 h-5 text-yellow-500" />,
+      icon: <Zap className="w-5 h-5 text-slate-600" />,
       title: "High-Scale Ingestion",
       description: "OTLP HTTP export with efficient storage"
     },
     {
-      icon: <Database className="w-5 h-5 text-blue-500" />,
+      icon: <Database className="w-5 h-5 text-slate-600" />,
       title: "Cost-Effective Storage",
       description: "Object storage backend (S3, GCS, Azure)"
     },
     {
-      icon: <BarChart3 className="w-5 h-5 text-green-500" />,
+      icon: <BarChart3 className="w-5 h-5 text-slate-600" />,
       title: "Grafana Integration",
       description: "Native dashboards and alerting"
     },
     {
-      icon: <Activity className="w-5 h-5 text-purple-500" />,
+      icon: <Activity className="w-5 h-5 text-slate-600" />,
       title: "TraceQL Queries",
       description: "Powerful trace search language"
     }
