@@ -99,12 +99,24 @@ export function TraceVisualization() {
     }
   };
 
-  // Sort spans by hierarchy (root first, then children)
-  const sortedSpans = spans ? [...spans].sort((a, b) => {
-    if (!a.parentSpanId && b.parentSpanId) return -1;
-    if (a.parentSpanId && !b.parentSpanId) return 1;
-    return new Date(a.startTime).getTime() - new Date(b.startTime).getTime();
-  }) : [];
+  // Group traces by traceId and display them as individual traces
+  const groupedTraces = traces?.reduce((acc: any, trace: any) => {
+    if (!acc[trace.traceId]) {
+      acc[trace.traceId] = {
+        traceId: trace.traceId,
+        spans: [],
+        status: trace.status,
+        startTime: trace.startTime
+      };
+    }
+    acc[trace.traceId].spans.push(trace);
+    return acc;
+  }, {}) || {};
+
+  const traceList = Object.values(groupedTraces);
+  const sortedSpans = activeTrace?.traceId ? 
+    traces?.filter((t: any) => t.traceId === activeTrace.traceId) || [] : 
+    [];
 
   return (
     <Card className="w-full">
