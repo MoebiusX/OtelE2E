@@ -90,7 +90,11 @@ The application is configured for deployment on Replit with the following setup:
 - **REPL_ID**: Replit environment identifier (enables development features)
 
 ## Changelog
-- June 18, 2025. Initial setup
+- June 18, 2025: Enhanced with comprehensive JMS queue simulation using Solace message broker patterns
+- June 18, 2025: Added real-time queue monitoring dashboard with message processing visualization
+- June 18, 2025: Implemented multi-service trace propagation through payment processing pipeline
+- June 18, 2025: Added functional Jaeger UI integration with demo mode for production simulation
+- June 18, 2025: Complete OpenTelemetry context propagation demonstration operational
 
 ## User Preferences
 

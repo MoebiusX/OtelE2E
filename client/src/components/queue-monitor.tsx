@@ -5,7 +5,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
 import { 
   RefreshCw, 
-  Queue, 
+  Layers, 
   Activity, 
   CheckCircle, 
   Clock, 
@@ -74,7 +74,7 @@ export function QueueMonitor() {
       <CardHeader>
         <div className="flex items-center justify-between">
           <CardTitle className="text-lg font-semibold text-slate-800 flex items-center">
-            <Queue className="w-5 h-5 text-otel-blue mr-2" />
+            <Layers className="w-5 h-5 text-otel-blue mr-2" />
             Solace Queue Monitor
           </CardTitle>
           <div className="flex items-center space-x-2">
@@ -200,7 +200,7 @@ export function QueueMonitor() {
           </>
         ) : (
           <div className="text-center py-8 text-slate-500">
-            <Queue className="w-8 h-8 mx-auto mb-2 opacity-50" />
+            <Layers className="w-8 h-8 mx-auto mb-2 opacity-50" />
             <p>No queue information available</p>
             <p className="text-sm">Queue service may be starting up</p>
           </div>

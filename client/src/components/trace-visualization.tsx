@@ -108,6 +108,21 @@ export function TraceVisualization() {
               variant="default"
               size="sm"
               className="bg-otel-blue hover:bg-blue-700 text-white"
+              onClick={() => {
+                // Open Jaeger UI in new window - in demo mode shows configuration
+                fetch('/api/jaeger')
+                  .then(res => res.json())
+                  .then(config => {
+                    if (config.status === 'demo_mode') {
+                      alert(`Jaeger UI Demo Mode\n\nIn production, this would open: ${config.ui_url}\n\nAvailable services:\n${config.services.join('\n')}\n\nTrace data is being collected and would be visible in the full Jaeger interface.`);
+                    } else {
+                      window.open(config.ui_url, '_blank');
+                    }
+                  })
+                  .catch(() => {
+                    alert('Jaeger UI connection failed. In production, ensure Jaeger is running and accessible.');
+                  });
+              }}
             >
               <ExternalLink className="w-4 h-4 mr-1" />
               Jaeger UI
