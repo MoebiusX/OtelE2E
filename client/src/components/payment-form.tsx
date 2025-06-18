@@ -39,13 +39,17 @@ export function PaymentForm() {
     mutationFn: async (data: PaymentFormData) => {
       if (!useEmptyTrace) {
         // Create client-side span when including trace headers
+        const now = new Date();
         const clientSpan = {
           traceId: currentTraceId,
           spanId: generateSpanId(),
           parentSpanId: currentSpanId,
           operationName: "Payment Form Submission",
           serviceName: "payment-frontend",
-          duration: 0,
+          status: "completed",
+          duration: 1,
+          startTime: now.toISOString(),
+          endTime: new Date(now.getTime() + 1).toISOString(),
           tags: JSON.stringify({
             "component": "payment-form",
             "user.action": "submit-payment",
