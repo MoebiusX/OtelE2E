@@ -10,7 +10,7 @@ The application follows a modern full-stack architecture with clear separation b
 
 **Frontend**: React-based single-page application with TypeScript
 **Backend**: Express.js REST API with TypeScript
-**Database**: PostgreSQL with Drizzle ORM
+**Storage**: In-memory demonstration data (no database required)
 **UI Framework**: shadcn/ui components with Tailwind CSS
 **Tracing**: OpenTelemetry instrumentation with Jaeger backend integration
 
