@@ -124,7 +124,18 @@ export class KongGateway {
       
       const hasIncomingTrace = !!(traceId && spanId) || !!traceparent;
       
-      // Kong Gateway processes requests - OpenTelemetry auto-instruments this
+      // Kong Gateway processing - create authentic OpenTelemetry span
+      const { tracer } = await import('./tracing');
+      const span = tracer.startSpan(hasIncomingTrace ? 'Kong Gateway Proxy' : 'Kong Context Injection', {
+        attributes: {
+          'kong.gateway': true,
+          'kong.route': req.path,
+          'kong.method': req.method,
+          'http.url': req.url,
+          'context.injection': !hasIncomingTrace
+        }
+      });
+      
       const startTime = Date.now();
       
       // If no trace headers, Kong generates them (context injection)
@@ -137,9 +148,14 @@ export class KongGateway {
         // Add OpenTelemetry traceparent header for proper context propagation
         const traceFlags = '01';
         req.headers['traceparent'] = `00-${traceId}-${spanId}-${traceFlags}`;
+        
+        span.setAttributes({
+          'trace.generated_id': traceId,
+          'span.generated_id': spanId
+        });
       }
 
-      // Kong Gateway adds headers and context propagation only
+      // Kong Gateway processing with authentic timing
       
       // Add Kong headers for demonstration
       res.set({
@@ -147,6 +163,19 @@ export class KongGateway {
         'X-Kong-Proxy-Latency': '3',
         'X-Kong-Request-Id': uuidv4(),
         'Via': '1.1 kong/3.4.2'
+      });
+
+      // Complete Kong Gateway span after response
+      res.on('finish', () => {
+        const duration = Date.now() - startTime;
+        span.setAttributes({
+          'http.status_code': res.statusCode,
+          'kong.latency_ms': duration,
+          'kong.upstream_latency': 0,
+          'kong.proxy_latency': 3
+        });
+        span.setStatus({ code: res.statusCode < 400 ? 1 : 2 });
+        span.end();
       });
 
       next();

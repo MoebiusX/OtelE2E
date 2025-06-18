@@ -55,7 +55,18 @@ export class SolaceQueueSimulator extends EventEmitter {
   }
 
   async publish(queueName: string, payload: any, traceId: string, parentSpanId: string): Promise<string> {
-    // Real queue operation - OpenTelemetry auto-instruments this
+    // Solace queue publish - create authentic OpenTelemetry span
+    const { tracer } = await import('./tracing');
+    const span = tracer.startSpan('Solace Queue Publish', {
+      attributes: {
+        'messaging.system': 'solace',
+        'messaging.destination': queueName,
+        'messaging.operation': 'publish',
+        'messaging.message_id': uuidv4(),
+        'trace.correlation_id': traceId
+      }
+    });
+
     const messageId = uuidv4();
     const message: QueueMessage = {
       id: messageId,
@@ -73,6 +84,14 @@ export class SolaceQueueSimulator extends EventEmitter {
     }
 
     queue.push(message);
+    
+    // Complete publish span
+    span.setAttributes({
+      'messaging.message_payload_size': JSON.stringify(payload).length,
+      'solace.queue_depth': queue.length
+    });
+    span.setStatus({ code: 1 });
+    span.end();
 
     // Trigger processing if consumer exists
     const consumer = this.consumers.get(queueName);
@@ -109,16 +128,34 @@ export class SolaceQueueSimulator extends EventEmitter {
     while (queue.length > 0) {
       const message = queue.shift()!;
       
+      // Create authentic Solace consumer span
+      const { tracer } = await import('./tracing');
+      const span = tracer.startSpan('Solace Queue Consume', {
+        attributes: {
+          'messaging.system': 'solace',
+          'messaging.destination': queueName,
+          'messaging.operation': 'receive',
+          'messaging.message_id': message.id,
+          'messaging.retry_count': message.retryCount,
+          'trace.correlation_id': message.traceId
+        }
+      });
+      
       try {
-        // Real message processing - OpenTelemetry auto-instruments this
+        // Real message processing with tracing
         await consumer(message);
+        span.setStatus({ code: 1 });
       } catch (error) {
         console.error(`Message processing failed for ${queueName}:`, error);
+        span.setStatus({ code: 2, message: error.message });
         
         if (message.retryCount < config.maxRetries) {
           message.retryCount++;
           queue.push(message);
+          span.setAttributes({ 'messaging.retry_scheduled': true });
         }
+      } finally {
+        span.end();
       }
       
       // Delay between messages
