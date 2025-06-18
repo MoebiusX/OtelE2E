@@ -202,6 +202,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Create a new span
+  app.post("/api/spans", async (req, res) => {
+    const { span, finish } = createSpan("span.create");
+    
+    try {
+      const spanData = req.body;
+      const newSpan = await storage.createSpan(spanData);
+      finish('success');
+      res.json(newSpan);
+    } catch (error) {
+      finish('error');
+      res.status(500).json({ 
+        error: error instanceof Error ? error.message : "Unknown error" 
+      });
+    }
+  });
+
 
 
 

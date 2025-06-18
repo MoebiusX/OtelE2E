@@ -37,6 +37,27 @@ export function PaymentForm() {
 
   const paymentMutation = useMutation({
     mutationFn: async (data: PaymentFormData) => {
+      if (!useEmptyTrace) {
+        // Create client-side span when including trace headers
+        const clientSpan = {
+          traceId: currentTraceId,
+          spanId: generateSpanId(),
+          parentSpanId: currentSpanId,
+          operationName: "Payment Form Submission",
+          serviceName: "payment-frontend",
+          duration: 0,
+          tags: JSON.stringify({
+            "component": "payment-form",
+            "user.action": "submit-payment",
+            "payment.amount": data.amount,
+            "payment.currency": data.currency
+          })
+        };
+
+        // Store client span in database
+        await apiRequest("POST", "/api/spans", clientSpan);
+      }
+
       const headers = useEmptyTrace 
         ? {} // No trace headers - let Kong Gateway inject context
         : createTraceHeaders(currentTraceId, currentSpanId);
