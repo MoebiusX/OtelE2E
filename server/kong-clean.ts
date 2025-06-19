@@ -126,13 +126,15 @@ export class KongGateway {
       
       // Kong Gateway processing - create authentic OpenTelemetry span
       const { tracer } = await import('./tracing');
-      const span = tracer.startSpan(hasIncomingTrace ? 'Kong Gateway Proxy' : 'Kong Context Injection', {
+      const span = tracer.startSpan(hasIncomingTrace ? 'Trace by Client' : 'Trace by Kong', {
         attributes: {
+          'service.name': 'kong-gateway',
           'kong.gateway': true,
           'kong.route': req.path,
           'kong.method': req.method,
           'http.url': req.url,
-          'context.injection': !hasIncomingTrace
+          'context.injection': !hasIncomingTrace,
+          'trace.mode': hasIncomingTrace ? 'client-provided' : 'kong-generated'
         }
       });
       

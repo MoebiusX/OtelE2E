@@ -9,7 +9,7 @@ import { useState } from "react";
 
 function TraceCard({ trace }: { trace: any }) {
   const [expanded, setExpanded] = useState(false);
-  const { data: spans } = useQuery({
+  const { data: spans } = useQuery<any[]>({
     queryKey: [`/api/traces/${trace.traceId}/spans`],
     enabled: expanded
   });
@@ -59,11 +59,11 @@ function TraceCard({ trace }: { trace: any }) {
         </div>
       </div>
       
-      {expanded && spans && (
+      {expanded && spans && Array.isArray(spans) && spans.length > 0 && (
         <div className="mt-3 space-y-2 border-t pt-3">
           <h4 className="text-sm font-medium text-slate-700">Payment Processing Flow:</h4>
-          {spans.slice(0, 5).map((span: any) => (
-            <div key={span.id} className="flex items-center justify-between text-sm">
+          {spans.map((span: any, index: number) => (
+            <div key={span.id || index} className="flex items-center justify-between text-sm">
               <div className="flex items-center space-x-2">
                 {getServiceIcon(span.serviceName)}
                 <span className="font-medium">{span.operationName}</span>
@@ -76,11 +76,6 @@ function TraceCard({ trace }: { trace: any }) {
               </div>
             </div>
           ))}
-          {spans.length > 5 && (
-            <div className="text-xs text-slate-500 pl-6">
-              ... and {spans.length - 5} more operations
-            </div>
-          )}
         </div>
       )}
     </div>
