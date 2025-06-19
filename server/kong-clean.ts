@@ -129,16 +129,17 @@ export class KongGateway {
       
       // Kong Gateway only creates span when injecting context (no incoming trace)
       if (!hasIncomingTrace) {
-        // Context injection scenario - Kong creates span and generates trace context
+        // Context injection scenario - Kong creates ROOT span and generates trace context
         const { tracer } = await import('./tracing');
-        span = tracer.startSpan('Trace by Kong', {
+        span = tracer.startSpan('Kong Gateway Context Injection', {
+          kind: 1, // SERVER span kind - this is the entry point
           attributes: {
             'service.name': 'kong-gateway',
             'kong.gateway': true,
-            'kong.route': req.path,
-            'kong.method': req.method,
+            'kong.context_injection': true,
+            'http.method': req.method,
+            'http.route': req.path,
             'http.url': req.url,
-            'context.injection': true,
             'trace.mode': 'kong-generated'
           }
         });

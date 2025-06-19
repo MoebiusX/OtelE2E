@@ -77,14 +77,28 @@ export function registerRoutes(app: Express) {
     try {
       const { traces } = await import('./otel');
       
-      // Filter out only GET requests - preserve all business operations
+      // Filter out GET requests and redundant HTTP POST spans when Kong does context injection
       const filteredTraces = traces.filter(span => {
         const httpMethod = span.attributes?.['http.method'];
         const spanName = span.name || '';
+        const isKongContextInjection = span.attributes?.['kong.context_injection'];
         
-        // Skip only GET requests - they're frontend polling
+        // Skip GET requests - they're frontend polling
         if (httpMethod === 'GET' || spanName.includes('GET ')) {
           return false;
+        }
+        
+        // If this trace has Kong context injection, skip the redundant HTTP POST span
+        // Kong becomes the entry point, so we don't need both Kong and POST spans
+        if (httpMethod === 'POST' && spanName.includes('POST')) {
+          // Check if this trace has a Kong context injection span
+          const hasKongInjection = traces.some(otherSpan => 
+            otherSpan.traceId === span.traceId && 
+            otherSpan.attributes?.['kong.context_injection']
+          );
+          if (hasKongInjection) {
+            return false; // Skip POST span when Kong does context injection
+          }
         }
         
         return true;
@@ -138,7 +152,7 @@ export function registerRoutes(app: Express) {
       const { traceId } = req.params;
       const { traces } = await import('./otel');
       
-      // Filter spans for this trace - keep all business operations, remove only GET requests
+      // Filter spans for this trace - remove GET requests and redundant POST spans when Kong does context injection
       const spans = traces
         .filter(span => {
           if (span.traceId !== traceId) return false;
@@ -146,9 +160,20 @@ export function registerRoutes(app: Express) {
           const httpMethod = span.attributes?.['http.method'];
           const spanName = span.name || '';
           
-          // Skip only GET requests
+          // Skip GET requests
           if (httpMethod === 'GET' || spanName.includes('GET ')) {
             return false;
+          }
+          
+          // If this trace has Kong context injection, skip the redundant HTTP POST span
+          if (httpMethod === 'POST' && spanName.includes('POST')) {
+            const hasKongInjection = traces.some(otherSpan => 
+              otherSpan.traceId === traceId && 
+              otherSpan.attributes?.['kong.context_injection']
+            );
+            if (hasKongInjection) {
+              return false; // Skip POST span when Kong does context injection
+            }
           }
           
           return true;
