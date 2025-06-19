@@ -17,12 +17,22 @@ export function clearTraces() {
 class TraceCollector implements SpanExporter {
   export(spans: ReadableSpan[], resultCallback: (result: ExportResult) => void): void {
     spans.forEach(span => {
-      // Show all spans - no filtering (authentic OpenTelemetry data)
+      // Show only business-critical spans (authentic OpenTelemetry data)
       const httpMethod = span.attributes?.['http.method'];
       const spanName = span.name || '';
+      const component = span.attributes?.['component'];
       
-      // Only skip GET requests to /api/traces and /api/payments to reduce noise
-      if (httpMethod === 'GET' && (spanName.includes('/api/traces') || spanName.includes('/api/payments'))) {
+      // Skip GET requests - they're UI polling noise
+      if (httpMethod === 'GET') {
+        return;
+      }
+      
+      // Only show business operations: POST/DELETE requests, Kong Gateway, JMS operations
+      const isBusinessSpan = httpMethod === 'POST' || httpMethod === 'DELETE' || 
+                            component === 'kong-gateway' || component === 'solace-jms' ||
+                            spanName.includes('kong-gateway') || spanName.includes('jms-message');
+      
+      if (!isBusinessSpan) {
         return;
       }
       

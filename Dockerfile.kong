@@ -1,0 +1,26 @@
+# Kong Gateway Container
+FROM node:20-alpine
+
+WORKDIR /app
+
+# Install dependencies
+COPY package*.json ./
+RUN npm ci --only=production
+
+# Copy Kong Gateway implementation
+COPY server/infrastructure/kong-gateway.ts ./
+COPY server/infrastructure/ ./infrastructure/
+COPY shared/ ./shared/
+
+# Install tsx for TypeScript execution
+RUN npm install -g tsx
+
+# Expose Kong ports
+EXPOSE 8000 8001
+
+# Health check endpoint
+HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
+  CMD curl -f http://localhost:8000/health || exit 1
+
+# Start Kong Gateway
+CMD ["tsx", "kong-gateway.ts"]

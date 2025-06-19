@@ -143,11 +143,18 @@ export class MessageBroker extends EventEmitter {
     const stats: Record<string, any> = {};
     this.queues.forEach((messages, queueName) => {
       stats[queueName] = {
-        messages: messages.length,
+        queueLength: messages.length,
         consumers: this.consumers.get(queueName)?.length || 0
       };
     });
     return stats;
+  }
+
+  async clearAllData() {
+    this.queues.forEach((messages, queueName) => {
+      messages.length = 0;
+    });
+    console.log('[Message Broker] All queues cleared');
   }
 }
 
