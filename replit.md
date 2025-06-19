@@ -12,11 +12,14 @@ This is a full-stack web application demonstrating authentic OpenTelemetry instr
 The application follows clean architecture principles with clear separation of concerns:
 
 **Frontend**: React-based SPA with TypeScript and shadcn/ui components
-**API Gateway**: Kong Gateway (separate process) for context injection and routing
 **Backend**: Express.js REST API with clean layered architecture
-**Messaging**: Enterprise message broker with authentic AMQP-style processing
 **Storage**: In-memory data store with full CRUD operations
-**Tracing**: Pure OpenTelemetry instrumentation with authentic span creation
+**Tracing**: Pure OpenTelemetry auto-instrumentation for HTTP requests
+
+### Optional External Services (Docker)
+**Kong Gateway**: Real API Gateway for proxy spans (requires Docker setup)
+**RabbitMQ**: Real AMQP message broker for queue spans (requires Docker setup)
+**Jaeger**: Real trace collection and visualization (optional Docker setup)
 
 ## Clean Architecture Implementation
 
@@ -27,73 +30,94 @@ server/
 │   └── routes.ts          # Clean HTTP endpoint definitions
 ├── core/                  # Business Logic Layer
 │   └── payment-service.ts # Payment processing service
-├── storage.ts            # Data persistence layer
-└── otel.ts               # OpenTelemetry configuration
+├── services/               # External Service Clients
+│   ├── kong-client.ts     # Kong Gateway proxy integration
+│   └── rabbitmq-client.ts # RabbitMQ AMQP messaging
+├── storage.ts             # Data persistence layer
+└── otel.ts                # OpenTelemetry configuration
 ```
 
 ### Key Components
 
 **API Layer**: Clean REST endpoints with proper error handling and validation
 **Business Logic**: Payment processing with authentic trace generation
+**External Services**: Real Kong Gateway and RabbitMQ clients (optional Docker setup)
 **Storage**: In-memory data store with full CRUD operations
 **OpenTelemetry**: Authentic auto-instrumentation for HTTP requests only
 
-### Data Flow (Authentic OpenTelemetry Only)
-1. **Frontend** → **Backend API** → **Payment Processing**
-2. **OpenTelemetry** captures only genuine HTTP spans (POST/DELETE requests)
-3. No simulation, no fake spans, no synthetic instrumentation
+## Data Flow Options
 
-### Removed All Simulation Code
-- All fake Kong Gateway implementations removed
-- All simulated message broker code deleted
-- All synthetic span generation eliminated
-- Infrastructure directory completely removed
-- Only authentic OpenTelemetry HTTP auto-instrumentation remains
-
-## Data Flow
-
+### Core Flow (Always Available)
 1. **Payment Submission**: User submits payment form in React frontend
-2. **Trace Generation**: Frontend generates trace ID and span ID for request correlation
-3. **HTTP Request**: Payment data sent to backend with tracing headers
-4. **Span Creation**: Backend creates root span and child spans for operations
-5. **Database Operations**: Payment, trace, and span records stored in PostgreSQL
-6. **Response**: Payment confirmation returned with trace information
-7. **UI Updates**: Frontend refreshes payment list and trace visualization
-8. **Real-time Monitoring**: Automatic polling for updated traces and system metrics
+2. **HTTP Request**: Payment data sent to Express backend
+3. **OpenTelemetry**: Captures authentic HTTP spans automatically
+4. **Storage**: Payment stored in in-memory data store
+5. **Response**: Payment confirmation with trace information returned
+6. **UI Updates**: Frontend refreshes payment list and trace visualization
 
-## External Dependencies
+### Extended Flow (With Docker Services)
+1. **Kong Gateway**: Proxy requests through real Kong (authentic Kong spans)
+2. **Express API**: Process payments with trace context propagation
+3. **RabbitMQ**: Publish payment messages to real AMQP queue (authentic AMQP spans)
+4. **Consumer**: Listen for messages and log to console (authentic consumer spans)
+5. **Jaeger**: Collect and visualize all traces in real Jaeger UI
 
-### Runtime Dependencies
+## Local Docker Environment
+
+### Quick Setup
+```bash
+# Start all external services
+docker-compose -f docker-compose.external.yml up -d
+
+# Verify services are running
+docker-compose -f docker-compose.external.yml ps
+```
+
+### Services Available
+- **Kong Gateway**: http://localhost:8000 (proxy), http://localhost:8001 (admin)
+- **RabbitMQ**: amqp://localhost:5672, http://localhost:15672 (management)
+- **Jaeger**: http://localhost:16686 (traces UI)
+
+### Environment Variables for External Services
+```bash
+KONG_GATEWAY_URL=http://localhost:8000
+KONG_ADMIN_URL=http://localhost:8001
+RABBITMQ_URL=amqp://admin:admin123@localhost:5672
+JAEGER_ENDPOINT=http://localhost:4318/v1/traces
+```
+
+## Runtime Dependencies
+
+### Core Application
 - **@opentelemetry/sdk-node**: Core OpenTelemetry SDK for Node.js
-- **@opentelemetry/auto-instrumentations-node**: Automatic instrumentation
-- **@neondatabase/serverless**: PostgreSQL driver for serverless environments
-- **drizzle-orm**: TypeScript ORM for database operations
+- **@opentelemetry/auto-instrumentations-node**: Automatic HTTP instrumentation
 - **@tanstack/react-query**: Data fetching and caching
 - **@radix-ui/react-***: Headless UI components
 - **react-hook-form**: Form state management with validation
 
-### Development Dependencies
+### External Services Integration
+- **http-proxy-middleware**: Kong Gateway proxy functionality
+- **amqplib**: RabbitMQ AMQP messaging client
+- **@types/amqplib**: TypeScript definitions for AMQP
+
+### Development Tools
 - **Vite**: Frontend build tool and dev server
 - **TypeScript**: Type checking and compilation
 - **Tailwind CSS**: Utility-first CSS framework
-- **drizzle-kit**: Database migration and schema management
 - **tsx**: TypeScript execution for development
 
 ## Deployment Strategy
 
-The application is configured for deployment on Replit with the following setup:
-
+### Replit Deployment
 - **Development**: `npm run dev` starts both frontend and backend concurrently
-- **Production Build**: `npm run build` compiles frontend and bundles backend
-- **Production Server**: `npm run start` runs the compiled application
-- **Database**: PostgreSQL module enabled in Replit configuration
-- **Auto-scaling**: Configured for automatic scaling based on demand
-- **Port Configuration**: Backend serves on port 5000, mapped to external port 80
+- **Production**: Backend serves on port 5000 with static frontend assets
+- **Storage**: In-memory data store (resets on restart)
+- **Tracing**: Authentic OpenTelemetry HTTP auto-instrumentation only
 
-### Environment Requirements
-- **NODE_ENV**: Set to "development" or "production"
-- **DATABASE_URL**: PostgreSQL connection string (required for database operations)
-- **REPL_ID**: Replit environment identifier (enables development features)
+### Local Development with Docker
+- **External Services**: Use `docker-compose.external.yml` for Kong, RabbitMQ, Jaeger
+- **Full Tracing**: Authentic spans from real Kong Gateway and AMQP message broker
+- **Persistence**: RabbitMQ and Kong data persisted in Docker volumes
 
 ## Changelog
 - June 19, 2025: **EXTERNAL SERVICES INTEGRATION** - Added Docker Compose setup for real Kong Gateway and RabbitMQ with authentic OpenTelemetry spans
