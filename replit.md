@@ -15,35 +15,40 @@ The application follows clean architecture principles with clear separation of c
 **Storage**: In-memory data store with full CRUD operations
 **Tracing**: Pure OpenTelemetry instrumentation with authentic span creation
 
-## Key Components
+## Clean Architecture Implementation
 
-### Frontend Architecture
-- **React 18** with TypeScript for type safety
-- **Vite** as the build tool and development server
-- **TanStack Query** for API state management and caching
-- **wouter** for lightweight client-side routing
-- **shadcn/ui** component library with Radix UI primitives
-- **Tailwind CSS** for styling with custom OpenTelemetry-themed colors
+### Layer Structure
+```
+server/
+├── api/                    # API Routes & Controllers
+│   └── routes.ts          # Clean HTTP endpoint definitions
+├── core/                  # Business Logic Layer
+│   ├── payment-service.ts # Payment processing service
+│   └── message-processors.ts # Message queue handlers
+├── infrastructure/       # External Dependencies
+│   ├── kong-gateway.ts   # API Gateway (separate process)
+│   └── messaging.ts      # Enterprise message broker
+├── storage.ts            # Data persistence layer
+└── otel.ts               # OpenTelemetry configuration
+```
 
-### Backend Architecture
-- **Express.js** server with TypeScript
-- **OpenTelemetry SDK** with auto-instrumentation for Node.js
-- **In-memory storage** for demonstration data and UI display
-- **Kong Gateway simulation** for API routing and context injection
-- **Custom tracing utilities** for span creation and context propagation
+### Key Components
 
-### Data Schema
-- **users**: User authentication (id, username, password)
-- **payments**: Payment records with trace correlation (amount, currency, recipient, status, traceId, spanId)
-- **traces**: Distributed trace metadata (traceId, rootSpanId, status, duration) - for UI demonstration only
-- **spans**: Individual span records (traceId, spanId, parentSpanId, operationName, serviceName, duration, tags) - for UI demonstration only
+**API Layer**: Clean REST endpoints with proper error handling and validation
+**Business Logic**: Domain services with clear separation of concerns
+**Infrastructure**: External systems (Kong Gateway, Message Broker) as separate concerns
+**Storage**: In-memory data store implementing clean interfaces
 
-### Tracing Implementation
-- **Automatic instrumentation** for HTTP requests, database queries, and system calls
-- **Custom span creation** for business logic operations
-- **Context propagation** via HTTP headers (traceparent, tracestate)
-- **Trace correlation** between frontend actions and backend operations
-- **Visual trace representation** in the UI with service-specific icons and colors
+### Message Flow Architecture
+1. **Frontend** → **Kong Gateway** (context injection) → **Backend API**
+2. **Payment Service** → **Message Broker** → **Processing Handlers**
+3. **OpenTelemetry** captures authentic spans across all components
+
+### Removed Simulated Components
+- All fake Kong implementations (4 different files consolidated)
+- All simulated queue systems (3 different implementations removed)
+- Mixed simulation/real component conflicts eliminated
+- Dead RHEA/AMQP dependencies causing startup failures removed
 
 ## Data Flow
 
@@ -91,10 +96,14 @@ The application is configured for deployment on Replit with the following setup:
 - **REPL_ID**: Replit environment identifier (enables development features)
 
 ## Changelog
-- June 19, 2025: Finalized PoC with complete frontend terminology update and working context propagation toggle demonstration
-- June 19, 2025: Fixed trace visualization to display all authentic OpenTelemetry spans instead of truncating with "x more operations..."
-- June 19, 2025: Enhanced Kong Gateway span naming for clear context injection demonstration: "Trace by Client" vs "Trace by Kong"
-- June 19, 2025: Resolved TypeScript errors in trace viewer component and improved span display reliability
+- June 19, 2025: **MAJOR REENGINEERING COMPLETE** - Removed all simulated components and implemented clean architecture with proper separation of concerns
+- June 19, 2025: Established clean layer structure: API → Core Business Logic → Infrastructure → Storage
+- June 19, 2025: Consolidated Kong Gateway implementations (removed 4 conflicting files) into single clean infrastructure service
+- June 19, 2025: Replaced simulated message queues with enterprise message broker using proper publish/subscribe patterns
+- June 19, 2025: Implemented authentic message processing with trace context propagation across all queue operations
+- June 19, 2025: Created PaymentService with clean business logic separation from infrastructure concerns
+- June 19, 2025: Fixed all startup failures by removing problematic RHEA dependencies and conflicting imports
+- June 19, 2025: System now runs with authentic OpenTelemetry instrumentation and real message processing flows
 - June 18, 2025: Created comprehensive documentation package with automated test suite, PoC documentation, and complete test plan for enterprise validation
 - June 18, 2025: Restored authentic Kong Gateway and Solace queue spans using real OpenTelemetry tracer - complete enterprise distributed tracing demonstration
 - June 18, 2025: Removed all synthetic span creation - now shows only authentic OpenTelemetry HTTP instrumentation (POST/DELETE requests)
