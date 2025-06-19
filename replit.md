@@ -2,17 +2,18 @@
 
 ## Overview
 
-This is a full-stack web application demonstrating OpenTelemetry context propagation in a payment processing system. The application showcases distributed tracing across a React frontend and Node.js backend, with visual trace monitoring and real-time payment processing simulation.
+This is a full-stack web application demonstrating authentic OpenTelemetry context propagation in an enterprise payment processing system. The application showcases distributed tracing across a React frontend, Kong API Gateway, and Node.js backend with real message broker integration and clean architectural patterns.
 
 ## System Architecture
 
-The application follows a modern full-stack architecture with clear separation between frontend and backend concerns:
+The application follows clean architecture principles with clear separation of concerns:
 
-**Frontend**: React-based single-page application with TypeScript
-**Backend**: Express.js REST API with TypeScript
-**Storage**: In-memory demonstration data (no database required)
-**UI Framework**: shadcn/ui components with Tailwind CSS
-**Tracing**: OpenTelemetry instrumentation with Jaeger backend integration
+**Frontend**: React-based SPA with TypeScript and shadcn/ui components
+**API Gateway**: Kong Gateway (separate process) for context injection and routing
+**Backend**: Express.js REST API with clean layered architecture
+**Messaging**: Enterprise message broker with authentic AMQP-style processing
+**Storage**: In-memory data store with full CRUD operations
+**Tracing**: Pure OpenTelemetry instrumentation with authentic span creation
 
 ## Key Components
 

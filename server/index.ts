@@ -2,9 +2,8 @@
 import "./otel";
 
 import express, { type Request, Response, NextFunction } from "express";
-import { registerRoutes } from "./routes";
+import { registerRoutes } from "./api/routes";
 import { setupVite, serveStatic, log } from "./vite";
-import { jmsClient } from "./jms-client";
 
 const app = express();
 
@@ -47,6 +46,9 @@ app.use((req, res, next) => {
 });
 
 (async () => {
+  // Initialize message processors
+  await import('./core/message-processors');
+  
   // Register API routes
   registerRoutes(app);
 
