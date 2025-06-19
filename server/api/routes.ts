@@ -53,11 +53,43 @@ function getServiceName(span: any): string {
 export function registerRoutes(app: Express) {
   console.log("Registering API routes...");
 
-  // Payment submission endpoint
+  // Kong proxy route for authentic Kong Gateway spans
+  app.post("/api/kong/payments", async (req: Request, res: Response) => {
+    try {
+      console.log('[KONG] Proxying payment through Kong Gateway...');
+      
+      // Forward request through Kong Gateway to generate authentic Kong spans
+      const response = await fetch('http://localhost:8000/api/payments', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          // Forward trace headers for context propagation
+          'x-trace-id': req.headers['x-trace-id'] as string || '',
+          'x-span-id': req.headers['x-span-id'] as string || '',
+          'traceparent': req.headers['traceparent'] as string || '',
+        },
+        body: JSON.stringify(req.body)
+      });
+      
+      if (response.ok) {
+        const result = await response.json();
+        console.log('[KONG] Payment processed through Kong Gateway');
+        res.json(result);
+      } else {
+        console.log('[KONG] Kong Gateway returned error:', response.status);
+        res.status(response.status).json({ error: 'Kong Gateway processing failed' });
+      }
+    } catch (error: any) {
+      console.log('[KONG] Kong Gateway connection failed:', error.message);
+      // Fallback to direct processing
+      const result = await paymentService.processPayment(req.body);
+      res.json(result);
+    }
+  });
+
   // Test Kong Gateway configuration endpoint
   app.get("/api/kong-test", async (req: Request, res: Response) => {
     try {
-      // Test Kong Gateway connectivity and configuration
       const statusResponse = await fetch('http://localhost:8001/status');
       const servicesResponse = await fetch('http://localhost:8001/services');
       

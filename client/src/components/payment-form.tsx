@@ -22,6 +22,7 @@ export function PaymentForm() {
   const [currentTraceId, setCurrentTraceId] = useState(generateTraceId());
   const [currentSpanId, setCurrentSpanId] = useState(generateSpanId());
   const [useEmptyTrace, setUseEmptyTrace] = useState(false);
+  const [useKongGateway, setUseKongGateway] = useState(false);
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
@@ -48,7 +49,8 @@ export function PaymentForm() {
             ...createTraceHeaders(currentTraceId, currentSpanId)
           };
       
-      const response = await apiRequest("POST", "/api/payments", data, headers);
+      const endpoint = useKongGateway ? "/api/kong/payments" : "/api/payments";
+      const response = await apiRequest("POST", endpoint, data, headers);
       return response.json();
     },
     onSuccess: (data) => {
@@ -185,7 +187,51 @@ export function PaymentForm() {
               )}
             />
 
+            {/* OpenTelemetry Configuration */}
+            <div className="bg-slate-50 rounded-lg p-4 border border-slate-200">
+              <h3 className="text-sm font-medium text-slate-700 mb-3 flex items-center">
+                <Route className="w-4 h-4 text-otel-blue mr-2" />
+                OpenTelemetry Configuration
+              </h3>
+              
+              <div className="mb-4 flex items-center justify-between">
+                <div>
+                  <label className="text-xs font-medium text-slate-600">Empty Trace Headers</label>
+                  <p className="text-xs text-slate-500">Test Kong Gateway context injection</p>
+                </div>
+                <Switch
+                  checked={useEmptyTrace}
+                  onCheckedChange={setUseEmptyTrace}
+                />
+              </div>
 
+              {!useEmptyTrace && (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-xs font-medium text-slate-600 mb-1">Trace ID</label>
+                    <Input
+                      value={currentTraceId}
+                      readOnly
+                      className="text-xs bg-white font-mono"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium text-slate-600 mb-1">Span ID</label>
+                    <Input
+                      value={currentSpanId}
+                      readOnly
+                      className="text-xs bg-white font-mono"
+                    />
+                  </div>
+                </div>
+              )}
+
+              {useEmptyTrace && (
+                <div className="text-center py-3 text-xs text-slate-500 bg-amber-50 border border-amber-200 rounded">
+                  No trace headers will be sent - Kong Gateway will inject context
+                </div>
+              )}
+            </div>
 
             <Button
               type="submit"
