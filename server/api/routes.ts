@@ -8,6 +8,7 @@ import { fromZodError } from "zod-validation-error";
 import { paymentService } from "../core/payment-service";
 import { insertPaymentSchema } from "@shared/schema";
 import { traces } from "../otel";
+import { trace, SpanStatusCode, SpanKind } from '@opentelemetry/api';
 
 export function registerRoutes(app: Express) {
   console.log("Registering API routes...");
