@@ -112,4 +112,59 @@ export class JMSClient extends EventEmitter {
   }
 }
 
+// Create and setup JMS client with message processors
 export const jmsClient = new JMSClient();
+
+// Setup payment processing handlers
+jmsClient.subscribeToQueue('payment-processing', async (message) => {
+  console.log(`[JMS Processor] Processing payment: ${message.payload.paymentId}`);
+  
+  // Route to downstream queues
+  await jmsClient.publishMessage('payment-validation', {
+    ...message.payload,
+    validationRequired: true
+  }, {
+    traceId: message.traceId,
+    spanId: generateSpanId(),
+    parentSpanId: message.spanId
+  });
+
+  await jmsClient.publishMessage('payment-notification', {
+    recipient: message.payload.recipient,
+    amount: message.payload.amount,
+    currency: message.payload.currency,
+    paymentId: message.payload.paymentId
+  }, {
+    traceId: message.traceId,
+    spanId: generateSpanId(),
+    parentSpanId: message.spanId
+  });
+
+  await jmsClient.publishMessage('payment-audit', {
+    ...message.payload,
+    processedAt: new Date().toISOString()
+  }, {
+    traceId: message.traceId,
+    spanId: generateSpanId(),
+    parentSpanId: message.spanId
+  });
+});
+
+jmsClient.subscribeToQueue('payment-validation', async (message) => {
+  console.log(`[JMS Processor] Validating payment: ${message.payload.paymentId}`);
+  // Simulate validation processing
+});
+
+jmsClient.subscribeToQueue('payment-notification', async (message) => {
+  console.log(`[JMS Processor] Sending notification for payment: ${message.payload.paymentId}`);
+  // Simulate notification processing
+});
+
+jmsClient.subscribeToQueue('payment-audit', async (message) => {
+  console.log(`[JMS Processor] Auditing payment: ${message.payload.paymentId}`);
+  // Simulate audit processing
+});
+
+function generateSpanId(): string {
+  return Array.from({ length: 16 }, () => Math.floor(Math.random() * 16).toString(16)).join('');
+}
