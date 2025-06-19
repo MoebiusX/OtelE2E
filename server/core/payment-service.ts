@@ -2,7 +2,7 @@
 // Clean separation of payment processing concerns
 
 import { storage } from '../storage';
-// Removed fake messaging implementation - authentic OpenTelemetry only
+import { rabbitMQClient } from '../services/rabbitmq-client';
 import { InsertPayment } from '@shared/schema';
 
 export interface PaymentRequest {
@@ -30,6 +30,22 @@ export class PaymentService {
       traceId,
       spanId
     });
+
+    // Publish payment to RabbitMQ queue for downstream processing
+    if (rabbitMQClient.isConnected()) {
+      await rabbitMQClient.publishPayment({
+        paymentId: payment.id,
+        amount: payment.amount,
+        currency: payment.currency,
+        recipient: payment.recipient,
+        description: payment.description || '',
+        traceId,
+        spanId,
+        timestamp: payment.createdAt instanceof Date ? payment.createdAt.toISOString() : new Date().toISOString()
+      });
+    } else {
+      console.warn('[PAYMENT] RabbitMQ not connected - payment processed without queue');
+    }
 
     return {
       paymentId: payment.id,

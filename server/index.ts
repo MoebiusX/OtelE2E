@@ -4,6 +4,8 @@ import "./otel";
 import express, { type Request, Response, NextFunction } from "express";
 import { registerRoutes } from "./api/routes";
 import { setupVite, serveStatic, log } from "./vite";
+import { kongClient } from "./services/kong-client";
+import { rabbitMQClient } from "./services/rabbitmq-client";
 
 const app = express();
 
@@ -46,6 +48,30 @@ app.use((req, res, next) => {
 });
 
 (async () => {
+  // Initialize external services
+  console.log('[INIT] Initializing external services...');
+  
+  // Setup Kong Gateway proxy routes
+  app.use('/kong', kongClient.createProxy());
+  
+  // Initialize RabbitMQ connection
+  try {
+    await rabbitMQClient.connect();
+    await rabbitMQClient.startConsumer();
+    console.log('[INIT] RabbitMQ connected and consumer started');
+  } catch (error) {
+    console.warn('[INIT] RabbitMQ initialization failed - continuing without message queue');
+  }
+  
+  // Check Kong Gateway health
+  const kongHealthy = await kongClient.checkHealth();
+  if (kongHealthy) {
+    console.log('[INIT] Kong Gateway available');
+    await kongClient.configureService();
+  } else {
+    console.warn('[INIT] Kong Gateway not available - continuing without proxy');
+  }
+
   // Register API routes
   registerRoutes(app);
 
