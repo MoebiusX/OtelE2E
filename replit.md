@@ -1,8 +1,11 @@
-# OpenTelemetry Payment PoC - Context Propagation
+# OpenTelemetry Payment PoC - Authentic Instrumentation Only
+
+## Core Principle
+**AUTHENTIC OPENTELEMETRY ONLY - NO SIMULATION, NO FAKE DATA, NO SYNTHETIC SPANS**
 
 ## Overview
 
-This is a full-stack web application demonstrating authentic OpenTelemetry context propagation in an enterprise payment processing system. The application showcases distributed tracing across a React frontend, Kong API Gateway, and Node.js backend with real message broker integration and clean architectural patterns.
+This is a full-stack web application demonstrating authentic OpenTelemetry instrumentation in an enterprise payment processing system. The application showcases real distributed tracing with genuine HTTP spans captured by OpenTelemetry's auto-instrumentation - exactly what production systems generate.
 
 ## System Architecture
 
@@ -141,4 +144,5 @@ The application is configured for deployment on Replit with the following setup:
 
 ## User Preferences
 
+**CORE PRINCIPLE**: AUTHENTIC OPENTELEMETRY ONLY - NO SIMULATION, NO FAKE DATA, NO SYNTHETIC SPANS
 Preferred communication style: Simple, everyday language.
