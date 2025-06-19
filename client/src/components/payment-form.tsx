@@ -196,8 +196,19 @@ export function PaymentForm() {
               
               <div className="mb-4 flex items-center justify-between">
                 <div>
+                  <label className="text-xs font-medium text-slate-600">Route through Kong Gateway</label>
+                  <p className="text-xs text-slate-500">Generate authentic Kong Gateway spans</p>
+                </div>
+                <Switch
+                  checked={useKongGateway}
+                  onCheckedChange={setUseKongGateway}
+                />
+              </div>
+
+              <div className="mb-4 flex items-center justify-between">
+                <div>
                   <label className="text-xs font-medium text-slate-600">Empty Trace Headers</label>
-                  <p className="text-xs text-slate-500">Test Kong Gateway context injection</p>
+                  <p className="text-xs text-slate-500">Test context injection without client headers</p>
                 </div>
                 <Switch
                   checked={useEmptyTrace}
