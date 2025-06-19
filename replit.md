@@ -90,6 +90,10 @@ The application is configured for deployment on Replit with the following setup:
 - **REPL_ID**: Replit environment identifier (enables development features)
 
 ## Changelog
+- June 19, 2025: Finalized PoC with complete frontend terminology update and working context propagation toggle demonstration
+- June 19, 2025: Fixed trace visualization to display all authentic OpenTelemetry spans instead of truncating with "x more operations..."
+- June 19, 2025: Enhanced Kong Gateway span naming for clear context injection demonstration: "Trace by Client" vs "Trace by Kong"
+- June 19, 2025: Resolved TypeScript errors in trace viewer component and improved span display reliability
 - June 18, 2025: Created comprehensive documentation package with automated test suite, PoC documentation, and complete test plan for enterprise validation
 - June 18, 2025: Restored authentic Kong Gateway and Solace queue spans using real OpenTelemetry tracer - complete enterprise distributed tracing demonstration
 - June 18, 2025: Removed all synthetic span creation - now shows only authentic OpenTelemetry HTTP instrumentation (POST/DELETE requests)

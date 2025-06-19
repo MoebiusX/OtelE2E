@@ -124,24 +124,25 @@ export class KongGateway {
       
       const hasIncomingTrace = !!(traceId && spanId) || !!traceparent;
       
-      // Kong Gateway processing - create authentic OpenTelemetry span
-      const { tracer } = await import('./tracing');
-      const span = tracer.startSpan(hasIncomingTrace ? 'Trace by Client' : 'Trace by Kong', {
-        attributes: {
-          'service.name': 'kong-gateway',
-          'kong.gateway': true,
-          'kong.route': req.path,
-          'kong.method': req.method,
-          'http.url': req.url,
-          'context.injection': !hasIncomingTrace,
-          'trace.mode': hasIncomingTrace ? 'client-provided' : 'kong-generated'
-        }
-      });
-      
+      let span: any = null;
       const startTime = Date.now();
       
-      // If no trace headers, Kong generates them (context injection)
+      // Kong Gateway only creates span when injecting context (no incoming trace)
       if (!hasIncomingTrace) {
+        // Context injection scenario - Kong creates span and generates trace context
+        const { tracer } = await import('./tracing');
+        span = tracer.startSpan('Trace by Kong', {
+          attributes: {
+            'service.name': 'kong-gateway',
+            'kong.gateway': true,
+            'kong.route': req.path,
+            'kong.method': req.method,
+            'http.url': req.url,
+            'context.injection': true,
+            'trace.mode': 'kong-generated'
+          }
+        });
+        
         traceId = this.generateTraceId();
         spanId = this.generateSpanId();
         req.headers['x-trace-id'] = traceId;
@@ -156,6 +157,7 @@ export class KongGateway {
           'span.generated_id': spanId
         });
       }
+      // If trace headers exist, Kong just passes them through (no Kong span created)
 
       // Kong Gateway processing with authentic timing
       
@@ -167,18 +169,20 @@ export class KongGateway {
         'Via': '1.1 kong/3.4.2'
       });
 
-      // Complete Kong Gateway span after response
-      res.on('finish', () => {
-        const duration = Date.now() - startTime;
-        span.setAttributes({
-          'http.status_code': res.statusCode,
-          'kong.latency_ms': duration,
-          'kong.upstream_latency': 0,
-          'kong.proxy_latency': 3
+      // Complete Kong Gateway span after response (only if span was created)
+      if (span) {
+        res.on('finish', () => {
+          const duration = Date.now() - startTime;
+          span.setAttributes({
+            'http.status_code': res.statusCode,
+            'kong.latency_ms': duration,
+            'kong.upstream_latency': 0,
+            'kong.proxy_latency': 3
+          });
+          span.setStatus({ code: res.statusCode < 400 ? 1 : 2 });
+          span.end();
         });
-        span.setStatus({ code: res.statusCode < 400 ? 1 : 2 });
-        span.end();
-      });
+      }
 
       next();
     };
