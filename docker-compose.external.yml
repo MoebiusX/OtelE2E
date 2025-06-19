@@ -15,7 +15,7 @@ services:
       - kong-net
 
   kong-migrations:
-    image: kong/kong-gateway:3.4.2
+    image: kong/kong-gateway:latest
     command: kong migrations bootstrap
     depends_on:
       - kong-database
