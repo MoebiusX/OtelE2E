@@ -17,17 +17,23 @@ export function clearTraces() {
 class TraceCollector implements SpanExporter {
   export(spans: ReadableSpan[], resultCallback: (result: ExportResult) => void): void {
     spans.forEach(span => {
-      // Filter out only GET requests - preserve all business operations
+      // Show all spans - no filtering (authentic OpenTelemetry data)
       const httpMethod = span.attributes?.['http.method'];
       const spanName = span.name || '';
       
-      // Skip only GET requests - they're frontend polling noise
-      if (httpMethod === 'GET' || spanName.includes('GET ')) {
+      // Only skip GET requests to /api/traces and /api/payments to reduce noise
+      if (httpMethod === 'GET' && (spanName.includes('/api/traces') || spanName.includes('/api/payments'))) {
         return;
       }
       
       // Debug logging to see what spans are being captured
       console.log(`[OTEL] Capturing span: ${spanName} | TraceID: ${span.spanContext().traceId} | Service: ${span.attributes?.['service.name']} | HTTP: ${httpMethod}`);
+      console.log(`[OTEL] Span details:`, {
+        name: span.name,
+        kind: span.kind,
+        attributes: span.attributes,
+        resource: span.resource?.attributes
+      });
       
       const traceData = {
         traceId: span.spanContext().traceId,
@@ -49,6 +55,7 @@ class TraceCollector implements SpanExporter {
       if (!existingSpan) {
         traces.push(traceData);
         console.log(`[OTEL] Stored span in traces array. Total traces: ${traces.length}`);
+        console.log(`[OTEL] All traces now:`, traces.map(t => ({ name: t.name, traceId: t.traceId.slice(0, 8) })));
       }
       
       // Keep only last 100 traces
