@@ -4,10 +4,17 @@ import "./otel";
 import express, { type Request, Response, NextFunction } from "express";
 import { registerRoutes } from "./routes";
 import { setupVite, serveStatic, log } from "./vite";
-import { createKongRouter } from "./kong-routes";
-import { queueSimulator, setupPaymentProcessor } from "./queue-clean";
+// Removed all simulated components - using only authentic OpenTelemetry
 
 const app = express();
+
+// Kong Gateway MUST run first, before any other middleware
+// This allows Kong to inject context before OpenTelemetry HTTP instrumentation
+(async () => {
+  const { kongGateway } = await import('./kong-clean');
+  app.use(kongGateway.gatewayMiddleware());
+})();
+
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
 
