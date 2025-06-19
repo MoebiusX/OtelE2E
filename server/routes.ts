@@ -87,18 +87,6 @@ export function registerRoutes(app: Express) {
           return false;
         }
         
-        // When Kong does context injection, filter out redundant HTTP POST span
-        // But preserve all other spans in the trace
-        if (httpMethod === 'POST' && spanName.includes('POST')) {
-          const hasKongInjection = traces.some(otherSpan => 
-            otherSpan.traceId === span.traceId && 
-            otherSpan.attributes?.['kong.context_injection']
-          );
-          if (hasKongInjection) {
-            return false; // Skip only the POST span when Kong creates the entry point
-          }
-        }
-        
         return true;
       });
       
@@ -150,7 +138,7 @@ export function registerRoutes(app: Express) {
       const { traceId } = req.params;
       const { traces } = await import('./otel');
       
-      // Filter spans for this trace - remove only GET requests and redundant POST when Kong does context injection
+      // Filter spans for this trace - remove only GET requests
       const spans = traces
         .filter(span => {
           if (span.traceId !== traceId) return false;
@@ -161,17 +149,6 @@ export function registerRoutes(app: Express) {
           // Skip only GET requests
           if (httpMethod === 'GET' || spanName.includes('GET ')) {
             return false;
-          }
-          
-          // When Kong does context injection, skip only the redundant HTTP POST span
-          if (httpMethod === 'POST' && spanName.includes('POST')) {
-            const hasKongInjection = traces.some(otherSpan => 
-              otherSpan.traceId === traceId && 
-              otherSpan.attributes?.['kong.context_injection']
-            );
-            if (hasKongInjection) {
-              return false; // Skip only POST span when Kong creates entry point
-            }
           }
           
           return true;

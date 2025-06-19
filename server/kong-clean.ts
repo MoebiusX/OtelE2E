@@ -124,26 +124,11 @@ export class KongGateway {
       
       const hasIncomingTrace = !!(traceId && spanId) || !!traceparent;
       
-      let span: any = null;
       const startTime = Date.now();
       
-      // Kong Gateway only creates span when injecting context (no incoming trace)
+      // Kong Gateway behavior: context injection when no trace headers exist
       if (!hasIncomingTrace) {
-        // Context injection scenario - Kong creates ROOT span and generates trace context
-        const { tracer } = await import('./tracing');
-        span = tracer.startSpan('Kong Gateway Context Injection', {
-          kind: 1, // SERVER span kind - this is the entry point
-          attributes: {
-            'service.name': 'kong-gateway',
-            'kong.gateway': true,
-            'kong.context_injection': true,
-            'http.method': req.method,
-            'http.route': req.path,
-            'http.url': req.url,
-            'trace.mode': 'kong-generated'
-          }
-        });
-        
+        // Generate trace context for upstream systems
         traceId = this.generateTraceId();
         spanId = this.generateSpanId();
         req.headers['x-trace-id'] = traceId;
@@ -153,12 +138,9 @@ export class KongGateway {
         const traceFlags = '01';
         req.headers['traceparent'] = `00-${traceId}-${spanId}-${traceFlags}`;
         
-        span.setAttributes({
-          'trace.generated_id': traceId,
-          'span.generated_id': spanId
-        });
-      } else if (hasIncomingTrace && !traceparent) {
-        // Client provided custom headers but no traceparent - convert to OpenTelemetry format
+        console.log(`[Kong] Context injection - generated trace: ${traceId}`);
+      } else if (!traceparent) {
+        // Convert custom headers to OpenTelemetry format for proper propagation
         const traceFlags = '01';
         req.headers['traceparent'] = `00-${traceId}-${spanId}-${traceFlags}`;
         console.log(`[Kong] Converting client headers to traceparent: ${req.headers['traceparent']}`);
@@ -175,20 +157,7 @@ export class KongGateway {
         'Via': '1.1 kong/3.4.2'
       });
 
-      // Complete Kong Gateway span after response (only if span was created)
-      if (span) {
-        res.on('finish', () => {
-          const duration = Date.now() - startTime;
-          span.setAttributes({
-            'http.status_code': res.statusCode,
-            'kong.latency_ms': duration,
-            'kong.upstream_latency': 0,
-            'kong.proxy_latency': 3
-          });
-          span.setStatus({ code: res.statusCode < 400 ? 1 : 2 });
-          span.end();
-        });
-      }
+      // Kong Gateway processing complete - no synthetic spans, only authentic telemetry
 
       next();
     };
