@@ -116,6 +116,8 @@ export class KongGateway {
       if (!req.path.startsWith('/api/payments') || req.method !== 'POST') {
         return next();
       }
+      
+      console.log(`[Kong] Intercepting ${req.method} ${req.path}`);
 
       // Extract trace context first to determine behavior
       let traceId = req.headers['x-trace-id'] as string;

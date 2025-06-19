@@ -4,16 +4,23 @@ import "./otel";
 import express, { type Request, Response, NextFunction } from "express";
 import { registerRoutes } from "./routes";
 import { setupVite, serveStatic, log } from "./vite";
-// Removed all simulated components - using only authentic OpenTelemetry
+import { queueSimulator, setupPaymentProcessor } from "./queue-clean";
+import { createKongRouter } from "./kong-routes";
 
 const app = express();
 
-// Kong Gateway MUST run first, before any other middleware
-// This allows Kong to inject context before OpenTelemetry HTTP instrumentation
-(async () => {
-  const { kongGateway } = await import('./kong-clean');
-  app.use(kongGateway.gatewayMiddleware());
-})();
+// Kong Gateway MUST be the very first middleware to inject context before OpenTelemetry
+import { kongGateway } from './kong-clean';
+
+// Create a custom middleware that runs before all others
+app.use((req, res, next) => {
+  // Only process payment POST requests
+  if (req.path.startsWith('/api/payments') && req.method === 'POST') {
+    kongGateway.gatewayMiddleware()(req, res, next);
+  } else {
+    next();
+  }
+});
 
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
@@ -55,12 +62,7 @@ app.use((req, res, next) => {
 
 (async () => {
   // Initialize Solace queue processors for payment processing
-  const { setupPaymentProcessor } = await import('./queue-clean');
   await setupPaymentProcessor(queueSimulator);
-
-  // Kong Gateway middleware - intercepts ALL requests to demonstrate tracing
-  const { kongGateway } = await import('./kong-clean');
-  app.use(kongGateway.gatewayMiddleware());
 
   // Register API routes
   registerRoutes(app);
