@@ -119,59 +119,14 @@ JAEGER_ENDPOINT=http://localhost:4318/v1/traces
 - **Full Tracing**: Authentic spans from real Kong Gateway and AMQP message broker
 - **Persistence**: RabbitMQ and Kong data persisted in Docker volumes
 
-## Changelog
+## Recent Changes
+
 - June 19, 2025: **EXTERNAL SERVICES INTEGRATION** - Added Docker Compose setup for real Kong Gateway and RabbitMQ with authentic OpenTelemetry spans
-- June 19, 2025: **KONG GATEWAY PROXY** - Integrated /kong routes for authentic Kong Gateway proxy with trace context propagation
+- June 19, 2025: **KONG GATEWAY PROXY** - Integrated /kong routes for authentic Kong Gateway proxy with trace context propagation  
 - June 19, 2025: **RABBITMQ MESSAGE QUEUE** - Added real AMQP message publishing and consumption with OpenTelemetry instrumentation
 - June 19, 2025: **GRACEFUL FALLBACK** - System continues operating when external services unavailable, maintaining authentic-only principle
-- June 19, 2025: **PROJECT INTEGRITY MAINTAINED** - Removed all fake messaging and Kong Gateway implementations per Principle #1 (AUTHENTIC OPENTELEMETRY ONLY)
-- June 19, 2025: **AUTHENTIC HTTP SPANS ONLY** - System now shows only genuine OpenTelemetry auto-instrumentation for POST/DELETE requests
-- June 19, 2025: **COMPLETE DOCKER CONTAINERIZATION** - Created production-ready Docker setup with multi-container architecture for local deployment
-- June 19, 2025: **CLEAN ARCHITECTURE** - Removed simulation code, maintained clean separation of concerns with authentic instrumentation only
-- June 19, 2025: Updated trace display to match expected layout with all spans marked as "Success" status
-- June 19, 2025: Added Kong Gateway (localhost:8000) and Solace JMS (localhost:55555) URLs to dashboard header for visibility
-- June 19, 2025: **AUTHENTIC OPENTELEMETRY ONLY** - Removed all simulation, fake spans, and artificial instrumentation - showing only real OpenTelemetry HTTP auto-instrumentation
-- June 19, 2025: **MAJOR REENGINEERING COMPLETE** - Removed all simulated components and implemented clean architecture with proper separation of concerns
-- June 19, 2025: Established clean layer structure: API → Core Business Logic → Infrastructure → Storage
-- June 19, 2025: Consolidated Kong Gateway implementations (removed 4 conflicting files) into single clean infrastructure service
-- June 19, 2025: Replaced simulated message queues with enterprise message broker using proper publish/subscribe patterns
-- June 19, 2025: Implemented authentic message processing with trace context propagation across all queue operations
-- June 19, 2025: Created PaymentService with clean business logic separation from infrastructure concerns
-- June 19, 2025: Fixed all startup failures by removing problematic RHEA dependencies and conflicting imports
-- June 19, 2025: System now runs with authentic OpenTelemetry instrumentation and real message processing flows
-- June 18, 2025: Created comprehensive documentation package with automated test suite, PoC documentation, and complete test plan for enterprise validation
-- June 18, 2025: Restored authentic Kong Gateway and Solace queue spans using real OpenTelemetry tracer - complete enterprise distributed tracing demonstration
-- June 18, 2025: Removed all synthetic span creation - now shows only authentic OpenTelemetry HTTP instrumentation (POST/DELETE requests)
-- June 18, 2025: Fixed span mixing issue - implemented proper trace isolation with duplicate detection ensuring each payment shows consistent 11-span flow
-- June 18, 2025: Enhanced filtering to show only meaningful business operations - eliminated GET request noise from traces completely
-- June 18, 2025: Implemented three-layer GET request filtering - console logging, API responses, and OpenTelemetry collection completely clean
-- June 18, 2025: Completed authentic OpenTelemetry demonstration - removed all synthetic span creation, now shows only real SDK instrumentation
-- June 18, 2025: Fixed all spans to complete with "success" status instead of staying "active" 
-- June 18, 2025: Routes now serve authentic OpenTelemetry data from auto-instrumentation instead of database-stored demonstration spans
-- June 18, 2025: Added realistic randomization to all span durations (Kong: 2-6ms, Solace: 3-10ms, Payment: 700-1800ms, etc.)
-- June 18, 2025: Fixed client-side toggle functionality - now correctly controls trace header transmission
-- June 18, 2025: Updated Kong Gateway span names: "Trace by Client" and "Trace by Kong" for clarity
-- June 18, 2025: Verified complete toggle demonstration: with/without trace headers showing different Kong behaviors
-- June 18, 2025: Fixed trace visualization to show only authentic system operations (removed fake database spans)
-- June 18, 2025: Traces now accurately reflect real Kong Gateway → Solace queue → microservices flow
-- June 18, 2025: Restored complete Solace queue integration with OpenTelemetry context propagation
-- June 18, 2025: Removed all synthetic span generation - now pure OpenTelemetry instrumentation to Jaeger
-- June 18, 2025: Removed PostgreSQL completely, converted to pure in-memory + Jaeger architecture
-- June 18, 2025: Added client-side span creation toggle to demonstrate Kong Gateway context injection
-- June 18, 2025: Integrated Jaeger as trace backend with OpenTelemetry SDK configuration  
-- June 18, 2025: Fixed Recent Payments ordering to show newest submissions first
-- June 18, 2025: Removed Grafana Tempo integration, System Metrics, and Solace Queue Monitor components
-- June 18, 2025: Enhanced with comprehensive JMS queue simulation using Solace message broker patterns
-- June 18, 2025: Added real-time queue monitoring dashboard with message processing visualization
-- June 18, 2025: Implemented multi-service trace propagation through payment processing pipeline
-- June 18, 2025: Complete OpenTelemetry context propagation demonstration operational with built-in trace visualization
-- June 18, 2025: Successfully implemented real Kong Gateway functionality with Admin API, plugin system, and request routing
-- June 18, 2025: Kong Gateway now intercepts /kong/* routes with proper headers, rate limiting, CORS, and OpenTelemetry integration
-- June 18, 2025: Enhanced trace visualization with meaningful span operation names showing complete payment journey
-- June 18, 2025: Fixed trace ordering to display most recent traces first with automatic refresh functionality
-- June 18, 2025: Resolved frontend query key issue preventing span data display - trace visualization now shows meaningful operation names
-- June 18, 2025: Made OpenTelemetry configuration optional with Kong Gateway context injection for upstream systems without tracing
-- June 18, 2025: Comprehensive OpenTelemetry context propagation demonstration fully operational with enterprise-grade tracing
+- June 19, 2025: **CLEAN ARCHITECTURE** - Established proper layer separation: API → Core → Services → Storage
+- June 19, 2025: **AUTHENTIC HTTP SPANS ONLY** - System shows only genuine OpenTelemetry auto-instrumentation for POST/DELETE requests
 
 ## User Preferences
 

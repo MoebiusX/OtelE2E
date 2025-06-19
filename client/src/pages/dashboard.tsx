@@ -45,9 +45,19 @@ export default function Dashboard() {
               </Badge>
             </div>
             <div className="flex items-center space-x-6">
-              <div className="flex items-center space-x-2 text-sm text-slate-600">
-                <div className="w-2 h-2 bg-otel-green rounded-full animate-pulse"></div>
-                <span>Tracing Active</span>
+              <div className="flex items-center space-x-4 text-sm text-slate-600">
+                <div className="flex items-center space-x-2">
+                  <div className="w-2 h-2 bg-otel-green rounded-full animate-pulse"></div>
+                  <span>HTTP Tracing</span>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <div className="w-2 h-2 bg-red-500 rounded-full"></div>
+                  <span>Kong (Docker)</span>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <div className="w-2 h-2 bg-red-500 rounded-full"></div>
+                  <span>RabbitMQ (Docker)</span>
+                </div>
               </div>
               <div className="flex items-center space-x-4 text-sm">
                 <div className="flex items-center space-x-2">
