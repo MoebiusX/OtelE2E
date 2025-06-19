@@ -99,6 +99,7 @@ The application is configured for deployment on Replit with the following setup:
 - **REPL_ID**: Replit environment identifier (enables development features)
 
 ## Changelog
+- June 19, 2025: Added Kong Gateway (localhost:8000) and Solace JMS (localhost:55555) URLs to dashboard header for visibility
 - June 19, 2025: **AUTHENTIC OPENTELEMETRY ONLY** - Removed all simulation, fake spans, and artificial instrumentation - showing only real OpenTelemetry HTTP auto-instrumentation
 - June 19, 2025: **MAJOR REENGINEERING COMPLETE** - Removed all simulated components and implemented clean architecture with proper separation of concerns
 - June 19, 2025: Established clean layer structure: API → Core Business Logic → Infrastructure → Storage

@@ -44,10 +44,22 @@ export default function Dashboard() {
                 Context Propagation
               </Badge>
             </div>
-            <div className="flex items-center space-x-4">
+            <div className="flex items-center space-x-6">
               <div className="flex items-center space-x-2 text-sm text-slate-600">
                 <div className="w-2 h-2 bg-otel-green rounded-full animate-pulse"></div>
                 <span>Tracing Active</span>
+              </div>
+              <div className="flex items-center space-x-4 text-sm">
+                <div className="flex items-center space-x-2">
+                  <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
+                  <span className="text-slate-600">Kong:</span>
+                  <code className="text-xs bg-slate-100 px-2 py-1 rounded font-mono">localhost:8000</code>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <div className="w-2 h-2 bg-amber-500 rounded-full"></div>
+                  <span className="text-slate-600">Solace:</span>
+                  <code className="text-xs bg-slate-100 px-2 py-1 rounded font-mono">localhost:55555</code>
+                </div>
               </div>
               <button className="px-3 py-1 text-sm bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-md transition-colors flex items-center">
                 <Settings className="w-4 h-4 mr-1" />
