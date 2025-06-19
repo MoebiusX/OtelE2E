@@ -30,7 +30,7 @@ services:
     restart: on-failure
 
   kong-gateway:
-    image: kong/kong-gateway:3.4.2
+    image: kong/kong-gateway:latest
     depends_on:
       - kong-database
       - kong-migrations
