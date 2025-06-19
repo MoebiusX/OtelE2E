@@ -83,7 +83,7 @@ function TraceCard({ trace }: { trace: any }) {
 }
 
 export function SimpleTraceViewer() {
-  const { data: traces, isLoading } = useQuery({
+  const { data: traces, isLoading, error } = useQuery({
     queryKey: ['/api/traces'],
     refetchInterval: 3000
   });
@@ -98,10 +98,18 @@ export function SimpleTraceViewer() {
     }
   });
 
+  // Debug logging
+  console.log('Traces data:', traces);
+  console.log('Is Array:', Array.isArray(traces));
+  console.log('Traces length:', traces?.length);
+  
   // Display traces as individual trace records showing payment processing flows
-  const traceList = (traces as any[])?.filter(trace => trace.traceId).sort((a: any, b: any) => 
+  const traceList = Array.isArray(traces) ? traces.filter(trace => trace.traceId).sort((a: any, b: any) => 
     new Date(b.startTime).getTime() - new Date(a.startTime).getTime()
-  ) || [];
+  ) : [];
+  
+  console.log('Filtered trace list length:', traceList.length);
+  console.log('Trace list:', traceList);
 
   return (
     <Card className="w-full">

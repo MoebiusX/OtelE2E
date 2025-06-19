@@ -3,7 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { PaymentForm } from "@/components/payment-form";
-import { SimpleTraceViewer } from "@/components/simple-trace-viewer";
+import { TraceViewer } from "@/components/trace-viewer";
 
 
 import { formatCurrency, formatTimeAgo, truncateId } from "@/lib/utils";
@@ -117,7 +117,7 @@ export default function Dashboard() {
 
           {/* Right Column */}
           <div className="space-y-6">
-            <SimpleTraceViewer />
+            <TraceViewer />
           </div>
         </div>
 
