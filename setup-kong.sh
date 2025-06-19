@@ -21,6 +21,14 @@ curl -i -X POST http://localhost:8001/services/ \
   --data write_timeout=60000 \
   --data read_timeout=60000
 
+# Alternative: If host.docker.internal doesn't work, try the Docker gateway IP
+# curl -i -X POST http://localhost:8001/services/ \
+#   --data name="payment-api" \
+#   --data url="http://172.17.0.1:5000" \
+#   --data connect_timeout=60000 \
+#   --data write_timeout=60000 \
+#   --data read_timeout=60000
+
 # Create route for the payment service
 echo "Creating payment route..."
 curl -i -X POST http://localhost:8001/services/payment-api/routes \
