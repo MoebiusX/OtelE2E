@@ -26,11 +26,7 @@ server/
 ├── api/                    # API Routes & Controllers
 │   └── routes.ts          # Clean HTTP endpoint definitions
 ├── core/                  # Business Logic Layer
-│   ├── payment-service.ts # Payment processing service
-│   └── message-processors.ts # Message queue handlers
-├── infrastructure/       # External Dependencies
-│   ├── kong-gateway.ts   # API Gateway (separate process)
-│   └── messaging.ts      # Enterprise message broker
+│   └── payment-service.ts # Payment processing service
 ├── storage.ts            # Data persistence layer
 └── otel.ts               # OpenTelemetry configuration
 ```
@@ -38,20 +34,21 @@ server/
 ### Key Components
 
 **API Layer**: Clean REST endpoints with proper error handling and validation
-**Business Logic**: Domain services with clear separation of concerns
-**Infrastructure**: External systems (Kong Gateway, Message Broker) as separate concerns
-**Storage**: In-memory data store implementing clean interfaces
+**Business Logic**: Payment processing with authentic trace generation
+**Storage**: In-memory data store with full CRUD operations
+**OpenTelemetry**: Authentic auto-instrumentation for HTTP requests only
 
-### Message Flow Architecture
-1. **Frontend** → **Kong Gateway** (context injection) → **Backend API**
-2. **Payment Service** → **Message Broker** → **Processing Handlers**
-3. **OpenTelemetry** captures authentic spans across all components
+### Data Flow (Authentic OpenTelemetry Only)
+1. **Frontend** → **Backend API** → **Payment Processing**
+2. **OpenTelemetry** captures only genuine HTTP spans (POST/DELETE requests)
+3. No simulation, no fake spans, no synthetic instrumentation
 
-### Removed Simulated Components
-- All fake Kong implementations (4 different files consolidated)
-- All simulated queue systems (3 different implementations removed)
-- Mixed simulation/real component conflicts eliminated
-- Dead RHEA/AMQP dependencies causing startup failures removed
+### Removed All Simulation Code
+- All fake Kong Gateway implementations removed
+- All simulated message broker code deleted
+- All synthetic span generation eliminated
+- Infrastructure directory completely removed
+- Only authentic OpenTelemetry HTTP auto-instrumentation remains
 
 ## Data Flow
 
