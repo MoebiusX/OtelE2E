@@ -96,6 +96,10 @@ The application is configured for deployment on Replit with the following setup:
 - **REPL_ID**: Replit environment identifier (enables development features)
 
 ## Changelog
+- June 19, 2025: **EXTERNAL SERVICES INTEGRATION** - Added Docker Compose setup for real Kong Gateway and RabbitMQ with authentic OpenTelemetry spans
+- June 19, 2025: **KONG GATEWAY PROXY** - Integrated /kong routes for authentic Kong Gateway proxy with trace context propagation
+- June 19, 2025: **RABBITMQ MESSAGE QUEUE** - Added real AMQP message publishing and consumption with OpenTelemetry instrumentation
+- June 19, 2025: **GRACEFUL FALLBACK** - System continues operating when external services unavailable, maintaining authentic-only principle
 - June 19, 2025: **PROJECT INTEGRITY MAINTAINED** - Removed all fake messaging and Kong Gateway implementations per Principle #1 (AUTHENTIC OPENTELEMETRY ONLY)
 - June 19, 2025: **AUTHENTIC HTTP SPANS ONLY** - System now shows only genuine OpenTelemetry auto-instrumentation for POST/DELETE requests
 - June 19, 2025: **COMPLETE DOCKER CONTAINERIZATION** - Created production-ready Docker setup with multi-container architecture for local deployment
