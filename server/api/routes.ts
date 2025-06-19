@@ -9,6 +9,47 @@ import { paymentService } from "../core/payment-service";
 import { insertPaymentSchema } from "@shared/schema";
 import { traces } from "../otel";
 
+// Helper functions for meaningful span names
+function getOperationName(span: any): string {
+  const httpMethod = span.attributes?.['http.method'];
+  const httpTarget = span.attributes?.['http.target'];
+  const messagingOperation = span.attributes?.['messaging.operation'];
+  const messagingSystem = span.attributes?.['messaging.system'];
+  
+  if (messagingSystem === 'rabbitmq') {
+    return messagingOperation === 'publish' ? 'rabbitmq.publish' : 'rabbitmq.consume';
+  }
+  
+  if (httpMethod && httpTarget) {
+    if (httpTarget.includes('/payments')) {
+      return 'payments.process';
+    }
+    return `${httpMethod.toLowerCase()}.${httpTarget.replace('/api/', '')}`;
+  }
+  
+  if (span.name === 'POST') {
+    return 'payments.process';
+  }
+  
+  return span.name || 'unknown.operation';
+}
+
+function getServiceName(span: any): string {
+  const serviceName = span.serviceName || span.attributes?.['service.name'];
+  const httpUrl = span.attributes?.['http.url'];
+  const messagingSystem = span.attributes?.['messaging.system'];
+  
+  if (messagingSystem === 'rabbitmq') {
+    return 'rabbitmq-broker';
+  }
+  
+  if (httpUrl?.includes(':8000')) {
+    return 'kong-gateway';
+  }
+  
+  return serviceName || 'payment-api';
+}
+
 export function registerRoutes(app: Express) {
   console.log("Registering API routes...");
 
@@ -124,8 +165,44 @@ export function registerRoutes(app: Express) {
             spanId: span.spanId,
             parentSpanId: span.parentSpanId,
             traceId: span.traceId,
-            operationName: span.name,
-            serviceName: span.serviceName || 'payment-api',
+            operationName: (() => {
+              const httpMethod = span.attributes?.['http.method'];
+              const httpTarget = span.attributes?.['http.target'];
+              const messagingOperation = span.attributes?.['messaging.operation'];
+              const messagingSystem = span.attributes?.['messaging.system'];
+              
+              if (messagingSystem === 'rabbitmq') {
+                return messagingOperation === 'publish' ? 'rabbitmq.publish' : 'rabbitmq.consume';
+              }
+              
+              if (httpMethod && httpTarget) {
+                if (httpTarget.includes('/payments')) {
+                  return 'payments.process';
+                }
+                return `${httpMethod.toLowerCase()}.${httpTarget.replace('/api/', '')}`;
+              }
+              
+              if (span.name === 'POST') {
+                return 'payments.process';
+              }
+              
+              return span.name || 'unknown.operation';
+            })(),
+            serviceName: (() => {
+              const serviceName = span.serviceName || span.attributes?.['service.name'];
+              const httpUrl = span.attributes?.['http.url'];
+              const messagingSystem = span.attributes?.['messaging.system'];
+              
+              if (messagingSystem === 'rabbitmq') {
+                return 'rabbitmq-broker';
+              }
+              
+              if (httpUrl?.includes(':8000')) {
+                return 'kong-gateway';
+              }
+              
+              return serviceName || 'payment-api';
+            })(),
             duration: span.duration,
             startTime: span.startTime,
             endTime: span.endTime,
