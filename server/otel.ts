@@ -26,6 +26,9 @@ class TraceCollector implements SpanExporter {
         return;
       }
       
+      // Debug logging to see what spans are being captured
+      console.log(`[OTEL] Capturing span: ${spanName} | TraceID: ${span.spanContext().traceId} | Service: ${span.attributes?.['service.name']} | HTTP: ${httpMethod}`);
+      
       const traceData = {
         traceId: span.spanContext().traceId,
         spanId: span.spanContext().spanId,

@@ -157,6 +157,11 @@ export class KongGateway {
           'trace.generated_id': traceId,
           'span.generated_id': spanId
         });
+      } else if (hasIncomingTrace && !traceparent) {
+        // Client provided custom headers but no traceparent - convert to OpenTelemetry format
+        const traceFlags = '01';
+        req.headers['traceparent'] = `00-${traceId}-${spanId}-${traceFlags}`;
+        console.log(`[Kong] Converting client headers to traceparent: ${req.headers['traceparent']}`);
       }
       // If trace headers exist, Kong just passes them through (no Kong span created)
 
