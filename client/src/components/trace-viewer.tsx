@@ -73,16 +73,32 @@ function TraceItem({ trace }: { trace: TraceData }) {
       
       {expanded && (
         <div className="border-t bg-slate-50 p-4">
+          <div className="mb-3">
+            <h4 className="text-sm font-medium text-slate-600">Payment Processing Flow:</h4>
+          </div>
           <div className="space-y-2">
-            {trace.spans.map((span) => (
-              <div key={span.spanId} className="flex items-center space-x-3 text-sm">
-                <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
-                <div className="flex-1">
+            {trace.spans.map((span, index) => (
+              <div key={span.spanId} className="flex items-center justify-between text-sm py-1">
+                <div className="flex items-center space-x-3">
+                  <div className="w-4 h-4 rounded-full bg-blue-500 flex items-center justify-center">
+                    <div className="w-2 h-2 bg-white rounded-full"></div>
+                  </div>
                   <span className="font-medium text-slate-700">{span.operationName}</span>
-                  <span className="text-slate-500 ml-2">({span.serviceName})</span>
+                  <span className="text-slate-500">({span.serviceName})</span>
                 </div>
-                <div className="text-slate-500">
-                  {span.duration ? `${span.duration.toFixed(2)}ms` : 'N/A'}
+                <div className="flex items-center space-x-3">
+                  <div className="flex items-center space-x-1 text-slate-500">
+                    <div className="w-3 h-3">
+                      <svg viewBox="0 0 24 24" fill="none" className="w-3 h-3">
+                        <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="2"/>
+                        <path d="M12 6v6l4 2" stroke="currentColor" strokeWidth="2"/>
+                      </svg>
+                    </div>
+                    <span>{span.duration ? `${span.duration.toFixed(5)}ms` : '0.00000ms'}</span>
+                  </div>
+                  <div className="px-2 py-1 bg-green-500/20 text-green-600 rounded text-xs font-medium">
+                    Success
+                  </div>
                 </div>
               </div>
             ))}
