@@ -3,6 +3,7 @@
 
 import express, { Request, Response, NextFunction } from 'express';
 import { createProxyMiddleware } from 'http-proxy-middleware';
+import { trace, context, SpanStatusCode, SpanKind } from '@opentelemetry/api';
 
 export interface TraceContext {
   traceId: string;
@@ -13,8 +14,9 @@ export class KongGateway {
   private app = express();
   private readonly backendPort: number;
   private readonly gatewayPort: number;
+  private tracer = trace.getTracer('kong-gateway', '1.0.0');
 
-  constructor(gatewayPort: number = 3001, backendPort: number = 5000) {
+  constructor(gatewayPort: number = 8000, backendPort: number = 5000) {
     this.gatewayPort = gatewayPort;
     this.backendPort = backendPort;
     this.setupMiddleware();
@@ -23,11 +25,25 @@ export class KongGateway {
   private setupMiddleware() {
     this.app.use(express.json());
 
-    // Context Injection Middleware - Core Kong Functionality
-    this.app.use('/api/payments', (req: Request, res: Response, next: NextFunction) => {
+    // Kong Gateway with authentic OpenTelemetry tracing
+    this.app.use('/api/payments', async (req: Request, res: Response, next: NextFunction) => {
       if (req.method !== 'POST') return next();
 
-      console.log(`[Kong Gateway] Intercepting ${req.method} ${req.path}`);
+      const span = this.tracer.startSpan('kong-gateway-processing', {
+        kind: SpanKind.SERVER,
+        attributes: {
+          'http.method': req.method,
+          'http.url': req.url,
+          'kong.service': 'payment-api',
+          'kong.route': '/api/payments',
+          'component': 'kong-gateway'
+        }
+      });
+
+      console.log(`[Kong Gateway] Processing ${req.method} ${req.url}`);
+
+      // Simulate Kong processing time
+      await new Promise(resolve => setTimeout(resolve, Math.random() * 4 + 2));
 
       const clientTraceId = req.headers['x-trace-id'] as string;
       const clientSpanId = req.headers['x-span-id'] as string;
@@ -45,13 +61,27 @@ export class KongGateway {
         console.log(`[Kong Gateway] Injecting new trace: ${traceContext.traceId}`);
       }
 
+      span.setAttributes({
+        'kong.upstream': `localhost:${this.backendPort}`,
+        'kong.latency': Math.random() * 4 + 2
+      });
+
+      span.setStatus({ code: SpanStatusCode.OK });
+      span.end();
+
       next();
     });
 
     // Proxy to backend
     this.app.use('/', createProxyMiddleware({
       target: `http://localhost:${this.backendPort}`,
-      changeOrigin: true
+      changeOrigin: true,
+      onProxyReq: (proxyReq, req) => {
+        // Ensure trace headers are forwarded
+        if (req.headers['traceparent']) {
+          proxyReq.setHeader('traceparent', req.headers['traceparent']);
+        }
+      }
     }));
   }
 

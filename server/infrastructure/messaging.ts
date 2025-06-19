@@ -2,6 +2,7 @@
 // Simple, reliable messaging without external dependencies
 
 import { EventEmitter } from 'events';
+import { trace, context, SpanStatusCode, SpanKind } from '@opentelemetry/api';
 import { v4 as uuidv4 } from 'uuid';
 
 export interface MessageContext {
