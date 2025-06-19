@@ -22,6 +22,7 @@ export interface Message {
 export class MessageBroker extends EventEmitter {
   private queues: Map<string, Message[]> = new Map();
   private consumers: Map<string, ((message: Message) => Promise<void>)[]> = new Map();
+  private tracer = trace.getTracer('jms-broker', '1.0.0');
 
   constructor() {
     super();
@@ -45,6 +46,18 @@ export class MessageBroker extends EventEmitter {
   }
 
   async publish(queueName: string, payload: any, context: MessageContext): Promise<string> {
+    // Create JMS publish span
+    const span = this.tracer.startSpan('jms-message-publish', {
+      kind: SpanKind.PRODUCER,
+      attributes: {
+        'messaging.system': 'jms',
+        'messaging.destination': queueName,
+        'messaging.destination_kind': 'queue',
+        'messaging.operation': 'publish',
+        'component': 'solace-jms'
+      }
+    });
+
     const message: Message = {
       id: uuidv4(),
       queueName,
@@ -53,11 +66,23 @@ export class MessageBroker extends EventEmitter {
       timestamp: new Date()
     };
 
-    console.log(`[Message Broker] Publishing to ${queueName}: ${message.id}`);
-    console.log(`[Message Broker] Trace: ${context.traceId}/${context.spanId}`);
+    console.log(`[JMS Broker] Publishing to ${queueName}: ${message.id}`);
+    console.log(`[JMS Broker] Trace: ${context.traceId}/${context.spanId}`);
+
+    // Simulate JMS publish latency
+    await new Promise(resolve => setTimeout(resolve, Math.random() * 8 + 3));
 
     // Store message
     this.queues.get(queueName)?.push(message);
+
+    span.setAttributes({
+      'messaging.message_id': message.id,
+      'messaging.message_payload_size_bytes': JSON.stringify(payload).length,
+      'jms.queue': queueName
+    });
+
+    span.setStatus({ code: SpanStatusCode.OK });
+    span.end();
 
     // Deliver to consumers
     setTimeout(() => {
@@ -82,10 +107,34 @@ export class MessageBroker extends EventEmitter {
 
     // Deliver to all consumers (fan-out pattern)
     for (const handler of consumers) {
+      // Create JMS consume span
+      const span = this.tracer.startSpan('jms-message-consume', {
+        kind: SpanKind.CONSUMER,
+        attributes: {
+          'messaging.system': 'jms',
+          'messaging.destination': queueName,
+          'messaging.destination_kind': 'queue',
+          'messaging.operation': 'receive',
+          'messaging.message_id': message.id,
+          'component': 'solace-jms'
+        }
+      });
+
       try {
+        // Simulate JMS consume latency
+        await new Promise(resolve => setTimeout(resolve, Math.random() * 5 + 2));
+        
         await handler(message);
+        
+        span.setStatus({ code: SpanStatusCode.OK });
       } catch (error) {
-        console.error(`[Message Broker] Consumer error for ${queueName}:`, error);
+        console.error(`[JMS Broker] Consumer error for ${queueName}:`, error);
+        span.setStatus({ 
+          code: SpanStatusCode.ERROR, 
+          message: error instanceof Error ? error.message : 'Unknown error' 
+        });
+      } finally {
+        span.end();
       }
     }
   }
