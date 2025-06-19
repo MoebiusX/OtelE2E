@@ -1,26 +1,17 @@
-// Initialize OpenTelemetry first
-import "./otel";
-
 import express, { type Request, Response, NextFunction } from "express";
 import { registerRoutes } from "./routes";
 import { setupVite, serveStatic, log } from "./vite";
 import { queueSimulator, setupPaymentProcessor } from "./queue-clean";
 import { createKongRouter } from "./kong-routes";
+import { kongContextMiddleware } from "./kong-middleware";
 
 const app = express();
 
-// Kong Gateway MUST be the very first middleware to inject context before OpenTelemetry
-import { kongGateway } from './kong-clean';
+// Kong Gateway context injection BEFORE OpenTelemetry initialization
+app.use(kongContextMiddleware);
 
-// Create a custom middleware that runs before all others
-app.use((req, res, next) => {
-  // Only process payment POST requests
-  if (req.path.startsWith('/api/payments') && req.method === 'POST') {
-    kongGateway.gatewayMiddleware()(req, res, next);
-  } else {
-    next();
-  }
-});
+// Initialize OpenTelemetry AFTER Kong context injection
+import "./otel";
 
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
