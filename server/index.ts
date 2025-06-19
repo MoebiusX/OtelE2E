@@ -1,17 +1,12 @@
+// Initialize OpenTelemetry first
+import "./otel";
+
 import express, { type Request, Response, NextFunction } from "express";
 import { registerRoutes } from "./routes";
 import { setupVite, serveStatic, log } from "./vite";
 import { queueSimulator, setupPaymentProcessor } from "./queue-clean";
-import { createKongRouter } from "./kong-routes";
-import { kongContextMiddleware } from "./kong-middleware";
 
 const app = express();
-
-// Kong Gateway context injection BEFORE OpenTelemetry initialization
-app.use(kongContextMiddleware);
-
-// Initialize OpenTelemetry AFTER Kong context injection
-import "./otel";
 
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
@@ -57,9 +52,6 @@ app.use((req, res, next) => {
 
   // Register API routes
   registerRoutes(app);
-
-  // Kong Gateway router for /kong routes - after API routes but before Vite
-  app.use('/kong', createKongRouter());
 
   app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
     const status = err.status || err.statusCode || 500;
