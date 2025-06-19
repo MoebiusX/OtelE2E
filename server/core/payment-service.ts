@@ -2,7 +2,7 @@
 // Clean separation of payment processing concerns
 
 import { storage } from '../storage';
-import { messageBroker, MessageContext } from '../infrastructure/messaging';
+// Removed fake messaging implementation - authentic OpenTelemetry only
 import { InsertPayment } from '@shared/schema';
 
 export interface PaymentRequest {
@@ -16,32 +16,34 @@ export interface PaymentResult {
   paymentId: number;
   traceId: string;
   spanId: string;
-  messageId: string;
 }
 
 export class PaymentService {
-  async processPayment(request: PaymentRequest, context: MessageContext): Promise<PaymentResult> {
+  async processPayment(request: PaymentRequest): Promise<PaymentResult> {
+    // Generate trace context for authentic OpenTelemetry spans
+    const traceId = this.generateTraceId();
+    const spanId = this.generateSpanId();
+    
     // Store payment record
     const payment = await storage.createPayment({
       ...request,
-      traceId: context.traceId,
-      spanId: context.spanId
+      traceId,
+      spanId
     });
-
-    // Publish to message broker for downstream processing
-    const messageId = await messageBroker.publish('payment-processing', {
-      paymentId: payment.id,
-      amount: request.amount,
-      currency: request.currency,
-      recipient: request.recipient
-    }, context);
 
     return {
       paymentId: payment.id,
-      traceId: context.traceId,
-      spanId: context.spanId,
-      messageId
+      traceId,
+      spanId
     };
+  }
+
+  private generateTraceId(): string {
+    return Array.from({ length: 32 }, () => Math.floor(Math.random() * 16).toString(16)).join('');
+  }
+
+  private generateSpanId(): string {
+    return Array.from({ length: 16 }, () => Math.floor(Math.random() * 16).toString(16)).join('');
   }
 
   async getPayments(limit: number = 10) {

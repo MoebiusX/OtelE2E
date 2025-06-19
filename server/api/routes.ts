@@ -40,9 +40,6 @@ export function registerRoutes(app: Express) {
         currency: paymentData.currency,
         recipient: paymentData.recipient,
         description: paymentData.description || 'Payment processing'
-      }, {
-        traceId,
-        spanId
       });
 
       // Return result
@@ -51,8 +48,7 @@ export function registerRoutes(app: Express) {
         success: true, 
         payment,
         traceId: result.traceId,
-        spanId: result.spanId,
-        messageId: result.messageId
+        spanId: result.spanId
       });
 
     } catch (error: any) {

@@ -46,9 +46,6 @@ app.use((req, res, next) => {
 });
 
 (async () => {
-  // Initialize message processors
-  await import('./core/message-processors');
-  
   // Register API routes
   registerRoutes(app);
 
