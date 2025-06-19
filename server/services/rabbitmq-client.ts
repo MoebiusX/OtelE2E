@@ -98,6 +98,10 @@ export class RabbitMQClient {
   }
 
   async startConsumer(): Promise<void> {
+    console.log('[RABBITMQ] Consumer disabled - manual queue inspection enabled');
+    return;
+
+    // Consumer disabled for manual queue inspection
     if (!this.channel) {
       console.warn('[RABBITMQ] No channel available for consumer');
       return;

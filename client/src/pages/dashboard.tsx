@@ -45,36 +45,35 @@ export default function Dashboard() {
               </Badge>
             </div>
             <div className="flex items-center space-x-6">
-              <div className="flex items-center space-x-4 text-sm text-slate-600">
-                <div className="flex items-center space-x-2">
-                  <div className="w-2 h-2 bg-otel-green rounded-full animate-pulse"></div>
-                  <span>HTTP Tracing</span>
-                </div>
-                <div className="flex items-center space-x-2">
-                  <div className="w-2 h-2 bg-red-500 rounded-full"></div>
-                  <span>Kong (Docker)</span>
-                </div>
-                <div className="flex items-center space-x-2">
-                  <div className="w-2 h-2 bg-red-500 rounded-full"></div>
-                  <span>RabbitMQ (Docker)</span>
-                </div>
-              </div>
               <div className="flex items-center space-x-4 text-sm">
-                <div className="flex items-center space-x-2">
+                <a 
+                  href="http://localhost:8000" 
+                  target="_blank" 
+                  rel="noopener noreferrer"
+                  className="flex items-center space-x-2 text-blue-600 hover:text-blue-800 transition-colors"
+                >
                   <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
-                  <span className="text-slate-600">Kong:</span>
-                  <code className="text-xs bg-slate-100 px-2 py-1 rounded font-mono">localhost:8000</code>
-                </div>
-                <div className="flex items-center space-x-2">
-                  <div className="w-2 h-2 bg-amber-500 rounded-full"></div>
-                  <span className="text-slate-600">Solace:</span>
-                  <code className="text-xs bg-slate-100 px-2 py-1 rounded font-mono">localhost:55555</code>
-                </div>
+                  <span>Kong Gateway</span>
+                </a>
+                <a 
+                  href="http://localhost:15672" 
+                  target="_blank" 
+                  rel="noopener noreferrer"
+                  className="flex items-center space-x-2 text-orange-600 hover:text-orange-800 transition-colors"
+                >
+                  <div className="w-2 h-2 bg-orange-500 rounded-full"></div>
+                  <span>RabbitMQ</span>
+                </a>
+                <a 
+                  href="http://localhost:16686" 
+                  target="_blank" 
+                  rel="noopener noreferrer"
+                  className="flex items-center space-x-2 text-purple-600 hover:text-purple-800 transition-colors"
+                >
+                  <div className="w-2 h-2 bg-purple-500 rounded-full"></div>
+                  <span>Jaeger</span>
+                </a>
               </div>
-              <button className="px-3 py-1 text-sm bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-md transition-colors flex items-center">
-                <Settings className="w-4 h-4 mr-1" />
-                Config
-              </button>
             </div>
           </div>
         </div>
