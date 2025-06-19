@@ -4,7 +4,7 @@ import "./otel";
 import express, { type Request, Response, NextFunction } from "express";
 import { registerRoutes } from "./routes";
 import { setupVite, serveStatic, log } from "./vite";
-import { queueSimulator, setupPaymentProcessor } from "./queue-clean";
+import { jmsClient } from "./jms-client";
 
 const app = express();
 
@@ -47,9 +47,6 @@ app.use((req, res, next) => {
 });
 
 (async () => {
-  // Initialize Solace queue processors for payment processing
-  await setupPaymentProcessor(queueSimulator);
-
   // Register API routes
   registerRoutes(app);
 

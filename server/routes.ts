@@ -8,7 +8,7 @@ import { storage } from "./storage";
 import { insertPaymentSchema } from "@shared/schema";
 // Removed synthetic tracing - using only authentic OpenTelemetry instrumentation
 import { kongGateway } from "./kong";
-import { queueSimulator } from "./queue-clean";
+import { jmsClient } from "./jms-client";
 import { traces } from "./otel";
 
 export function registerRoutes(app: Express) {
@@ -40,13 +40,13 @@ export function registerRoutes(app: Express) {
         spanId: spanId,
       });
 
-      // Actual operation: Publish to Solace queue (this really happens)
-      const messageId = await queueSimulator.publish('payment-queue', {
+      // Publish to real JMS message broker
+      const messageId = await jmsClient.publishMessage('payment-processing', {
         paymentId: payment.id,
         amount: validatedData.amount,
         currency: validatedData.currency,
         recipient: validatedData.recipient
-      }, traceId, spanId);
+      }, { traceId, spanId });
 
       res.json({ 
         success: true, 

@@ -2,7 +2,7 @@
 // Apache QPID JMS Message Broker - Separate Process
 // AMQP 1.0 compliant message broker for enterprise messaging
 
-import * as rhea from 'rhea';
+const rhea = require('rhea');
 import { v4 as uuidv4 } from 'uuid';
 
 const BROKER_PORT = 5672;
