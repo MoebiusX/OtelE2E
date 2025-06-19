@@ -13,6 +13,31 @@ export function registerRoutes(app: Express) {
   console.log("Registering API routes...");
 
   // Payment submission endpoint
+  // Kong Gateway proxy route for payments (generates Kong spans)
+  app.post("/api/payments-via-kong", async (req: Request, res: Response) => {
+    try {
+      // Forward request through Kong Gateway to generate authentic Kong spans
+      const kongResponse = await fetch('http://localhost:8000/api/payments', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-trace-id': req.headers['x-trace-id'] as string || '',
+          'x-span-id': req.headers['x-span-id'] as string || ''
+        },
+        body: JSON.stringify(req.body)
+      });
+
+      const result = await kongResponse.json();
+      res.json(result);
+    } catch (error) {
+      console.error('[KONG] Proxy request failed:', error);
+      res.status(503).json({ 
+        error: 'Kong Gateway unavailable',
+        message: 'Please ensure Kong Gateway is running on localhost:8000'
+      });
+    }
+  });
+
   app.post("/api/payments", async (req: Request, res: Response) => {
     try {
       // Extract trace context from headers (injected by Kong Gateway)

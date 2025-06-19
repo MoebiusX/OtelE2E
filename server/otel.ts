@@ -27,23 +27,33 @@ class TraceCollector implements SpanExporter {
         return;
       }
       
-      // Only show business operations: POST/DELETE requests, Kong Gateway, JMS operations
+      // Only show business operations: POST/DELETE requests, Kong Gateway, AMQP operations
       const isBusinessSpan = httpMethod === 'POST' || httpMethod === 'DELETE' || 
-                            component === 'kong-gateway' || component === 'solace-jms' ||
-                            spanName.includes('kong-gateway') || spanName.includes('jms-message');
+                            component === 'kong-gateway' || 
+                            spanName.includes('kong') || 
+                            spanName.includes('amqp') || 
+                            spanName.includes('rabbitmq') ||
+                            span.attributes?.['messaging.system'] === 'rabbitmq';
       
       if (!isBusinessSpan) {
         return;
       }
       
       // Debug logging to see what spans are being captured
-      console.log(`[OTEL] Capturing span: ${spanName} | TraceID: ${span.spanContext().traceId} | Service: ${span.attributes?.['service.name']} | HTTP: ${httpMethod}`);
-      console.log(`[OTEL] Span details:`, {
-        name: span.name,
-        kind: span.kind,
-        attributes: span.attributes,
-        resource: span.resource?.attributes
-      });
+      const operation = span.attributes?.['messaging.operation'] || httpMethod || spanName;
+      console.log(`[OTEL] Capturing span: ${spanName} | Operation: ${operation} | TraceID: ${span.spanContext().traceId} | Service: ${span.attributes?.['service.name']}`);
+      
+      // Show attributes for debugging span capture
+      if (span.attributes?.['messaging.system'] || spanName.includes('amqp') || spanName.includes('rabbitmq')) {
+        console.log(`[OTEL] RabbitMQ span captured:`, {
+          name: span.name,
+          messaging: {
+            system: span.attributes?.['messaging.system'],
+            operation: span.attributes?.['messaging.operation'],
+            destination: span.attributes?.['messaging.destination']
+          }
+        });
+      }
       
       const traceData = {
         traceId: span.spanContext().traceId,
@@ -92,6 +102,14 @@ const sdk = new NodeSDK({
     // Disable fs instrumentation to reduce noise
     '@opentelemetry/instrumentation-fs': {
       enabled: false,
+    },
+    // Enable AMQP instrumentation for RabbitMQ spans
+    '@opentelemetry/instrumentation-amqplib': {
+      enabled: true,
+    },
+    // Enable HTTP instrumentation for Kong proxy spans
+    '@opentelemetry/instrumentation-http': {
+      enabled: true,
     },
   })],
 });

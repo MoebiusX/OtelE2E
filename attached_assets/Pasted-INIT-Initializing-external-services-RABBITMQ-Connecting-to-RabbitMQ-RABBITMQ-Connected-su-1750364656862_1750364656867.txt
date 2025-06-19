@@ -1,0 +1,135 @@
+INIT] Initializing external services...
+[RABBITMQ] Connecting to RabbitMQ...
+[RABBITMQ] Connected successfully
+[RABBITMQ] Starting payment message consumer...
+[INIT] RabbitMQ connected and consumer started
+[INIT] Kong Gateway available
+[KONG] Payment service configured successfully
+Registering API routes...
+10:22:21 PM [express] serving on port 5000
+Browserslist: browsers data (caniuse-lite) is 8 months old. Please run:
+  npx update-browserslist-db@latest
+  Why you should do it regularly: https://github.com/browserslist/update-db#readme
+[RABBITMQ] Published payment 1 to queue
+10:22:55 PM [express] POST /api/payments 200 in 86ms :: {"success":true,"payment":{"id":1,"amount":10…
+[OTEL] Capturing span: POST | TraceID: d73de25c72d149798d2ef430f48e0c44 | Service: undefined | HTTP: POST
+[OTEL] Span details: {
+  name: 'POST',
+  kind: 1,
+  attributes: {
+    'http.url': 'http://localhost:5000/api/payments',
+    'http.host': 'localhost:5000',
+    'net.host.name': 'localhost',
+    'http.method': 'POST',
+    'http.scheme': 'http',
+    'http.target': '/api/payments',
+    'http.user_agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/137.0.0.0 Safari/537.36',
+    'http.request_content_length_uncompressed': 104,
+    'http.flavor': '1.1',
+    'net.transport': 'ip_tcp',
+    'net.host.ip': '127.0.0.1',
+    'net.host.port': 5000,
+    'net.peer.ip': '127.0.0.1',
+    'net.peer.port': 49794,
+    'http.status_code': 200,
+    'http.status_text': 'OK'
+  },
+  resource: {
+    'service.name': 'payment-api',
+    'host.name': 'Carloss-MacBook-Pro.local',
+    'host.arch': 'amd64',
+    'host.id': 'D8B6BFA0-0E6E-5548-BA3A-27742C9969EF',
+    'process.pid': 48530,
+    'process.executable.name': '/usr/local/Cellar/node/23.11.0/bin/node',
+    'process.executable.path': '/usr/local/Cellar/node/23.11.0/bin/node',
+    'process.command_args': [
+      '/usr/local/Cellar/node/23.11.0/bin/node',
+      '--require',
+      '/Users/carlosmontero/projects/GitHub/OtelE2E/node_modules/tsx/dist/preflight.cjs',
+      '--import',
+      'file:///Users/carlosmontero/projects/GitHub/OtelE2E/node_modules/tsx/dist/loader.mjs',
+      '/Users/carlosmontero/projects/GitHub/OtelE2E/server/index.ts'
+    ],
+    'process.runtime.version': '23.11.0',
+    'process.runtime.name': 'nodejs',
+    'process.runtime.description': 'Node.js',
+    'process.command': '/Users/carlosmontero/projects/GitHub/OtelE2E/server/index.ts',
+    'process.owner': 'carlosmontero',
+    'telemetry.sdk.language': 'nodejs',
+    'telemetry.sdk.name': 'opentelemetry',
+    'telemetry.sdk.version': '2.0.1'
+  }
+}
+[OTEL] Stored span in traces array. Total traces: 1
+[OTEL] All traces now: [ { name: 'POST', traceId: 'd73de25c' } ]
+[RABBITMQ] Received payment message: {
+  paymentId: 1,
+  amount: 1000,
+  currency: 'USD',
+  recipient: 'john.doe@example.com',
+  traceId: '1966cc1d45c85f0d356b90dd8b431d04',
+  timestamp: '2025-06-19T20:22:55.512Z'
+}
+[RABBITMQ] Published payment 2 to queue
+10:23:01 PM [express] POST /api/payments 200 in 22ms :: {"success":true,"payment":{"id":2,"amount":10…
+[OTEL] Capturing span: POST | TraceID: f66e73c13cc249a823b9a7d2b017435e | Service: undefined | HTTP: POST
+[OTEL] Span details: {
+  name: 'POST',
+  kind: 1,
+  attributes: {
+    'http.url': 'http://localhost:5000/api/payments',
+    'http.host': 'localhost:5000',
+    'net.host.name': 'localhost',
+    'http.method': 'POST',
+    'http.scheme': 'http',
+    'http.target': '/api/payments',
+    'http.user_agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/137.0.0.0 Safari/537.36',
+    'http.request_content_length_uncompressed': 104,
+    'http.flavor': '1.1',
+    'net.transport': 'ip_tcp',
+    'net.host.ip': '127.0.0.1',
+    'net.host.port': 5000,
+    'net.peer.ip': '127.0.0.1',
+    'net.peer.port': 49794,
+    'http.status_code': 200,
+    'http.status_text': 'OK'
+  },
+  resource: {
+    'service.name': 'payment-api',
+    'host.name': 'Carloss-MacBook-Pro.local',
+    'host.arch': 'amd64',
+    'host.id': 'D8B6BFA0-0E6E-5548-BA3A-27742C9969EF',
+    'process.pid': 48530,
+    'process.executable.name': '/usr/local/Cellar/node/23.11.0/bin/node',
+    'process.executable.path': '/usr/local/Cellar/node/23.11.0/bin/node',
+    'process.command_args': [
+      '/usr/local/Cellar/node/23.11.0/bin/node',
+      '--require',
+      '/Users/carlosmontero/projects/GitHub/OtelE2E/node_modules/tsx/dist/preflight.cjs',
+      '--import',
+      'file:///Users/carlosmontero/projects/GitHub/OtelE2E/node_modules/tsx/dist/loader.mjs',
+      '/Users/carlosmontero/projects/GitHub/OtelE2E/server/index.ts'
+    ],
+    'process.runtime.version': '23.11.0',
+    'process.runtime.name': 'nodejs',
+    'process.runtime.description': 'Node.js',
+    'process.command': '/Users/carlosmontero/projects/GitHub/OtelE2E/server/index.ts',
+    'process.owner': 'carlosmontero',
+    'telemetry.sdk.language': 'nodejs',
+    'telemetry.sdk.name': 'opentelemetry',
+    'telemetry.sdk.version': '2.0.1'
+  }
+}
+[OTEL] Stored span in traces array. Total traces: 2
+[OTEL] All traces now: [
+  { name: 'POST', traceId: 'd73de25c' },
+  { name: 'POST', traceId: 'f66e73c1' }
+]
+[RABBITMQ] Received payment message: {
+  paymentId: 2,
+  amount: 1000,
+  currency: 'USD',
+  recipient: 'john.doe@example.com',
+  traceId: '595da04594a5b98de27541257fd29e1a',
+  timestamp: '2025-06-19T20:23:01.588Z'
+}
