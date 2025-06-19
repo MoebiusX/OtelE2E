@@ -1,7 +1,7 @@
 import { NodeSDK } from '@opentelemetry/sdk-node';
 import { getNodeAutoInstrumentations } from '@opentelemetry/auto-instrumentations-node';
 import { SemanticResourceAttributes } from '@opentelemetry/semantic-conventions';
-import { BatchSpanProcessor, SpanExporter } from '@opentelemetry/sdk-trace-node';
+import { SimpleSpanProcessor, SpanExporter } from '@opentelemetry/sdk-trace-node';
 import { ExportResult, ExportResultCode } from '@opentelemetry/core';
 import { ReadableSpan } from '@opentelemetry/sdk-trace-base';
 
@@ -48,6 +48,7 @@ class TraceCollector implements SpanExporter {
       const existingSpan = traces.find(t => t.traceId === traceData.traceId && t.spanId === traceData.spanId);
       if (!existingSpan) {
         traces.push(traceData);
+        console.log(`[OTEL] Stored span in traces array. Total traces: ${traces.length}`);
       }
       
       // Keep only last 100 traces
@@ -69,7 +70,7 @@ const traceCollector = new TraceCollector();
 // Initialize OpenTelemetry SDK with custom collector
 const sdk = new NodeSDK({
   serviceName: 'payment-api',
-  spanProcessor: new BatchSpanProcessor(traceCollector),
+  spanProcessor: new SimpleSpanProcessor(traceCollector),
   instrumentations: [getNodeAutoInstrumentations({
     // Disable fs instrumentation to reduce noise
     '@opentelemetry/instrumentation-fs': {

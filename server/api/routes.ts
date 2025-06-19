@@ -75,17 +75,45 @@ export function registerRoutes(app: Express) {
   // Get OpenTelemetry traces
   app.get("/api/traces", async (req: Request, res: Response) => {
     try {
-      // Filter authentic OpenTelemetry spans - no GET requests, only business operations
-      const businessTraces = traces.filter(trace => {
-        const spans = trace.spans || [];
-        return spans.some((span: any) => 
-          span.name?.includes('POST') || 
-          span.name?.includes('Queue') ||
-          span.name?.includes('payment')
-        );
+      // Group spans by traceId to create proper trace objects
+      const traceGroups = new Map<string, any[]>();
+      
+      // Filter and group spans
+      traces.forEach(span => {
+        const traceId = span.traceId;
+        if (!traceGroups.has(traceId)) {
+          traceGroups.set(traceId, []);
+        }
+        traceGroups.get(traceId)?.push(span);
       });
 
-      res.json(businessTraces.slice(0, 10));
+      // Create trace objects with grouped spans
+      const formattedTraces = Array.from(traceGroups.entries()).map(([traceId, spans]) => {
+        const rootSpan = spans.find(s => !s.parentSpanId) || spans[0];
+        return {
+          traceId,
+          rootSpanId: rootSpan?.spanId || spans[0]?.spanId,
+          status: 'completed',
+          duration: Math.max(...spans.map(s => s.duration || 0)),
+          startTime: new Date(Math.min(...spans.map(s => new Date(s.startTime).getTime()))),
+          spans: spans.map(span => ({
+            spanId: span.spanId,
+            parentSpanId: span.parentSpanId,
+            traceId: span.traceId,
+            operationName: span.name,
+            serviceName: span.serviceName,
+            duration: span.duration,
+            startTime: span.startTime,
+            endTime: span.endTime,
+            tags: span.attributes || {}
+          }))
+        };
+      });
+
+      // Sort by most recent first
+      formattedTraces.sort((a, b) => new Date(b.startTime).getTime() - new Date(a.startTime).getTime());
+
+      res.json(formattedTraces.slice(0, 10));
     } catch (error: any) {
       console.error(`Error fetching traces: ${error.message}`);
       res.status(500).json({ error: "Failed to fetch traces" });
