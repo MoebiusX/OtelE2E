@@ -13,27 +13,30 @@ export function registerRoutes(app: Express) {
   console.log("Registering API routes...");
 
   // Payment submission endpoint
-  // Kong Gateway proxy route for payments (generates Kong spans)
-  app.post("/api/payments-via-kong", async (req: Request, res: Response) => {
+  // Test Kong Gateway configuration endpoint
+  app.get("/api/kong-test", async (req: Request, res: Response) => {
     try {
-      // Forward request through Kong Gateway to generate authentic Kong spans
-      const kongResponse = await fetch('http://localhost:8000/api/payments', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'x-trace-id': req.headers['x-trace-id'] as string || '',
-          'x-span-id': req.headers['x-span-id'] as string || ''
-        },
-        body: JSON.stringify(req.body)
-      });
-
-      const result = await kongResponse.json();
-      res.json(result);
+      // Test Kong Gateway connectivity and configuration
+      const statusResponse = await fetch('http://localhost:8001/status');
+      const servicesResponse = await fetch('http://localhost:8001/services');
+      
+      if (statusResponse.ok && servicesResponse.ok) {
+        const services = await servicesResponse.json();
+        res.json({ 
+          kong_status: 'available',
+          services: services.data || [],
+          message: 'Kong Gateway is configured and ready'
+        });
+      } else {
+        res.status(503).json({ 
+          kong_status: 'unavailable',
+          message: 'Kong Gateway not accessible'
+        });
+      }
     } catch (error) {
-      console.error('[KONG] Proxy request failed:', error);
       res.status(503).json({ 
-        error: 'Kong Gateway unavailable',
-        message: 'Please ensure Kong Gateway is running on localhost:8000'
+        kong_status: 'error',
+        message: 'Kong Gateway connection failed'
       });
     }
   });

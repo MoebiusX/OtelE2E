@@ -33,7 +33,10 @@ class TraceCollector implements SpanExporter {
                             spanName.includes('kong') || 
                             spanName.includes('amqp') || 
                             spanName.includes('rabbitmq') ||
-                            span.attributes?.['messaging.system'] === 'rabbitmq';
+                            span.attributes?.['messaging.system'] === 'rabbitmq' ||
+                            span.attributes?.['http.url']?.toString().includes(':8000') || // Kong Gateway requests
+                            span.kind === 3 || // Client spans (outgoing requests)
+                            span.kind === 4;   // Producer spans (message publishing)
       
       if (!isBusinessSpan) {
         return;

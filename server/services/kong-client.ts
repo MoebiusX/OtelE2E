@@ -60,23 +60,47 @@ export class KongClient {
   // Configure Kong service for our payment API
   async configureService() {
     try {
+      // Create service
       const serviceConfig = {
-        name: 'payment-service',
-        url: 'http://localhost:5000'
+        name: 'payment-api',
+        url: 'http://host.docker.internal:5000'
       };
 
-      const response = await fetch(`${this.adminUrl}/services`, {
+      let response = await fetch(`${this.adminUrl}/services`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(serviceConfig)
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        body: new URLSearchParams(serviceConfig)
       });
 
-      if (response.ok) {
-        console.log('[KONG] Payment service configured successfully');
+      if (response.status === 409) {
+        console.log('[KONG] Service already exists');
+      } else if (response.ok) {
+        console.log('[KONG] Payment service created successfully');
+      }
+
+      // Create route
+      const routeConfig = {
+        'paths[]': '/api',
+        strip_path: 'false',
+        preserve_host: 'false'
+      };
+
+      response = await fetch(`${this.adminUrl}/services/payment-api/routes`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        body: new URLSearchParams(routeConfig)
+      });
+
+      if (response.status === 409) {
+        console.log('[KONG] Route already exists');
+        return true;
+      } else if (response.ok) {
+        console.log('[KONG] Payment route created successfully');
         return true;
       }
+
     } catch (error) {
-      console.warn('[KONG] Service configuration failed:', error);
+      console.warn('[KONG] Service configuration failed:', (error as Error).message);
     }
     return false;
   }
