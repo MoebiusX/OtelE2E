@@ -18,10 +18,10 @@ export async function apiRequest(
     ...(customHeaders || {}),
   };
 
-  // Route through Kong Gateway for authentic Kong spans
-  const kongUrl = url.startsWith('/api') ? `http://localhost:8000${url}` : url;
+  // Use direct backend routing for now - Kong Gateway requires Docker setup
+  const targetUrl = url;
   
-  const res = await fetch(kongUrl, {
+  const res = await fetch(targetUrl, {
     method,
     headers,
     body: data ? JSON.stringify(data) : undefined,
