@@ -22,7 +22,7 @@ export function PaymentForm() {
   const [currentTraceId, setCurrentTraceId] = useState(generateTraceId());
   const [currentSpanId, setCurrentSpanId] = useState(generateSpanId());
   const [useEmptyTrace, setUseEmptyTrace] = useState(false);
-  const [useKongGateway, setUseKongGateway] = useState(false);
+
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
@@ -49,8 +49,7 @@ export function PaymentForm() {
             ...createTraceHeaders(currentTraceId, currentSpanId)
           };
       
-      const endpoint = useKongGateway ? "/api/kong/payments" : "/api/payments";
-      const response = await apiRequest("POST", endpoint, data, headers);
+      const response = await apiRequest("POST", "/api/payments", data, headers);
       return response.json();
     },
     onSuccess: (data) => {
@@ -194,16 +193,7 @@ export function PaymentForm() {
                 OpenTelemetry Configuration
               </h3>
               
-              <div className="mb-4 flex items-center justify-between">
-                <div>
-                  <label className="text-xs font-medium text-slate-600">Route through Kong Gateway</label>
-                  <p className="text-xs text-slate-500">Generate authentic Kong Gateway spans</p>
-                </div>
-                <Switch
-                  checked={useKongGateway}
-                  onCheckedChange={setUseKongGateway}
-                />
-              </div>
+
 
               <div className="mb-4 flex items-center justify-between">
                 <div>

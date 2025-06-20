@@ -18,7 +18,10 @@ export async function apiRequest(
     ...(customHeaders || {}),
   };
 
-  const res = await fetch(url, {
+  // Route through Kong Gateway for authentic Kong spans
+  const kongUrl = url.startsWith('/api') ? `http://localhost:8000${url}` : url;
+  
+  const res = await fetch(kongUrl, {
     method,
     headers,
     body: data ? JSON.stringify(data) : undefined,
