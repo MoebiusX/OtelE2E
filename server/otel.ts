@@ -98,10 +98,19 @@ class TraceCollector implements SpanExporter {
 
 const traceCollector = new TraceCollector();
 
-// Initialize OpenTelemetry SDK with custom collector
+// Configure Tempo OTLP exporter
+const tempoExporter = new OTLPTraceExporter({
+  url: 'http://localhost:4318/v1/traces',
+  headers: {},
+});
+
+// Initialize OpenTelemetry SDK with multiple exporters
 const sdk = new NodeSDK({
   serviceName: 'payment-api',
-  spanProcessor: new SimpleSpanProcessor(traceCollector),
+  spanProcessors: [
+    new SimpleSpanProcessor(traceCollector),     // For local UI
+    new BatchSpanProcessor(tempoExporter)        // For Grafana Tempo
+  ],
   instrumentations: [getNodeAutoInstrumentations({
     // Disable fs instrumentation to reduce noise
     '@opentelemetry/instrumentation-fs': {

@@ -73,6 +73,15 @@ export default function Dashboard() {
                   <div className="w-2 h-2 bg-purple-500 rounded-full"></div>
                   <span>Jaeger</span>
                 </a>
+                <a 
+                  href="http://localhost:3000" 
+                  target="_blank" 
+                  rel="noopener noreferrer"
+                  className="flex items-center space-x-2 text-green-600 hover:text-green-800 transition-colors"
+                >
+                  <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+                  <span>Grafana</span>
+                </a>
               </div>
             </div>
           </div>

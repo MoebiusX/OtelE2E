@@ -121,12 +121,13 @@ JAEGER_ENDPOINT=http://localhost:4318/v1/traces
 
 ## Recent Changes
 
+- June 20, 2025: **GRAFANA TEMPO & JAEGER INTEGRATION** - Added Grafana Tempo for trace storage with Jaeger UI visualization and Grafana dashboards
+- June 20, 2025: **PROPER FLOW ENFORCEMENT** - Fixed CLIENT → KONG → BACKEND → JMS flow, all requests now route through Kong Gateway at localhost:8000  
 - June 19, 2025: **EXTERNAL SERVICES INTEGRATION** - Added Docker Compose setup for real Kong Gateway and RabbitMQ with authentic OpenTelemetry spans
-- June 19, 2025: **KONG GATEWAY PROXY** - Integrated /kong routes for authentic Kong Gateway proxy with trace context propagation  
+- June 19, 2025: **KONG GATEWAY PROXY** - Integrated Kong Gateway proxy with trace context propagation  
 - June 19, 2025: **RABBITMQ MESSAGE QUEUE** - Added real AMQP message publishing and consumption with OpenTelemetry instrumentation
-- June 19, 2025: **GRACEFUL FALLBACK** - System continues operating when external services unavailable, maintaining authentic-only principle
 - June 19, 2025: **CLEAN ARCHITECTURE** - Established proper layer separation: API → Core → Services → Storage
-- June 19, 2025: **AUTHENTIC HTTP SPANS ONLY** - System shows only genuine OpenTelemetry auto-instrumentation for POST/DELETE requests
+- June 19, 2025: **AUTHENTIC HTTP SPANS ONLY** - System shows only genuine OpenTelemetry auto-instrumentation
 
 ## User Preferences
 
