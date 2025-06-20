@@ -18,8 +18,8 @@ export async function apiRequest(
     ...(customHeaders || {}),
   };
 
-  // Use direct backend routing for now - Kong Gateway requires Docker setup
-  const targetUrl = url;
+  // Route through Kong Gateway for authentic Kong spans - CLIENT → KONG → BACKEND → JMS
+  const targetUrl = url.startsWith('/api') ? `http://localhost:8000${url}` : url;
   
   const res = await fetch(targetUrl, {
     method,
