@@ -77,16 +77,51 @@ services:
       - kong-net
     restart: unless-stopped
 
-  # Optional: Jaeger for trace collection
-  jaeger:
-    image: jaegertracing/all-in-one:1.49
-    environment:
-      COLLECTOR_OTLP_ENABLED: true
+  # Grafana Tempo for trace storage
+  tempo:
+    image: grafana/tempo:latest
+    command: [ "-config.file=/etc/tempo.yaml" ]
+    volumes:
+      - ./tempo-config.yaml:/etc/tempo.yaml
+      - tempo_data:/tmp/tempo
     ports:
-      - "16686:16686" # Jaeger UI
-      - "14268:14268" # Jaeger collector HTTP
+      - "3200:3200"   # Tempo HTTP API
       - "4317:4317"   # OTLP gRPC receiver
       - "4318:4318"   # OTLP HTTP receiver
+    networks:
+      - kong-net
+    restart: unless-stopped
+
+  # Jaeger UI for trace visualization (reads from Tempo)
+  jaeger:
+    image: jaegertracing/jaeger-query:latest
+    environment:
+      SPAN_STORAGE_TYPE: grpc-plugin
+      GRPC_STORAGE_PLUGIN_BINARY: /go/bin/jaeger-tempo
+      GRPC_STORAGE_PLUGIN_CONFIGURATION_FILE: /etc/jaeger/config.yaml
+    volumes:
+      - ./jaeger-tempo-config.yaml:/etc/jaeger/config.yaml
+    ports:
+      - "16686:16686" # Jaeger UI
+    depends_on:
+      - tempo
+    networks:
+      - kong-net
+    restart: unless-stopped
+
+  # Grafana for dashboards and observability
+  grafana:
+    image: grafana/grafana:latest
+    ports:
+      - "3000:3000"
+    environment:
+      GF_SECURITY_ADMIN_PASSWORD: admin
+      GF_USERS_ALLOW_SIGN_UP: false
+    volumes:
+      - grafana_data:/var/lib/grafana
+      - ./grafana-datasources.yml:/etc/grafana/provisioning/datasources/datasources.yml
+    depends_on:
+      - tempo
     networks:
       - kong-net
     restart: unless-stopped
@@ -94,6 +129,8 @@ services:
 volumes:
   kong_data:
   rabbitmq_data:
+  tempo_data:
+  grafana_data:
 
 networks:
   kong-net:

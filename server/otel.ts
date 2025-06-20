@@ -1,9 +1,10 @@
 import { NodeSDK } from '@opentelemetry/sdk-node';
 import { getNodeAutoInstrumentations } from '@opentelemetry/auto-instrumentations-node';
 import { SemanticResourceAttributes } from '@opentelemetry/semantic-conventions';
-import { SimpleSpanProcessor, SpanExporter } from '@opentelemetry/sdk-trace-node';
+import { SimpleSpanProcessor, SpanExporter, BatchSpanProcessor } from '@opentelemetry/sdk-trace-node';
 import { ExportResult, ExportResultCode } from '@opentelemetry/core';
 import { ReadableSpan } from '@opentelemetry/sdk-trace-base';
+import { OTLPTraceExporter } from '@opentelemetry/exporter-trace-otlp-http';
 
 // Store traces for local visualization
 export const traces: any[] = [];
