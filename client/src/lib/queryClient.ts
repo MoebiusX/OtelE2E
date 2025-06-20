@@ -18,7 +18,7 @@ export async function apiRequest(
     ...(customHeaders || {}),
   };
 
-  // Route through Kong Gateway for authentic Kong spans - CLIENT → KONG → BACKEND → JMS
+  // Always try Kong Gateway first for CLIENT → KONG → BACKEND → JMS flow
   const targetUrl = url.startsWith('/api') ? `http://localhost:8000${url}` : url;
   
   const res = await fetch(targetUrl, {
