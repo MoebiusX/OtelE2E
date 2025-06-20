@@ -25,7 +25,8 @@ export async function apiRequest(
     method,
     headers,
     body: data ? JSON.stringify(data) : undefined,
-    credentials: "include",
+    credentials: "same-origin",
+    cache: "no-cache",
   });
 
   await throwIfResNotOk(res);
@@ -39,7 +40,8 @@ export const getQueryFn: <T>(options: {
   ({ on401: unauthorizedBehavior }) =>
   async ({ queryKey }) => {
     const res = await fetch(queryKey[0] as string, {
-      credentials: "include",
+      credentials: "same-origin",
+      cache: "no-cache",
     });
 
     if (unauthorizedBehavior === "returnNull" && res.status === 401) {
