@@ -98,8 +98,8 @@ class TraceCollector implements SpanExporter {
 
 const traceCollector = new TraceCollector();
 
-// Configure Tempo OTLP exporter
-const tempoExporter = new OTLPTraceExporter({
+// Configure Jaeger OTLP exporter (simpler than Tempo for now)
+const jaegerExporter = new OTLPTraceExporter({
   url: 'http://localhost:4318/v1/traces',
   headers: {},
 });
@@ -109,7 +109,7 @@ const sdk = new NodeSDK({
   serviceName: 'payment-api',
   spanProcessors: [
     new SimpleSpanProcessor(traceCollector),     // For local UI
-    new BatchSpanProcessor(tempoExporter)        // For Grafana Tempo
+    new BatchSpanProcessor(jaegerExporter)       // For Jaeger
   ],
   instrumentations: [getNodeAutoInstrumentations({
     // Disable fs instrumentation to reduce noise
