@@ -16,6 +16,11 @@ export interface PaymentResult {
   paymentId: number;
   traceId: string;
   spanId: string;
+  processorResponse?: {
+    status: string;
+    processedAt: string;
+    processorId: string;
+  };
 }
 
 export class PaymentService {
@@ -23,7 +28,8 @@ export class PaymentService {
     // Generate trace context for authentic OpenTelemetry spans
     const traceId = this.generateTraceId();
     const spanId = this.generateSpanId();
-    
+    const correlationId = this.generateCorrelationId();
+
     // Store payment record
     const payment = await storage.createPayment({
       ...request,
@@ -31,18 +37,42 @@ export class PaymentService {
       spanId
     });
 
-    // Publish payment to RabbitMQ queue for downstream processing
+    // Publish payment and wait for processor response
     if (rabbitMQClient.isConnected()) {
-      await rabbitMQClient.publishPayment({
-        paymentId: payment.id,
-        amount: payment.amount,
-        currency: payment.currency,
-        recipient: payment.recipient,
-        description: payment.description || '',
-        traceId,
-        spanId,
-        timestamp: payment.createdAt instanceof Date ? payment.createdAt.toISOString() : new Date().toISOString()
-      });
+      try {
+        const processorResponse = await rabbitMQClient.publishPaymentAndWait({
+          paymentId: payment.id,
+          correlationId,
+          amount: payment.amount,
+          currency: payment.currency,
+          recipient: payment.recipient,
+          description: payment.description || '',
+          traceId,
+          spanId,
+          timestamp: payment.createdAt instanceof Date ? payment.createdAt.toISOString() : new Date().toISOString()
+        }, 5000); // 5 second timeout
+
+        console.log(`[PAYMENT] Processor response: ${processorResponse.status}`);
+
+        return {
+          paymentId: payment.id,
+          traceId,
+          spanId,
+          processorResponse: {
+            status: processorResponse.status,
+            processedAt: processorResponse.processedAt,
+            processorId: processorResponse.processorId
+          }
+        };
+      } catch (error: any) {
+        console.warn(`[PAYMENT] Processor response timeout or error: ${error.message}`);
+        // Return without processor response on timeout
+        return {
+          paymentId: payment.id,
+          traceId,
+          spanId
+        };
+      }
     } else {
       console.warn('[PAYMENT] RabbitMQ not connected - payment processed without queue');
     }
@@ -52,6 +82,10 @@ export class PaymentService {
       traceId,
       spanId
     };
+  }
+
+  private generateCorrelationId(): string {
+    return `corr-${Date.now()}-${Math.random().toString(36).slice(2, 11)}`;
   }
 
   private generateTraceId(): string {

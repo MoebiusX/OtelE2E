@@ -1,8 +1,9 @@
 import * as amqp from 'amqplib';
-import { trace, context, SpanStatusCode, SpanKind } from '@opentelemetry/api';
+import { trace, context, SpanStatusCode, SpanKind, propagation } from '@opentelemetry/api';
 
 export interface PaymentMessage {
   paymentId: number;
+  correlationId: string;  // Added for correlation
   amount: number;
   currency: string;
   recipient: string;
@@ -12,12 +13,26 @@ export interface PaymentMessage {
   timestamp: string;
 }
 
+export interface PaymentResponse {
+  paymentId: number;
+  correlationId: string;
+  status: 'acknowledged' | 'rejected' | 'error';
+  processedAt: string;
+  processorId: string;
+}
+
+type ResponseCallback = (response: PaymentResponse) => void;
+
 export class RabbitMQClient {
   private connection: amqp.Connection | null = null;
   private channel: amqp.Channel | null = null;
   private rabbitUrl: string;
-  private readonly QUEUE_NAME = 'payments';
+  private readonly PAYMENTS_QUEUE = 'payments';
+  private readonly RESPONSE_QUEUE = 'payment_response';
   private tracer;
+
+  // Map of correlationId -> callback for pending responses
+  private pendingResponses: Map<string, ResponseCallback> = new Map();
 
   constructor() {
     this.rabbitUrl = process.env.RABBITMQ_URL || 'amqp://admin:admin123@localhost:5672';
@@ -29,11 +44,10 @@ export class RabbitMQClient {
       console.log('[RABBITMQ] Connecting to RabbitMQ...');
       this.connection = await amqp.connect(this.rabbitUrl);
       this.channel = await this.connection.createChannel();
-      
-      // Declare the payments queue
-      await this.channel.assertQueue(this.QUEUE_NAME, {
-        durable: true
-      });
+
+      // Declare both queues
+      await this.channel.assertQueue(this.PAYMENTS_QUEUE, { durable: true });
+      await this.channel.assertQueue(this.RESPONSE_QUEUE, { durable: true });
 
       console.log('[RABBITMQ] Connected successfully');
       return true;
@@ -43,53 +57,76 @@ export class RabbitMQClient {
     }
   }
 
-  async publishPayment(payment: PaymentMessage): Promise<boolean> {
+  /**
+   * Publish payment and wait for response from processor
+   * Returns the processor's acknowledgment response
+   */
+  async publishPaymentAndWait(payment: PaymentMessage, timeoutMs: number = 5000): Promise<PaymentResponse> {
     if (!this.channel) {
-      console.error('[RABBITMQ] No channel available');
-      return false;
+      throw new Error('No channel available');
     }
 
-    return new Promise((resolve) => {
+    return new Promise((resolve, reject) => {
+      const correlationId = payment.correlationId;
+
+      // Set up timeout
+      const timeout = setTimeout(() => {
+        this.pendingResponses.delete(correlationId);
+        reject(new Error(`Payment response timeout after ${timeoutMs}ms`));
+      }, timeoutMs);
+
+      // Register callback for this correlation ID
+      this.pendingResponses.set(correlationId, (response: PaymentResponse) => {
+        clearTimeout(timeout);
+        this.pendingResponses.delete(correlationId);
+        resolve(response);
+      });
+
+      // Create publish span
       const span = this.tracer.startSpan('rabbitmq.publish', {
         kind: SpanKind.PRODUCER,
         attributes: {
           'messaging.system': 'rabbitmq',
-          'messaging.destination': this.QUEUE_NAME,
+          'messaging.destination': this.PAYMENTS_QUEUE,
           'messaging.operation': 'publish',
           'payment.id': payment.paymentId,
-          'payment.amount': payment.amount,
-          'payment.currency': payment.currency
+          'payment.correlationId': correlationId
         }
       });
 
       context.with(trace.setSpan(context.active(), span), () => {
         try {
           const message = JSON.stringify(payment);
+          const headers: Record<string, string> = {};
+          propagation.inject(context.active(), headers);
+
           const sent = this.channel!.sendToQueue(
-            this.QUEUE_NAME,
+            this.PAYMENTS_QUEUE,
             Buffer.from(message),
             {
               persistent: true,
+              correlationId: correlationId,
               headers: {
-                'x-trace-id': payment.traceId,
-                'x-span-id': payment.spanId
+                ...headers,
+                'x-correlation-id': correlationId
               }
             }
           );
 
           if (sent) {
-            console.log(`[RABBITMQ] Published payment ${payment.paymentId} to queue`);
+            console.log(`[RABBITMQ] Published payment ${payment.paymentId} (correlation: ${correlationId.slice(0, 8)}...)`);
             span.setStatus({ code: SpanStatusCode.OK });
-            resolve(true);
           } else {
-            console.error('[RABBITMQ] Failed to send message to queue');
-            span.setStatus({ code: SpanStatusCode.ERROR, message: 'Failed to send message' });
-            resolve(false);
+            clearTimeout(timeout);
+            this.pendingResponses.delete(correlationId);
+            span.setStatus({ code: SpanStatusCode.ERROR, message: 'Failed to send' });
+            reject(new Error('Failed to send message to queue'));
           }
-        } catch (error) {
-          console.error('[RABBITMQ] Publish error:', error.message);
+        } catch (error: any) {
+          clearTimeout(timeout);
+          this.pendingResponses.delete(correlationId);
           span.setStatus({ code: SpanStatusCode.ERROR, message: error.message });
-          resolve(false);
+          reject(error);
         } finally {
           span.end();
         }
@@ -98,66 +135,39 @@ export class RabbitMQClient {
   }
 
   async startConsumer(): Promise<void> {
-    console.log('[RABBITMQ] Consumer disabled - manual queue inspection enabled');
-    return;
-
-    // Consumer disabled for manual queue inspection
     if (!this.channel) {
       console.warn('[RABBITMQ] No channel available for consumer');
       return;
     }
 
-    console.log('[RABBITMQ] Starting payment message consumer...');
-    
-    await this.channel.consume(this.QUEUE_NAME, (msg) => {
+    console.log('[RABBITMQ] Starting payment response consumer...');
+
+    await this.channel.consume(this.RESPONSE_QUEUE, (msg) => {
       if (msg) {
-        const span = this.tracer.startSpan('rabbitmq.consume', {
-          kind: SpanKind.CONSUMER,
-          attributes: {
-            'messaging.system': 'rabbitmq',
-            'messaging.destination': this.QUEUE_NAME,
-            'messaging.operation': 'receive'
+        try {
+          const response: PaymentResponse = JSON.parse(msg.content.toString());
+          const correlationId = response.correlationId || msg.properties.correlationId;
+
+          console.log(`[RABBITMQ] Received response for payment ${response.paymentId} (correlation: ${correlationId?.slice(0, 8)}...)`);
+
+          // Find and call the pending callback
+          const callback = this.pendingResponses.get(correlationId);
+          if (callback) {
+            callback(response);
+            console.log(`[RABBITMQ] Response delivered to waiting caller`);
+          } else {
+            console.log(`[RABBITMQ] No pending request for correlation ${correlationId?.slice(0, 8)}... (may have timed out)`);
           }
-        });
 
-        context.with(trace.setSpan(context.active(), span), () => {
-          try {
-            const payment: PaymentMessage = JSON.parse(msg.content.toString());
-            
-            // Extract trace context from headers
-            const traceId = msg.properties.headers?.['x-trace-id'];
-            const parentSpanId = msg.properties.headers?.['x-span-id'];
-            
-            console.log(`[RABBITMQ] Received payment message:`, {
-              paymentId: payment.paymentId,
-              amount: payment.amount,
-              currency: payment.currency,
-              recipient: payment.recipient,
-              traceId: traceId || payment.traceId,
-              timestamp: payment.timestamp
-            });
-
-            span.setAttributes({
-              'payment.id': payment.paymentId,
-              'payment.amount': payment.amount,
-              'payment.currency': payment.currency,
-              'trace.id': traceId || payment.traceId
-            });
-
-            // Acknowledge the message
-            this.channel!.ack(msg);
-            span.setStatus({ code: SpanStatusCode.OK });
-            
-          } catch (error) {
-            console.error('[RABBITMQ] Consumer error:', error.message);
-            span.setStatus({ code: SpanStatusCode.ERROR, message: error.message });
-            this.channel!.nack(msg, false, false);
-          } finally {
-            span.end();
-          }
-        });
+          this.channel!.ack(msg);
+        } catch (error: any) {
+          console.error('[RABBITMQ] Response consumer error:', error.message);
+          this.channel!.nack(msg, false, false);
+        }
       }
     });
+
+    console.log('[RABBITMQ] Consumer started - listening for payment responses');
   }
 
   async disconnect(): Promise<void> {
@@ -171,7 +181,7 @@ export class RabbitMQClient {
         this.connection = null;
       }
       console.log('[RABBITMQ] Disconnected');
-    } catch (error) {
+    } catch (error: any) {
       console.error('[RABBITMQ] Disconnect error:', error.message);
     }
   }

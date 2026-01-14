@@ -22,31 +22,31 @@ class TraceCollector implements SpanExporter {
       const httpMethod = span.attributes?.['http.method'];
       const spanName = span.name || '';
       const component = span.attributes?.['component'];
-      
+
       // Skip GET requests - they're UI polling noise
       if (httpMethod === 'GET') {
         return;
       }
-      
+
       // Only show business operations: POST/DELETE requests, Kong Gateway, AMQP operations
-      const isBusinessSpan = httpMethod === 'POST' || httpMethod === 'DELETE' || 
-                            component === 'kong-gateway' || 
-                            spanName.includes('kong') || 
-                            spanName.includes('amqp') || 
-                            spanName.includes('rabbitmq') ||
-                            span.attributes?.['messaging.system'] === 'rabbitmq' ||
-                            span.attributes?.['http.url']?.toString().includes(':8000') || // Kong Gateway requests
-                            span.kind === 3 || // Client spans (outgoing requests)
-                            span.kind === 4;   // Producer spans (message publishing)
-      
+      const isBusinessSpan = httpMethod === 'POST' || httpMethod === 'DELETE' ||
+        component === 'api-gateway' ||
+        spanName.includes('kong') ||
+        spanName.includes('amqp') ||
+        spanName.includes('rabbitmq') ||
+        span.attributes?.['messaging.system'] === 'rabbitmq' ||
+        span.attributes?.['http.url']?.toString().includes(':8000') || // Kong Gateway requests
+        span.kind === 3 || // Client spans (outgoing requests)
+        span.kind === 4;   // Producer spans (message publishing)
+
       if (!isBusinessSpan) {
         return;
       }
-      
+
       // Debug logging to see what spans are being captured
       const operation = span.attributes?.['messaging.operation'] || httpMethod || spanName;
       console.log(`[OTEL] Capturing span: ${spanName} | Operation: ${operation} | TraceID: ${span.spanContext().traceId} | Service: ${span.attributes?.['service.name']}`);
-      
+
       // Show attributes for debugging span capture
       if (span.attributes?.['messaging.system'] || spanName.includes('amqp') || spanName.includes('rabbitmq')) {
         console.log(`[OTEL] RabbitMQ span captured:`, {
@@ -58,7 +58,7 @@ class TraceCollector implements SpanExporter {
           }
         });
       }
-      
+
       const traceData = {
         traceId: span.spanContext().traceId,
         spanId: span.spanContext().spanId,
@@ -73,7 +73,7 @@ class TraceCollector implements SpanExporter {
         serviceName: span.resource?.attributes?.[SemanticResourceAttributes.SERVICE_NAME] || 'payment-api',
         events: span.events || []
       };
-      
+
       // Only add if this span doesn't already exist to prevent duplicates
       const existingSpan = traces.find(t => t.traceId === traceData.traceId && t.spanId === traceData.spanId);
       if (!existingSpan) {
@@ -81,13 +81,13 @@ class TraceCollector implements SpanExporter {
         console.log(`[OTEL] Stored span in traces array. Total traces: ${traces.length}`);
         console.log(`[OTEL] All traces now:`, traces.map(t => ({ name: t.name, traceId: t.traceId.slice(0, 8) })));
       }
-      
+
       // Keep only last 100 traces
       if (traces.length > 100) {
         traces.shift();
       }
     });
-    
+
     resultCallback({ code: ExportResultCode.SUCCESS });
   }
 

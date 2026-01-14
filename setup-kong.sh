@@ -41,8 +41,8 @@ echo "Enabling OpenTelemetry plugin..."
 curl -i -X POST http://localhost:8001/plugins/ \
   --data name="opentelemetry" \
   --data config.endpoint="http://jaeger:14268/api/traces" \
-  --data config.service_name="kong-gateway" \
-  --data config.resource_attributes.service.name="kong-gateway" \
+  --data config.service_name="api-gateway" \
+  --data config.resource_attributes.service.name="api-gateway" \
   --data config.resource_attributes.service.version="1.0.0"
 
 # Enable request tracing plugin
