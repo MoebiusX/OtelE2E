@@ -15,22 +15,22 @@ function getOperationName(span: any): string {
   const httpTarget = span.attributes?.['http.target'];
   const messagingOperation = span.attributes?.['messaging.operation'];
   const messagingSystem = span.attributes?.['messaging.system'];
-  
+
   if (messagingSystem === 'rabbitmq') {
     return messagingOperation === 'publish' ? 'rabbitmq.publish' : 'rabbitmq.consume';
   }
-  
+
   if (httpMethod && httpTarget) {
     if (httpTarget.includes('/payments')) {
       return 'payments.process';
     }
     return `${httpMethod.toLowerCase()}.${httpTarget.replace('/api/', '')}`;
   }
-  
+
   if (span.name === 'POST') {
     return 'payments.process';
   }
-  
+
   return span.name || 'unknown.operation';
 }
 
@@ -38,15 +38,15 @@ function getServiceName(span: any): string {
   const serviceName = span.serviceName || span.attributes?.['service.name'];
   const httpUrl = span.attributes?.['http.url'];
   const messagingSystem = span.attributes?.['messaging.system'];
-  
+
   if (messagingSystem === 'rabbitmq') {
     return 'rabbitmq-broker';
   }
-  
+
   if (httpUrl?.includes(':8000')) {
     return 'kong-gateway';
   }
-  
+
   return serviceName || 'payment-api';
 }
 
@@ -57,7 +57,7 @@ export function registerRoutes(app: Express) {
   app.post("/api/kong/payments", async (req: Request, res: Response) => {
     try {
       console.log('[KONG] Proxying payment through Kong Gateway...');
-      
+
       // Forward request through Kong Gateway to generate authentic Kong spans
       const response = await fetch('http://localhost:8000/api/payments', {
         method: 'POST',
@@ -70,7 +70,7 @@ export function registerRoutes(app: Express) {
         },
         body: JSON.stringify(req.body)
       });
-      
+
       if (response.ok) {
         const result = await response.json();
         console.log('[KONG] Payment processed through Kong Gateway');
@@ -92,22 +92,22 @@ export function registerRoutes(app: Express) {
     try {
       const statusResponse = await fetch('http://localhost:8001/status');
       const servicesResponse = await fetch('http://localhost:8001/services');
-      
+
       if (statusResponse.ok && servicesResponse.ok) {
         const services = await servicesResponse.json();
-        res.json({ 
+        res.json({
           kong_status: 'available',
           services: services.data || [],
           message: 'Kong Gateway is configured and ready'
         });
       } else {
-        res.status(503).json({ 
+        res.status(503).json({
           kong_status: 'unavailable',
           message: 'Kong Gateway not accessible'
         });
       }
     } catch (error) {
-      res.status(503).json({ 
+      res.status(503).json({
         kong_status: 'error',
         message: 'Kong Gateway connection failed'
       });
@@ -116,20 +116,28 @@ export function registerRoutes(app: Express) {
 
   app.post("/api/payments", async (req: Request, res: Response) => {
     try {
+      // Log incoming trace headers for debugging
+      const incomingTraceparent = req.headers['traceparent'];
+      if (incomingTraceparent) {
+        console.log(`[ROUTES] Incoming traceparent: ${incomingTraceparent}`);
+      } else {
+        console.log(`[ROUTES] No traceparent header - OTEL will create new trace`);
+      }
+
       // Extract trace context from headers (injected by Kong Gateway)
-      const traceId = req.headers['x-trace-id'] as string || 
-                     req.headers['traceparent']?.toString().split('-')[1] || 
-                     generateTraceId();
-      const spanId = req.headers['x-span-id'] as string || 
-                    req.headers['traceparent']?.toString().split('-')[2] || 
-                    generateSpanId();
+      const traceId = req.headers['x-trace-id'] as string ||
+        req.headers['traceparent']?.toString().split('-')[1] ||
+        generateTraceId();
+      const spanId = req.headers['x-span-id'] as string ||
+        req.headers['traceparent']?.toString().split('-')[2] ||
+        generateSpanId();
 
       // Validate request
       const validation = insertPaymentSchema.safeParse(req.body);
       if (!validation.success) {
-        return res.status(400).json({ 
-          error: "Invalid request", 
-          details: fromZodError(validation.error).message 
+        return res.status(400).json({
+          error: "Invalid request",
+          details: fromZodError(validation.error).message
         });
       }
 
@@ -145,8 +153,8 @@ export function registerRoutes(app: Express) {
 
       // Return result
       const payment = await paymentService.getPayment(result.paymentId);
-      res.json({ 
-        success: true, 
+      res.json({
+        success: true,
         payment,
         traceId: result.traceId,
         spanId: result.spanId
@@ -174,7 +182,7 @@ export function registerRoutes(app: Express) {
     try {
       // Group spans by traceId to create proper trace objects
       const traceGroups = new Map<string, any[]>();
-      
+
       // Filter and group spans
       traces.forEach(span => {
         const traceId = span.traceId;
@@ -202,37 +210,37 @@ export function registerRoutes(app: Express) {
               const httpTarget = span.attributes?.['http.target'];
               const messagingOperation = span.attributes?.['messaging.operation'];
               const messagingSystem = span.attributes?.['messaging.system'];
-              
+
               if (messagingSystem === 'rabbitmq') {
                 return messagingOperation === 'publish' ? 'rabbitmq.publish' : 'rabbitmq.consume';
               }
-              
+
               if (httpMethod && httpTarget) {
                 if (httpTarget.includes('/payments')) {
                   return 'payments.process';
                 }
                 return `${httpMethod.toLowerCase()}.${httpTarget.replace('/api/', '')}`;
               }
-              
+
               if (span.name === 'POST') {
                 return 'payments.process';
               }
-              
+
               return span.name || 'unknown.operation';
             })(),
             serviceName: (() => {
               const serviceName = span.serviceName || span.attributes?.['service.name'];
               const httpUrl = span.attributes?.['http.url'];
               const messagingSystem = span.attributes?.['messaging.system'];
-              
+
               if (messagingSystem === 'rabbitmq') {
                 return 'rabbitmq-broker';
               }
-              
+
               if (httpUrl?.includes(':8000')) {
                 return 'kong-gateway';
               }
-              
+
               return serviceName || 'payment-api';
             })(),
             duration: span.duration,
@@ -259,7 +267,7 @@ export function registerRoutes(app: Express) {
     try {
       const { traceId } = req.params;
       const trace = traces.find(t => t.traceId === traceId);
-      
+
       if (!trace) {
         return res.status(404).json({ error: "Trace not found" });
       }
@@ -277,10 +285,10 @@ export function registerRoutes(app: Express) {
       const { clearTraces } = await import('../otel');
       await paymentService.clearAllData();
       clearTraces();
-      
-      res.json({ 
-        success: true, 
-        message: "All recorded transactions cleared" 
+
+      res.json({
+        success: true,
+        message: "All recorded transactions cleared"
       });
     } catch (error: any) {
       console.error(`Clear operation error: ${error.message}`);

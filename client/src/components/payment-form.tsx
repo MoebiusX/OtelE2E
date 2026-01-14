@@ -4,7 +4,6 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { insertPaymentSchema } from "@shared/schema";
 import { apiRequest } from "@/lib/queryClient";
-import { generateTraceId, generateSpanId, createTraceHeaders } from "@/lib/tracing";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
@@ -19,9 +18,8 @@ import type { z } from "zod";
 type PaymentFormData = z.infer<typeof insertPaymentSchema>;
 
 export function PaymentForm() {
-  const [currentTraceId, setCurrentTraceId] = useState(generateTraceId());
-  const [currentSpanId, setCurrentSpanId] = useState(generateSpanId());
-  const [useEmptyTrace, setUseEmptyTrace] = useState(false);
+  // Toggle to control whether browser OTEL injects trace context or not
+  const [disableBrowserTrace, setDisableBrowserTrace] = useState(false);
 
   const { toast } = useToast();
   const queryClient = useQueryClient();
@@ -38,32 +36,71 @@ export function PaymentForm() {
 
   const paymentMutation = useMutation({
     mutationFn: async (data: PaymentFormData) => {
-      // Note: With Jaeger integration, spans are automatically sent to Jaeger
-      // via OpenTelemetry SDK instrumentation, not stored in local database
+      // Browser OTEL auto-instruments fetch() and injects traceparent headers
+      // If disableBrowserTrace is true, we use a separate fetch to bypass instrumentation
 
-      const headers = useEmptyTrace 
-        ? {} // No trace headers - let Kong Gateway inject context
-        : {
-            'x-trace-id': currentTraceId,
-            'x-span-id': currentSpanId,
-            ...createTraceHeaders(currentTraceId, currentSpanId)
+      if (disableBrowserTrace) {
+        // Use XMLHttpRequest to bypass OTEL fetch instrumentation
+        // This simulates a client without OTEL - Kong will create the trace
+        return new Promise((resolve, reject) => {
+          const xhr = new XMLHttpRequest();
+          xhr.open('POST', 'http://localhost:8000/api/payments');
+          xhr.setRequestHeader('Content-Type', 'application/json');
+          xhr.onload = () => {
+            if (xhr.status >= 200 && xhr.status < 300) {
+              resolve(JSON.parse(xhr.responseText));
+            } else {
+              reject(new Error(`Request failed: ${xhr.status}`));
+            }
           };
-      
-      const response = await apiRequest("POST", "/api/payments", data, headers);
+          xhr.onerror = () => reject(new Error('Network error'));
+          xhr.send(JSON.stringify(data));
+        });
+      }
+
+      // Normal path: OTEL auto-injects traceparent header
+      const response = await apiRequest("POST", "/api/payments", data);
       return response.json();
     },
     onSuccess: (data) => {
+      // Show real OTEL trace ID from the response (not the client-generated one)
+      const realTraceId = data.traceId;
+      const processorStatus = data.processorResponse?.status || 'pending';
+      const processorId = data.processorResponse?.processorId || 'N/A';
+
       toast({
-        title: "Payment Submitted Successfully",
-        description: `Payment processed with trace ID: ${data.traceId.substring(0, 8)}...`,
+        title: "Payment Processed",
+        description: (
+          <div className="space-y-1">
+            <p>Trace ID: <code className="bg-slate-100 px-1 rounded">{realTraceId.substring(0, 16)}...</code></p>
+            <p>Processor: <span className="font-medium">{processorStatus}</span> ({processorId.split('-')[0]})</p>
+            <a
+              href={`http://localhost:16686/trace/${realTraceId}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-blue-600 hover:underline text-sm"
+            >
+              View in Jaeger →
+            </a>
+            <p className="text-xs text-slate-400">Trace appears in ~3 seconds</p>
+          </div>
+        ),
       });
+      // Invalidate immediately
       queryClient.invalidateQueries({ queryKey: ["/api/payments"] });
       queryClient.invalidateQueries({ queryKey: ["/api/traces"] });
       queryClient.invalidateQueries({ queryKey: ["/api/metrics"] });
-      
-      // Generate new trace IDs for next payment
-      setCurrentTraceId(generateTraceId());
-      setCurrentSpanId(generateSpanId());
+
+      // Also refetch after a delay to catch traces that are still being collected
+      setTimeout(() => {
+        queryClient.invalidateQueries({ queryKey: ["/api/traces"] });
+      }, 1000);
+      setTimeout(() => {
+        queryClient.invalidateQueries({ queryKey: ["/api/traces"] });
+      }, 2500);
+
+
+
     },
     onError: (error) => {
       toast({
@@ -192,44 +229,29 @@ export function PaymentForm() {
                 <Route className="w-4 h-4 text-otel-blue mr-2" />
                 OpenTelemetry Configuration
               </h3>
-              
+
 
 
               <div className="mb-4 flex items-center justify-between">
                 <div>
-                  <label className="text-xs font-medium text-slate-600">Empty Trace Headers</label>
-                  <p className="text-xs text-slate-500">Test context injection without client headers</p>
+                  <label className="text-xs font-medium text-slate-600">Gateway-Initiated Trace</label>
+                  <p className="text-xs text-slate-500">Disable browser OTEL (Kong creates trace)</p>
                 </div>
                 <Switch
-                  checked={useEmptyTrace}
-                  onCheckedChange={setUseEmptyTrace}
+                  checked={disableBrowserTrace}
+                  onCheckedChange={setDisableBrowserTrace}
                 />
               </div>
 
-              {!useEmptyTrace && (
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                  <div>
-                    <label className="block text-xs font-medium text-slate-600 mb-1">Trace ID</label>
-                    <Input
-                      value={currentTraceId}
-                      readOnly
-                      className="text-xs bg-white font-mono"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-xs font-medium text-slate-600 mb-1">Span ID</label>
-                    <Input
-                      value={currentSpanId}
-                      readOnly
-                      className="text-xs bg-white font-mono"
-                    />
-                  </div>
+              {!disableBrowserTrace && (
+                <div className="text-xs text-slate-500 bg-blue-50 border border-blue-200 rounded p-2">
+                  <strong>Browser-initiated trace:</strong> React client creates root span via OTEL instrumentation
                 </div>
               )}
 
-              {useEmptyTrace && (
+              {disableBrowserTrace && (
                 <div className="text-center py-3 text-xs text-slate-500 bg-amber-50 border border-amber-200 rounded">
-                  No trace headers will be sent - Kong Gateway will inject context
+                  <strong>Gateway-initiated trace:</strong> No client OTEL → Kong creates trace context
                 </div>
               )}
             </div>

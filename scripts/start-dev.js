@@ -1,7 +1,6 @@
 
 import { spawn, execSync } from 'child_process';
 import path from 'path';
-import fs from 'fs';
 import { fileURLToPath } from 'url';
 
 const __filename = fileURLToPath(import.meta.url);
@@ -10,10 +9,7 @@ const rootDir = path.join(__dirname, '..');
 
 const isWindows = process.platform === 'win32';
 const npmCmd = isWindows ? 'npm.cmd' : 'npm';
-const dockerComposeCmd = 'docker-compose';
-
-// Parse args
-const args = process.argv.slice(2);
+const npxCmd = isWindows ? 'npx.cmd' : 'npx';
 
 console.log('🚀 Starting OtelE2E Development Environment...');
 
@@ -26,11 +22,10 @@ async function checkDocker() {
     }
 }
 
-async function startExternalServices() {
-    console.log('📦 Starting external services (Kong, RabbitMQ, Jaeger)...');
-    const composeFile = path.join(rootDir, 'docker-compose.external.yml');
-
-    const child = spawn(dockerComposeCmd, ['-f', composeFile, 'up', '-d'], {
+async function startDockerServices() {
+    console.log('📦 Starting Docker services (Kong, RabbitMQ, Jaeger, OTEL Collector)...');
+    // Use the main docker-compose.yml file
+    const child = spawn('docker-compose', ['up', '-d'], {
         cwd: rootDir,
         stdio: 'inherit',
         shell: true
@@ -38,45 +33,115 @@ async function startExternalServices() {
 
     return new Promise((resolve, reject) => {
         child.on('exit', (code) => {
-            if (code === 0) resolve();
-            else reject(new Error('Failed to start external services'));
+            if (code === 0) {
+                console.log('✅ Docker services started');
+                resolve();
+            } else {
+                reject(new Error('Failed to start Docker services'));
+            }
         });
     });
 }
 
-async function startApp() {
-    console.log('✨ Starting Application (Server + Vite)...');
-    const child = spawn(npmCmd, ['run', 'dev'], {
+async function waitForServices() {
+    console.log('⏳ Waiting for services to be ready...');
+
+    // Wait for Kong
+    for (let i = 0; i < 30; i++) {
+        try {
+            execSync('curl -s http://localhost:8001/status', { stdio: 'ignore' });
+            console.log('   ✅ Kong Gateway ready');
+            break;
+        } catch (e) {
+            if (i === 29) console.log('   ⚠️  Kong Gateway not responding (may still be starting)');
+            await new Promise(r => setTimeout(r, 1000));
+        }
+    }
+
+    // Wait for RabbitMQ
+    for (let i = 0; i < 30; i++) {
+        try {
+            execSync('curl -s http://localhost:15672', { stdio: 'ignore' });
+            console.log('   ✅ RabbitMQ ready');
+            break;
+        } catch (e) {
+            if (i === 29) console.log('   ⚠️  RabbitMQ not responding');
+            await new Promise(r => setTimeout(r, 1000));
+        }
+    }
+}
+
+function startProcess(name, cmd, args, color) {
+    const child = spawn(cmd, args, {
         cwd: rootDir,
-        stdio: 'inherit',
         shell: true,
-        env: { ...process.env, NODE_ENV: 'development' }
+        env: { ...process.env, NODE_ENV: 'development', FORCE_COLOR: '1' }
     });
 
-    // Handle cleanup
-    process.on('SIGINT', () => {
-        child.kill();
-        process.exit();
+    child.stdout?.on('data', (data) => {
+        process.stdout.write(`${color}[${name}]${'\x1b[0m'} ${data}`);
     });
+
+    child.stderr?.on('data', (data) => {
+        process.stderr.write(`${color}[${name}]${'\x1b[0m'} ${data}`);
+    });
+
+    return child;
 }
 
 async function main() {
+    // Check Docker
     const dockerUp = await checkDocker();
     if (!dockerUp) {
-        console.error('❌ Docker is not running or not accessible.');
-        console.error('   This application requires Docker for Kong, RabbitMQ, and Jaeger.');
-        console.error('   Please start Docker and try again.');
+        console.error('❌ Docker is not running. Please start Docker and try again.');
         process.exit(1);
     }
 
+    // Start Docker services
     try {
-        await startExternalServices();
+        await startDockerServices();
+        await waitForServices();
     } catch (e) {
-        console.error('❌ Failed to start external services. Please check docker outputs.');
+        console.error('❌ Failed to start Docker services:', e.message);
         process.exit(1);
     }
 
-    await startApp();
+    console.log('\n🚀 Starting application components...\n');
+
+    // Start all components
+    const processes = [];
+
+    // Server (payment-api)
+    processes.push(startProcess('SERVER', npmCmd, ['run', 'dev:server'], '\x1b[36m'));
+
+    // Wait a bit for server to start before processor
+    await new Promise(r => setTimeout(r, 3000));
+
+    // Payment Processor
+    processes.push(startProcess('PROCESSOR', npxCmd, ['tsx', 'payment-processor/index.ts'], '\x1b[33m'));
+
+    // Wait a bit more
+    await new Promise(r => setTimeout(r, 2000));
+
+    // Vite frontend
+    processes.push(startProcess('VITE', npxCmd, ['vite', '--host'], '\x1b[35m'));
+
+    console.log('\n✨ All components starting! Open http://localhost:5173\n');
+    console.log('   📊 Jaeger UI: http://localhost:16686');
+    console.log('   🐰 RabbitMQ: http://localhost:15672');
+    console.log('   🦍 Kong Admin: http://localhost:8001\n');
+
+    // Handle cleanup on exit
+    const cleanup = () => {
+        console.log('\n🛑 Shutting down...');
+        processes.forEach(p => {
+            try { p.kill(); } catch (e) { }
+        });
+        process.exit();
+    };
+
+    process.on('SIGINT', cleanup);
+    process.on('SIGTERM', cleanup);
 }
 
 main().catch(console.error);

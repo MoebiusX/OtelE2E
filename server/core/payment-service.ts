@@ -4,6 +4,7 @@
 import { storage } from '../storage';
 import { rabbitMQClient } from '../services/rabbitmq-client';
 import { InsertPayment } from '@shared/schema';
+import { trace } from '@opentelemetry/api';
 
 export interface PaymentRequest {
   amount: number;
@@ -25,10 +26,16 @@ export interface PaymentResult {
 
 export class PaymentService {
   async processPayment(request: PaymentRequest): Promise<PaymentResult> {
-    // Generate trace context for authentic OpenTelemetry spans
-    const traceId = this.generateTraceId();
-    const spanId = this.generateSpanId();
+    // Get REAL trace context from OpenTelemetry active span
+    const activeSpan = trace.getActiveSpan();
+    const spanContext = activeSpan?.spanContext();
+
+    // Use real OTEL trace/span IDs if available, otherwise generate fallback
+    const traceId = spanContext?.traceId || this.generateTraceId();
+    const spanId = spanContext?.spanId || this.generateSpanId();
     const correlationId = this.generateCorrelationId();
+
+    console.log(`[PAYMENT] Using OTEL trace context: traceId=${traceId.slice(0, 8)}... spanId=${spanId.slice(0, 8)}...`);
 
     // Store payment record
     const payment = await storage.createPayment({

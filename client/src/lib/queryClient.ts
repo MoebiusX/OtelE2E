@@ -18,25 +18,15 @@ export async function apiRequest(
     ...(customHeaders || {}),
   };
 
-  // Conditional Routing based on User Requirements:
-  // 1. If NO trace headers are present -> Route to Kong (8000) for Context Injection.
-  // 2. If trace headers ARE present -> Route directly to Backend (5000), bypassing Kong.
-
-  const hasTraceHeaders = customHeaders && (
-    'x-trace-id' in customHeaders ||
-    'traceparent' in customHeaders
-  );
-
+  // All API requests go through Kong Gateway:
+  // - If client provides traceparent → Kong preserves and propagates it
+  // - If no traceparent → Kong creates new trace context
   const KONG_URL = 'http://localhost:8000';
 
-  // Default to direct backend routing
   let targetUrl = url;
-
-  if (url.startsWith('/api') && !hasTraceHeaders) {
-    // No headers -> Send to Kong for injection
+  if (url.startsWith('/api')) {
     targetUrl = `${KONG_URL}${url}`;
   }
-  // Else -> Keep as relative (direct to backend 5000)
 
   const res = await fetch(targetUrl, {
     method,

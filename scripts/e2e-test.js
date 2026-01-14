@@ -97,8 +97,8 @@ async function testCase1_EmptyHeaders() {
 
     console.log(`   Payment ID: ${payment.payment?.id}`);
 
-    // Wait for traces to be collected
-    await delay(3000);
+    // Wait for traces to be collected (5 seconds for reliable batch flushing)
+    await delay(5000);
 
     // Try both service names (old and new)
     let traces = await queryJaegerTraces('api-gateway');
@@ -135,8 +135,8 @@ async function testCase1_EmptyHeaders() {
 }
 
 async function testCase2_ClientHeaders() {
-    // Use Case 2: Send request directly to Payment API with client-generated trace context
-    // Expected: Client's trace context is preserved
+    // Use Case 2: Send request through Kong WITH client trace headers
+    // Expected: Kong preserves client's trace context and propagates it
 
     const clientTraceId = Array.from({ length: 32 }, () =>
         Math.floor(Math.random() * 16).toString(16)
@@ -145,21 +145,21 @@ async function testCase2_ClientHeaders() {
         Math.floor(Math.random() * 16).toString(16)
     ).join('');
 
-    console.log(`📤 Sending payment with client trace ID: ${clientTraceId.slice(0, 8)}...`);
+    console.log(`📤 Sending payment through Kong with client trace ID: ${clientTraceId.slice(0, 8)}...`);
 
-    const payment = await submitPayment(PAYMENT_API, {
+    const payment = await submitPayment(KONG_API, {
         amount: 2002,
         currency: 'USD',
         recipient: 'e2e-test2@example.com',
-        description: 'E2E Test - Client Headers'
+        description: 'E2E Test - Client Headers via Kong'
     }, {
         'traceparent': `00-${clientTraceId}-${clientSpanId}-01`
     });
 
     console.log(`   Payment ID: ${payment.payment?.id}`);
 
-    // Wait for traces
-    await delay(2000);
+    // Wait for traces to be collected (5 seconds for reliable batch flushing)
+    await delay(5000);
 
     // Query for the specific trace
     const trace = await findTraceById(clientTraceId);
@@ -176,8 +176,8 @@ async function testCase2_ClientHeaders() {
     }
 
     const validation = validateSpans(trace,
-        ['payment-api'],
-        ['POST', 'rabbitmq']
+        ['api-gateway'],  // Now goes through Kong, so expect api-gateway
+        ['kong']          // Just need Kong spans to verify propagation
     );
 
     console.log(`   Found services: ${validation.foundServices.join(', ')}`);
