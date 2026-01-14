@@ -139,9 +139,9 @@ curl http://localhost:5000/api/traces
 
 ## Documentation
 
-- **[ARCHITECTURE.md](./ARCHITECTURE.md)**: System architecture, repository map, and component diagrams
-- **[EXTERNAL_SERVICES.md](./EXTERNAL_SERVICES.md)**: Docker services and configuration
-- **[DEPLOYMENT.md](./DEPLOYMENT.md)**: Deployment and environment setup
+- **[ARCHITECTURE.md](./docs/ARCHITECTURE.md)**: System architecture, repository map, and component diagrams
+- **[EXTERNAL_SERVICES.md](./docs/EXTERNAL_SERVICES.md)**: Docker services and configuration
+- **[DEPLOYMENT.md](./docs/DEPLOYMENT.md)**: Deployment and environment setup
 
 ## Technical Stack
 

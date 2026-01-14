@@ -1,80 +1,132 @@
 version: '3.8'
 
 services:
-  # PostgreSQL Database
-  postgres:
-    image: postgres:16-alpine
+  kong-database:
+    image: postgres:13
     environment:
-      POSTGRES_DB: payment_poc
-      POSTGRES_USER: payment_user
-      POSTGRES_PASSWORD: payment_pass
+      POSTGRES_USER: kong
+      POSTGRES_PASSWORD: kongpass
+      POSTGRES_DB: kong
     ports:
       - "5432:5432"
     volumes:
-      - postgres_data:/var/lib/postgresql/data
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U payment_user -d payment_poc"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
+      - kong_data:/var/lib/postgresql/data
+    networks:
+      - kong-net
 
-  # Kong Gateway
+  kong-migrations:
+    image: kong/kong-gateway:latest
+    command: kong migrations bootstrap
+    depends_on:
+      - kong-database
+    environment:
+      KONG_DATABASE: postgres
+      KONG_PG_HOST: kong-database
+      KONG_PG_USER: kong
+      KONG_PG_PASSWORD: kongpass
+      KONG_PG_DATABASE: kong
+    networks:
+      - kong-net
+    restart: on-failure
+
   kong-gateway:
-    build: 
-      context: .
-      dockerfile: Dockerfile.kong
-    ports:
-      - "8000:8000"
-      - "8001:8001"  # Admin API
-    environment:
-      - BACKEND_URL=http://payment-api:5000
+    image: kong/kong-gateway:latest
     depends_on:
-      - payment-api
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-
-  # Payment API Backend
-  payment-api:
-    build: .
-    ports:
-      - "5000:5000"
+      - kong-database
+      - kong-migrations
     environment:
-      - NODE_ENV=production
-      - DATABASE_URL=postgresql://payment_user:payment_pass@postgres:5432/payment_poc
-      - OTEL_SERVICE_NAME=payment-api
-      - OTEL_EXPORTER_OTLP_ENDPOINT=http://jaeger:14268/api/traces
-    depends_on:
-      postgres:
-        condition: service_healthy
-      jaeger:
-        condition: service_started
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:5000/api/payments"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
+      KONG_DATABASE: postgres
+      KONG_PG_HOST: kong-database
+      KONG_PG_USER: kong
+      KONG_PG_PASSWORD: kongpass
+      KONG_PG_DATABASE: kong
+      KONG_PROXY_ACCESS_LOG: /dev/stdout
+      KONG_ADMIN_ACCESS_LOG: /dev/stdout
+      KONG_PROXY_ERROR_LOG: /dev/stderr
+      KONG_ADMIN_ERROR_LOG: /dev/stderr
+      KONG_ADMIN_LISTEN: 0.0.0.0:8001
+      KONG_ADMIN_GUI_URL: http://localhost:8002
+      # OpenTelemetry configuration
+      KONG_TRACING_INSTRUMENTATIONS: all
+      KONG_TRACING_SAMPLING_RATE: 1.0
+    ports:
+      - "8000:8000"   # Kong Gateway proxy
+      - "8443:8443"   # Kong Gateway proxy SSL
+      - "8001:8001"   # Kong Admin API
+      - "8444:8444"   # Kong Admin API SSL
+      - "8002:8002"   # Kong Manager (GUI)
+      - "8445:8445"   # Kong Manager SSL
+      - "8003:8003"   # Kong Dev Portal
+      - "8446:8446"   # Kong Dev Portal SSL
+    networks:
+      - kong-net
+    restart: unless-stopped
 
-  # Jaeger Tracing Backend
+  rabbitmq:
+    image: rabbitmq:3.12-management
+    environment:
+      RABBITMQ_DEFAULT_USER: admin
+      RABBITMQ_DEFAULT_PASS: admin123
+      RABBITMQ_DEFAULT_VHOST: /
+    ports:
+      - "5672:5672"   # AMQP port
+      - "15672:15672" # Management UI
+    volumes:
+      - rabbitmq_data:/var/lib/rabbitmq
+    networks:
+      - kong-net
+    restart: unless-stopped
+
+  # Grafana Tempo for trace storage
+  tempo:
+    image: grafana/tempo:latest
+    command: [ "-config.file=/etc/tempo.yaml" ]
+    volumes:
+      - ./config/tempo-config.yaml:/etc/tempo.yaml
+      - tempo_data:/tmp/tempo
+    ports:
+      - "3200:3200"   # Tempo HTTP API
+      - "4317:4317"   # OTLP gRPC receiver
+      - "4318:4318"   # OTLP HTTP receiver
+    networks:
+      - kong-net
+    restart: unless-stopped
+
+  # Jaeger UI for trace visualization (standalone for now)
   jaeger:
     image: jaegertracing/all-in-one:latest
-    ports:
-      - "16686:16686"  # Jaeger UI
-      - "14268:14268"  # HTTP collector
-      - "14250:14250"  # gRPC collector
     environment:
-      - COLLECTOR_OTLP_ENABLED=true
-    healthcheck:
-      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:16686/"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
+      COLLECTOR_OTLP_ENABLED: true
+    ports:
+      - "16686:16686" # Jaeger UI
+      - "14250:14250" # Jaeger gRPC
+    networks:
+      - kong-net
+    restart: unless-stopped
+
+  # Grafana for dashboards and observability
+  grafana:
+    image: grafana/grafana:latest
+    ports:
+      - "3000:3000"
+    environment:
+      GF_SECURITY_ADMIN_PASSWORD: admin
+      GF_USERS_ALLOW_SIGN_UP: false
+    volumes:
+      - grafana_data:/var/lib/grafana
+      - ./config/grafana-datasources.yml:/etc/grafana/provisioning/datasources/datasources.yml
+    depends_on:
+      - tempo
+    networks:
+      - kong-net
+    restart: unless-stopped
 
 volumes:
-  postgres_data:
+  kong_data:
+  rabbitmq_data:
+  tempo_data:
+  grafana_data:
 
 networks:
-  default:
-    name: payment_poc_network
+  kong-net:
+    driver: bridge
