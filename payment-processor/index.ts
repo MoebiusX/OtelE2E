@@ -1,12 +1,12 @@
 /**
- * Payment Processor Service
+ * Order Matcher Service (formerly Payment Processor)
  * 
  * A standalone microservice that:
- * 1. Consumes payment messages from the "payments" queue
- * 2. Processes the payment (simulated)
- * 3. Sends an acknowledgment response to the "payment_response" queue
+ * 1. Consumes trade orders from the "payments" queue (legacy name kept for compat)
+ * 2. Simulates order matching with price execution
+ * 3. Sends execution response to the "payment_response" queue
  * 
- * Run with: node payment-processor/index.js
+ * Run with: npx tsx payment-processor/index.ts
  */
 
 import * as amqp from 'amqplib';
@@ -17,7 +17,7 @@ import { trace, context, SpanStatusCode, SpanKind, propagation } from '@opentele
 
 // Initialize OpenTelemetry
 const sdk = new NodeSDK({
-    serviceName: 'payment-processor',
+    serviceName: 'order-matcher',
     traceExporter: new OTLPTraceExporter({
         url: process.env.OTEL_EXPORTER_OTLP_ENDPOINT || 'http://localhost:4318/v1/traces'
     }),
@@ -27,35 +27,55 @@ const sdk = new NodeSDK({
 sdk.start();
 
 // Message interfaces
-interface PaymentMessage {
-    paymentId: number;
-    correlationId: string;  // For correlation wait pattern
-    amount: number;
-    currency: string;
-    recipient: string;
-    description: string;
+interface OrderMessage {
+    orderId: string;
+    correlationId: string;
+    pair: string;
+    side: "BUY" | "SELL";
+    quantity: number;
+    orderType: "MARKET";
+    currentPrice: number;
     traceId: string;
     spanId: string;
     timestamp: string;
+    // Legacy fields (for backwards compat)
+    paymentId?: number;
+    amount?: number;
+    currency?: string;
 }
 
-interface PaymentResponse {
-    paymentId: number;
-    correlationId: string;  // Echo back for correlation
-    status: 'acknowledged' | 'rejected' | 'error';
+interface ExecutionResponse {
+    orderId: string;
+    correlationId: string;
+    paymentId?: number;  // Legacy field
+    status: 'FILLED' | 'REJECTED' | 'acknowledged';  // acknowledged for legacy compat
+    fillPrice: number;
+    totalValue: number;
     processedAt: string;
     processorId: string;
 }
 
 const RABBITMQ_URL = process.env.RABBITMQ_URL || 'amqp://admin:admin123@localhost:5672';
-const PAYMENTS_QUEUE = 'payments';
-const RESPONSE_QUEUE = 'payment_response';
-const PROCESSOR_ID = `processor-${Date.now()}`;
+const ORDERS_QUEUE = 'payments';  // Keep legacy queue name for compat
+const RESPONSE_QUEUE = 'payment_response';  // Keep legacy queue name
+const PROCESSOR_ID = `matcher-${Date.now()}`;
 
-const tracer = trace.getTracer('payment-processor', '1.0.0');
+const tracer = trace.getTracer('order-matcher', '1.0.0');
+
+// Price simulation with volatility
+function simulateExecution(price: number, side: string): { fillPrice: number; slippage: number } {
+    // Simulate slippage: 0.01% to 0.5%
+    const slippage = (Math.random() * 0.005 + 0.0001);
+    const direction = side === 'BUY' ? 1 : -1;
+    const fillPrice = price * (1 + (slippage * direction));
+    return {
+        fillPrice: Math.round(fillPrice * 100) / 100,
+        slippage: Math.round(slippage * 10000) / 100
+    };
+}
 
 async function main() {
-    console.log(`[PROCESSOR] Starting Payment Processor Service (ID: ${PROCESSOR_ID})...`);
+    console.log(`[MATCHER] Starting Order Matcher Service (ID: ${PROCESSOR_ID})...`);
 
     try {
         // Connect to RabbitMQ
@@ -63,87 +83,119 @@ async function main() {
         const channel = await connection.createChannel();
 
         // Declare queues
-        await channel.assertQueue(PAYMENTS_QUEUE, { durable: true });
+        await channel.assertQueue(ORDERS_QUEUE, { durable: true });
         await channel.assertQueue(RESPONSE_QUEUE, { durable: true });
 
-        console.log(`[PROCESSOR] Connected to RabbitMQ`);
-        console.log(`[PROCESSOR] Listening on queue: ${PAYMENTS_QUEUE}`);
-        console.log(`[PROCESSOR] Responses sent to: ${RESPONSE_QUEUE}`);
+        console.log(`[MATCHER] Connected to RabbitMQ`);
+        console.log(`[MATCHER] Listening on queue: ${ORDERS_QUEUE}`);
+        console.log(`[MATCHER] Responses sent to: ${RESPONSE_QUEUE}`);
 
-        // Consume messages from payments queue
-        await channel.consume(PAYMENTS_QUEUE, async (msg) => {
+        // Consume orders
+        await channel.consume(ORDERS_QUEUE, async (msg) => {
             if (!msg) return;
 
             // Extract trace context from message headers
-            const parentContext = propagation.extract(context.active(), msg.properties.headers || {});
+            const headers = msg.properties.headers || {};
 
-            // Create processing span
-            const span = tracer.startSpan('payment.process', {
+            // Extract the parent context (for order.match span)
+            const parentContext = propagation.extract(context.active(), headers);
+
+            // Also get the original POST span context (for response)
+            const originalPostTraceparent = headers['x-parent-traceparent'];
+            const originalPostTracestate = headers['x-parent-tracestate'];
+            console.log(`[MATCHER] Original POST context: ${originalPostTraceparent?.slice(0, 40) || 'none'}...`);
+
+            // Create processing span as child of extracted context
+            const span = tracer.startSpan('order.match', {
                 kind: SpanKind.CONSUMER,
                 attributes: {
                     'messaging.system': 'rabbitmq',
-                    'messaging.source': PAYMENTS_QUEUE,
+                    'messaging.source': ORDERS_QUEUE,
                     'messaging.destination': RESPONSE_QUEUE,
                     'messaging.operation': 'process',
                     'processor.id': PROCESSOR_ID
                 }
             }, parentContext);
 
+            console.log(`[MATCHER] Created span with traceId: ${span.spanContext().traceId}`);
+
+            // Store original POST context for response routing
+            const originalContext = { traceparent: originalPostTraceparent, tracestate: originalPostTracestate };
+
             await context.with(trace.setSpan(parentContext, span), async () => {
                 try {
-                    const payment: PaymentMessage = JSON.parse(msg.content.toString());
+                    const order: OrderMessage = JSON.parse(msg.content.toString());
 
-                    console.log(`[PROCESSOR] Processing payment ${payment.paymentId}:`, {
-                        amount: payment.amount,
-                        currency: payment.currency,
-                        recipient: payment.recipient
-                    });
+                    // Handle both new order format and legacy payment format
+                    const orderId = order.orderId || `ORD-${order.paymentId}`;
+                    const pair = order.pair || 'BTC/USD';
+                    const side = order.side || 'BUY';
+                    const quantity = order.quantity || (order.amount ? order.amount / 42500 : 0.001);
+                    const currentPrice = order.currentPrice || 42500;
+
+                    console.log(`[MATCHER] Processing ${side} order: ${quantity.toFixed(8)} BTC @ ~$${currentPrice}`);
 
                     span.setAttributes({
-                        'payment.id': payment.paymentId,
-                        'payment.amount': payment.amount,
-                        'payment.currency': payment.currency,
-                        'payment.recipient': payment.recipient
+                        'order.id': orderId,
+                        'order.pair': pair,
+                        'order.side': side,
+                        'order.quantity': quantity,
+                        'order.price': currentPrice
                     });
 
-                    // Simulate processing (validation, fraud check, etc.)
-                    await simulateProcessing(100);
+                    // Simulate order matching (validation, price lookup, execution)
+                    await simulateProcessing(80);
 
-                    // Create response with correlationId for correlation
-                    const response: PaymentResponse = {
-                        paymentId: payment.paymentId,
-                        correlationId: payment.correlationId,
-                        status: 'acknowledged',
+                    // Calculate execution
+                    const { fillPrice, slippage } = simulateExecution(currentPrice, side);
+                    const totalValue = fillPrice * quantity;
+
+                    console.log(`[MATCHER] Executed: ${side} ${quantity.toFixed(8)} BTC @ $${fillPrice} (slip: ${slippage}%)`);
+
+                    // Create response
+                    const response: ExecutionResponse = {
+                        orderId,
+                        correlationId: order.correlationId,
+                        paymentId: order.paymentId,  // Legacy field
+                        status: 'FILLED',
+                        fillPrice,
+                        totalValue,
                         processedAt: new Date().toISOString(),
                         processorId: PROCESSOR_ID
                     };
 
-                    // Send response to payment_response queue - with proper trace context
-                    const responseSpan = tracer.startSpan('payment.respond', {
+                    // Send response with ORIGINAL POST context (not order-matcher context)
+                    // This makes exchange-api response consumer a sibling of publish span
+                    const responseSpan = tracer.startSpan('order.response', {
                         kind: SpanKind.PRODUCER,
                         attributes: {
                             'messaging.system': 'rabbitmq',
                             'messaging.destination': RESPONSE_QUEUE,
                             'messaging.operation': 'publish',
-                            'payment.id': payment.paymentId,
-                            'payment.status': response.status
+                            'order.id': orderId,
+                            'order.status': response.status,
+                            'order.fillPrice': fillPrice
                         }
                     });
 
-                    // Inject trace context WITHIN the responseSpan context
-                    context.with(trace.setSpan(context.active(), responseSpan), () => {
-                        const responseHeaders: Record<string, string> = {};
-                        propagation.inject(context.active(), responseHeaders);
+                    // Send response with original POST context headers
+                    const responseHeaders: Record<string, string> = {};
+                    if (originalContext.traceparent) {
+                        responseHeaders['traceparent'] = originalContext.traceparent;
+                    }
+                    if (originalContext.tracestate) {
+                        responseHeaders['tracestate'] = originalContext.tracestate;
+                    }
+                    console.log(`[MATCHER] Response with POST context: ${originalContext.traceparent?.slice(0, 40) || 'none'}...`);
 
-                        channel.sendToQueue(
-                            RESPONSE_QUEUE,
-                            Buffer.from(JSON.stringify(response)),
-                            {
-                                persistent: true,
-                                headers: responseHeaders
-                            }
-                        );
-                    });
+                    channel.sendToQueue(
+                        RESPONSE_QUEUE,
+                        Buffer.from(JSON.stringify(response)),
+                        {
+                            persistent: true,
+                            headers: responseHeaders
+                        }
+                    );
 
                     responseSpan.setStatus({ code: SpanStatusCode.OK });
                     responseSpan.end();
@@ -152,10 +204,10 @@ async function main() {
                     channel.ack(msg);
 
                     span.setStatus({ code: SpanStatusCode.OK });
-                    console.log(`[PROCESSOR] Payment ${payment.paymentId} processed → response sent`);
+                    console.log(`[MATCHER] Order ${orderId} filled → response sent`);
 
                 } catch (error: any) {
-                    console.error(`[PROCESSOR] Error:`, error.message);
+                    console.error(`[MATCHER] Error:`, error.message);
                     span.setStatus({ code: SpanStatusCode.ERROR, message: error.message });
                     channel.nack(msg, false, false);
                 } finally {
@@ -166,7 +218,7 @@ async function main() {
 
         // Graceful shutdown
         process.on('SIGINT', async () => {
-            console.log('[PROCESSOR] Shutting down...');
+            console.log('[MATCHER] Shutting down...');
             await channel.close();
             await connection.close();
             await sdk.shutdown();
@@ -174,7 +226,7 @@ async function main() {
         });
 
     } catch (error: any) {
-        console.error('[PROCESSOR] Failed to start:', error.message);
+        console.error('[MATCHER] Failed to start:', error.message);
         process.exit(1);
     }
 }

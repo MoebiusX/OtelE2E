@@ -1,24 +1,44 @@
-import { type User, type InsertUser, type Payment, type InsertPayment, type Trace, type InsertTrace, type Span, type InsertSpan } from "@shared/schema";
+import { type Order, type Trace, type InsertTrace, type Span, type InsertSpan, type User, type UserWallet, type Transfer } from "@shared/schema";
+
+// ============================================
+// USERS - Alice & Bob
+// ============================================
+
+export const USERS: User[] = [
+  { id: 'alice', name: 'Alice', avatar: '👩' },
+  { id: 'bob', name: 'Bob', avatar: '👨' },
+];
+
+// ============================================
+// STORAGE INTERFACE
+// ============================================
 
 export interface IStorage {
   // User operations
-  getUser(id: number): Promise<User | undefined>;
-  getUserByUsername(username: string): Promise<User | undefined>;
-  createUser(user: InsertUser): Promise<User>;
+  getUsers(): Promise<User[]>;
+  getUser(userId: string): Promise<User | undefined>;
 
-  // Payment operations
-  createPayment(payment: InsertPayment & { traceId: string; spanId: string }): Promise<Payment>;
-  getPayment(id: number): Promise<Payment | undefined>;
-  getPayments(limit?: number): Promise<Payment[]>;
-  updatePaymentStatus(id: number, status: string): Promise<Payment | undefined>;
+  // Wallet operations (per user)
+  getWallet(userId: string): Promise<UserWallet | undefined>;
+  updateWallet(userId: string, updates: { btc?: number; usd?: number }): Promise<UserWallet | undefined>;
 
-  // Trace operations - Note: With Jaeger integration, these are primarily for demo UI
+  // Transfer operations
+  createTransfer(data: { transferId: string; fromUserId: string; toUserId: string; amount: number; traceId: string; spanId: string }): Promise<Transfer>;
+  getTransfers(limit?: number): Promise<Transfer[]>;
+  updateTransfer(transferId: string, status: "PENDING" | "COMPLETED" | "FAILED"): Promise<Transfer | undefined>;
+
+  // Order operations
+  createOrder(order: { orderId: string; pair: string; side: string; quantity: number; orderType: string; traceId: string; spanId: string; userId?: string }): Promise<Order>;
+  getOrders(limit?: number): Promise<Order[]>;
+  updateOrder(orderId: string, updates: { status?: "PENDING" | "FILLED" | "REJECTED"; fillPrice?: number; totalValue?: number }): Promise<Order | undefined>;
+
+  // Trace operations
   createTrace(trace: InsertTrace): Promise<Trace>;
   getTrace(traceId: string): Promise<Trace | undefined>;
   getTraces(limit?: number): Promise<Trace[]>;
   updateTraceStatus(traceId: string, status: string, duration?: number): Promise<Trace | undefined>;
 
-  // Span operations - Note: With Jaeger integration, these are primarily for demo UI
+  // Span operations
   createSpan(span: InsertSpan): Promise<Span>;
   getSpan(spanId: string): Promise<Span | undefined>;
   getSpansByTrace(traceId: string): Promise<Span[]>;
@@ -28,72 +48,141 @@ export interface IStorage {
   clearAllData(): Promise<void>;
 }
 
+// ============================================
+// MEMORY STORAGE IMPLEMENTATION
+// ============================================
+
 export class MemoryStorage implements IStorage {
-  private users: Map<number, User> = new Map();
-  private payments: Map<number, Payment> = new Map();
+  private wallets: Map<string, UserWallet> = new Map();
+  private transfers: Map<string, Transfer> = new Map();
+  private orders: Map<string, Order> = new Map();
   private traces: Map<string, Trace> = new Map();
   private spans: Map<string, Span> = new Map();
   private nextId = 1;
 
   constructor() {
-    this.createDemoData();
+    // Initialize wallets for Alice and Bob
+    this.wallets.set('alice', {
+      userId: 'alice',
+      btc: 1.5,
+      usd: 50000,
+      lastUpdated: new Date(),
+    });
+    this.wallets.set('bob', {
+      userId: 'bob',
+      btc: 0.5,
+      usd: 10000,
+      lastUpdated: new Date(),
+    });
   }
 
-  private createDemoData() {
-    // Clean slate - no demo data, only real payment submissions will appear
+  // ============================================
+  // USER OPERATIONS
+  // ============================================
+
+  async getUsers(): Promise<User[]> {
+    return USERS;
   }
 
-  async getUser(id: number): Promise<User | undefined> {
-    return this.users.get(id);
+  async getUser(userId: string): Promise<User | undefined> {
+    return USERS.find(u => u.id === userId);
   }
 
-  async getUserByUsername(username: string): Promise<User | undefined> {
-    for (const user of this.users.values()) {
-      if (user.username === username) return user;
+  // ============================================
+  // WALLET OPERATIONS
+  // ============================================
+
+  async getWallet(userId: string): Promise<UserWallet | undefined> {
+    return this.wallets.get(userId);
+  }
+
+  async updateWallet(userId: string, updates: { btc?: number; usd?: number }): Promise<UserWallet | undefined> {
+    const wallet = this.wallets.get(userId);
+    if (wallet) {
+      if (updates.btc !== undefined) wallet.btc = updates.btc;
+      if (updates.usd !== undefined) wallet.usd = updates.usd;
+      wallet.lastUpdated = new Date();
+      return wallet;
     }
     return undefined;
   }
 
-  async createUser(insertUser: InsertUser): Promise<User> {
-    const user: User = {
-      id: this.nextId++,
-      username: insertUser.username,
-      password: insertUser.password,
-    };
-    this.users.set(user.id, user);
-    return user;
-  }
+  // ============================================
+  // TRANSFER OPERATIONS
+  // ============================================
 
-  async createPayment(paymentData: InsertPayment & { traceId: string; spanId: string }): Promise<Payment> {
-    const payment: Payment = {
-      id: this.nextId++,
-      ...paymentData,
-      status: "completed",
+  async createTransfer(data: { transferId: string; fromUserId: string; toUserId: string; amount: number; traceId: string; spanId: string }): Promise<Transfer> {
+    const transfer: Transfer = {
+      transferId: data.transferId,
+      fromUserId: data.fromUserId,
+      toUserId: data.toUserId,
+      amount: data.amount,
+      status: "PENDING",
+      traceId: data.traceId,
+      spanId: data.spanId,
       createdAt: new Date(),
     };
-    this.payments.set(payment.id, payment);
-    return payment;
+    this.transfers.set(transfer.transferId, transfer);
+    return transfer;
   }
 
-  async getPayment(id: number): Promise<Payment | undefined> {
-    return this.payments.get(id);
-  }
-
-  async getPayments(limit: number = 10): Promise<Payment[]> {
-    const allPayments = Array.from(this.payments.values());
-    return allPayments
+  async getTransfers(limit: number = 10): Promise<Transfer[]> {
+    const allTransfers = Array.from(this.transfers.values());
+    return allTransfers
       .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime())
       .slice(0, limit);
   }
 
-  async updatePaymentStatus(id: number, status: string): Promise<Payment | undefined> {
-    const payment = this.payments.get(id);
-    if (payment) {
-      payment.status = status;
-      return payment;
+  async updateTransfer(transferId: string, status: "PENDING" | "COMPLETED" | "FAILED"): Promise<Transfer | undefined> {
+    const transfer = this.transfers.get(transferId);
+    if (transfer) {
+      transfer.status = status;
+      return transfer;
     }
     return undefined;
   }
+
+  // ============================================
+  // ORDER OPERATIONS
+  // ============================================
+
+  async createOrder(orderData: { orderId: string; pair: string; side: string; quantity: number; orderType: string; traceId: string; spanId: string; userId?: string }): Promise<Order> {
+    const order: Order = {
+      orderId: orderData.orderId,
+      pair: "BTC/USD",
+      side: orderData.side as "BUY" | "SELL",
+      quantity: orderData.quantity,
+      orderType: "MARKET",
+      status: "PENDING",
+      traceId: orderData.traceId,
+      spanId: orderData.spanId,
+      createdAt: new Date(),
+    };
+    this.orders.set(order.orderId, order);
+    return order;
+  }
+
+  async getOrders(limit: number = 10): Promise<Order[]> {
+    const allOrders = Array.from(this.orders.values());
+    return allOrders
+      .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime())
+      .slice(0, limit);
+  }
+
+  async updateOrder(orderId: string, updates: { status?: "PENDING" | "FILLED" | "REJECTED"; fillPrice?: number; totalValue?: number }): Promise<Order | undefined> {
+    const order = this.orders.get(orderId);
+    if (order) {
+      if (updates.status) order.status = updates.status;
+      if (updates.fillPrice) order.fillPrice = updates.fillPrice;
+      if (updates.totalValue) order.totalValue = updates.totalValue;
+      return order;
+    }
+    return undefined;
+  }
+
+  // ============================================
+  // TRACE OPERATIONS
+  // ============================================
 
   async createTrace(traceData: InsertTrace): Promise<Trace> {
     const trace: Trace = {
@@ -130,6 +219,10 @@ export class MemoryStorage implements IStorage {
     return undefined;
   }
 
+  // ============================================
+  // SPAN OPERATIONS
+  // ============================================
+
   async createSpan(spanData: InsertSpan): Promise<Span> {
     const span: Span = {
       id: this.nextId++,
@@ -161,11 +254,30 @@ export class MemoryStorage implements IStorage {
     return undefined;
   }
 
+  // ============================================
+  // CLEAR ALL DATA
+  // ============================================
+
   async clearAllData(): Promise<void> {
-    this.payments.clear();
+    this.orders.clear();
+    this.transfers.clear();
     this.traces.clear();
     this.spans.clear();
     this.nextId = 1;
+
+    // Reset wallets to initial state
+    this.wallets.set('alice', {
+      userId: 'alice',
+      btc: 1.5,
+      usd: 50000,
+      lastUpdated: new Date(),
+    });
+    this.wallets.set('bob', {
+      userId: 'bob',
+      btc: 0.5,
+      usd: 10000,
+      lastUpdated: new Date(),
+    });
   }
 }
 

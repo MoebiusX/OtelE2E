@@ -1,189 +1,272 @@
-// Clean API Routes - Enterprise Payment Processing
-// Authentic OpenTelemetry instrumentation only
+// Clean API Routes - Crypto Exchange
+// Multi-user with BTC transfers
 
 import type { Express } from "express";
 import { Request, Response } from "express";
 import { z } from "zod";
 import { fromZodError } from "zod-validation-error";
-import { paymentService } from "../core/payment-service";
-import { insertPaymentSchema } from "@shared/schema";
+import { orderService, getPrice } from "../core/order-service";
+import { insertOrderSchema, insertTransferSchema } from "@shared/schema";
 import { traces } from "../otel";
-
-// Helper functions for meaningful span names
-function getOperationName(span: any): string {
-  const httpMethod = span.attributes?.['http.method'];
-  const httpTarget = span.attributes?.['http.target'];
-  const messagingOperation = span.attributes?.['messaging.operation'];
-  const messagingSystem = span.attributes?.['messaging.system'];
-
-  if (messagingSystem === 'rabbitmq') {
-    return messagingOperation === 'publish' ? 'rabbitmq.publish' : 'rabbitmq.consume';
-  }
-
-  if (httpMethod && httpTarget) {
-    if (httpTarget.includes('/payments')) {
-      return 'payments.process';
-    }
-    return `${httpMethod.toLowerCase()}.${httpTarget.replace('/api/', '')}`;
-  }
-
-  if (span.name === 'POST') {
-    return 'payments.process';
-  }
-
-  return span.name || 'unknown.operation';
-}
-
-function getServiceName(span: any): string {
-  const serviceName = span.serviceName || span.attributes?.['service.name'];
-  const httpUrl = span.attributes?.['http.url'];
-  const messagingSystem = span.attributes?.['messaging.system'];
-
-  if (messagingSystem === 'rabbitmq') {
-    return 'rabbitmq-broker';
-  }
-
-  if (httpUrl?.includes(':8000')) {
-    return 'kong-gateway';
-  }
-
-  return serviceName || 'payment-api';
-}
 
 export function registerRoutes(app: Express) {
   console.log("Registering API routes...");
 
-  // Kong proxy route for authentic Kong Gateway spans
-  app.post("/api/kong/payments", async (req: Request, res: Response) => {
+  // ============================================
+  // USER ENDPOINTS
+  // ============================================
+
+  // Get all users
+  app.get("/api/users", async (req: Request, res: Response) => {
     try {
-      console.log('[KONG] Proxying payment through Kong Gateway...');
-
-      // Forward request through Kong Gateway to generate authentic Kong spans
-      const response = await fetch('http://localhost:8000/api/payments', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          // Forward trace headers for context propagation
-          'x-trace-id': req.headers['x-trace-id'] as string || '',
-          'x-span-id': req.headers['x-span-id'] as string || '',
-          'traceparent': req.headers['traceparent'] as string || '',
-        },
-        body: JSON.stringify(req.body)
-      });
-
-      if (response.ok) {
-        const result = await response.json();
-        console.log('[KONG] Payment processed through Kong Gateway');
-        res.json(result);
-      } else {
-        console.log('[KONG] Kong Gateway returned error:', response.status);
-        res.status(response.status).json({ error: 'Kong Gateway processing failed' });
-      }
+      const users = await orderService.getUsers();
+      res.json(users);
     } catch (error: any) {
-      console.log('[KONG] Kong Gateway connection failed:', error.message);
-      // Fallback to direct processing
-      const result = await paymentService.processPayment(req.body);
-      res.json(result);
+      res.status(500).json({ error: "Failed to fetch users" });
     }
   });
 
-  // Test Kong Gateway configuration endpoint
-  app.get("/api/kong-test", async (req: Request, res: Response) => {
-    try {
-      const statusResponse = await fetch('http://localhost:8001/status');
-      const servicesResponse = await fetch('http://localhost:8001/services');
+  // ============================================
+  // WALLET & PRICE ENDPOINTS
+  // ============================================
 
-      if (statusResponse.ok && servicesResponse.ok) {
-        const services = await servicesResponse.json();
-        res.json({
-          kong_status: 'available',
-          services: services.data || [],
-          message: 'Kong Gateway is configured and ready'
-        });
-      } else {
-        res.status(503).json({
-          kong_status: 'unavailable',
-          message: 'Kong Gateway not accessible'
-        });
-      }
-    } catch (error) {
-      res.status(503).json({
-        kong_status: 'error',
-        message: 'Kong Gateway connection failed'
+  // Get current BTC price
+  app.get("/api/price", async (req: Request, res: Response) => {
+    try {
+      const price = getPrice();
+      res.json({
+        pair: "BTC/USD",
+        price,
+        change24h: (Math.random() - 0.5) * 5,
+        timestamp: new Date()
       });
+    } catch (error: any) {
+      res.status(500).json({ error: "Failed to fetch price" });
     }
   });
 
-  app.post("/api/payments", async (req: Request, res: Response) => {
+  // Get wallet balance for a user (default: alice)
+  app.get("/api/wallet", async (req: Request, res: Response) => {
     try {
-      // Log incoming trace headers for debugging
+      const userId = (req.query.userId as string) || 'alice';
+      const wallet = await orderService.getWallet(userId);
+      if (!wallet) {
+        return res.status(404).json({ error: "User not found" });
+      }
+      const price = getPrice();
+      res.json({
+        ...wallet,
+        btcValue: wallet.btc * price,
+        totalValue: wallet.usd + (wallet.btc * price)
+      });
+    } catch (error: any) {
+      res.status(500).json({ error: "Failed to fetch wallet" });
+    }
+  });
+
+  // Get wallet for specific user
+  app.get("/api/wallet/:userId", async (req: Request, res: Response) => {
+    try {
+      const { userId } = req.params;
+      const wallet = await orderService.getWallet(userId);
+      if (!wallet) {
+        return res.status(404).json({ error: "User not found" });
+      }
+      const price = getPrice();
+      res.json({
+        ...wallet,
+        btcValue: wallet.btc * price,
+        totalValue: wallet.usd + (wallet.btc * price)
+      });
+    } catch (error: any) {
+      res.status(500).json({ error: "Failed to fetch wallet" });
+    }
+  });
+
+  // ============================================
+  // ORDER ENDPOINTS
+  // ============================================
+
+  // Submit trade order
+  app.post("/api/orders", async (req: Request, res: Response) => {
+    try {
       const incomingTraceparent = req.headers['traceparent'];
       if (incomingTraceparent) {
         console.log(`[ROUTES] Incoming traceparent: ${incomingTraceparent}`);
-      } else {
-        console.log(`[ROUTES] No traceparent header - OTEL will create new trace`);
       }
 
-      // Extract trace context from headers (injected by Kong Gateway)
-      const traceId = req.headers['x-trace-id'] as string ||
-        req.headers['traceparent']?.toString().split('-')[1] ||
-        generateTraceId();
-      const spanId = req.headers['x-span-id'] as string ||
-        req.headers['traceparent']?.toString().split('-')[2] ||
-        generateSpanId();
+      // Extend schema to include userId
+      const orderWithUserSchema = insertOrderSchema.extend({
+        userId: z.string().optional()
+      });
 
-      // Validate request
-      const validation = insertPaymentSchema.safeParse(req.body);
+      const validation = orderWithUserSchema.safeParse(req.body);
       if (!validation.success) {
         return res.status(400).json({
-          error: "Invalid request",
+          error: "Invalid order request",
           details: fromZodError(validation.error).message
         });
       }
 
-      const paymentData = validation.data;
+      const orderData = validation.data;
 
-      // Process payment
-      const result = await paymentService.processPayment({
-        amount: paymentData.amount,
-        currency: paymentData.currency,
-        recipient: paymentData.recipient,
-        description: paymentData.description || 'Payment processing'
+      const result = await orderService.submitOrder({
+        userId: orderData.userId || 'alice',
+        pair: orderData.pair,
+        side: orderData.side,
+        quantity: orderData.quantity,
+        orderType: orderData.orderType
       });
 
-      // Return result
-      const payment = await paymentService.getPayment(result.paymentId);
+      const wallet = await orderService.getWallet(orderData.userId || 'alice');
+
       res.json({
         success: true,
-        payment,
+        orderId: result.orderId,
+        order: {
+          orderId: result.orderId,
+          pair: orderData.pair,
+          side: orderData.side,
+          quantity: orderData.quantity
+        },
+        execution: result.execution,
+        wallet,
         traceId: result.traceId,
         spanId: result.spanId
       });
 
     } catch (error: any) {
-      console.error(`Payment processing error: ${error.message}`);
+      console.error(`Order processing error: ${error.message}`);
+      res.status(500).json({ error: "Failed to process order" });
+    }
+  });
+
+  // Get orders
+  app.get("/api/orders", async (req: Request, res: Response) => {
+    try {
+      const orders = await orderService.getOrders(10);
+      res.json(orders);
+    } catch (error: any) {
+      res.status(500).json({ error: "Failed to fetch orders" });
+    }
+  });
+
+  // ============================================
+  // TRANSFER ENDPOINTS
+  // ============================================
+
+  // Transfer BTC between users
+  app.post("/api/transfer", async (req: Request, res: Response) => {
+    try {
+      const incomingTraceparent = req.headers['traceparent'];
+      if (incomingTraceparent) {
+        console.log(`[ROUTES] Transfer traceparent: ${incomingTraceparent}`);
+      }
+
+      const validation = insertTransferSchema.safeParse(req.body);
+      if (!validation.success) {
+        return res.status(400).json({
+          error: "Invalid transfer request",
+          details: fromZodError(validation.error).message
+        });
+      }
+
+      const transferData = validation.data;
+
+      const result = await orderService.processTransfer({
+        fromUserId: transferData.fromUserId,
+        toUserId: transferData.toUserId,
+        amount: transferData.amount
+      });
+
+      // Get updated wallets
+      const fromWallet = await orderService.getWallet(transferData.fromUserId);
+      const toWallet = await orderService.getWallet(transferData.toUserId);
+
+      res.json({
+        success: result.status === 'COMPLETED',
+        transferId: result.transferId,
+        transfer: result.transfer,
+        status: result.status,
+        message: result.message,
+        wallets: {
+          [transferData.fromUserId]: fromWallet,
+          [transferData.toUserId]: toWallet
+        },
+        traceId: result.traceId,
+        spanId: result.spanId
+      });
+
+    } catch (error: any) {
+      console.error(`Transfer error: ${error.message}`);
+      res.status(500).json({ error: "Failed to process transfer" });
+    }
+  });
+
+  // Get transfers
+  app.get("/api/transfers", async (req: Request, res: Response) => {
+    try {
+      const transfers = await orderService.getTransfers(10);
+      res.json(transfers);
+    } catch (error: any) {
+      res.status(500).json({ error: "Failed to fetch transfers" });
+    }
+  });
+
+  // ============================================
+  // LEGACY PAYMENT ROUTES (backwards compat)
+  // ============================================
+
+  app.post("/api/payments", async (req: Request, res: Response) => {
+    const orderRequest = {
+      userId: 'alice',
+      pair: "BTC/USD" as const,
+      side: "BUY" as const,
+      quantity: (req.body.amount || 100) / getPrice(),
+      orderType: "MARKET" as const
+    };
+
+    try {
+      const result = await orderService.submitOrder(orderRequest);
+      const wallet = await orderService.getWallet('alice');
+
+      res.json({
+        success: true,
+        payment: {
+          id: result.orderId,
+          amount: req.body.amount || 100,
+          currency: "USD",
+          status: result.execution?.status || "PENDING"
+        },
+        traceId: result.traceId,
+        processorResponse: result.execution ? {
+          status: result.execution.status,
+          processedAt: result.execution.processedAt,
+          processorId: result.execution.processorId
+        } : undefined
+      });
+    } catch (error: any) {
       res.status(500).json({ error: "Failed to process payment" });
     }
   });
 
-  // Get payments
   app.get("/api/payments", async (req: Request, res: Response) => {
     try {
-      const payments = await paymentService.getPayments(10);
-      res.json(payments);
+      const orders = await orderService.getOrders(10);
+      res.json(orders);
     } catch (error: any) {
-      console.error(`Error fetching payments: ${error.message}`);
       res.status(500).json({ error: "Failed to fetch payments" });
     }
   });
 
-  // Get OpenTelemetry traces
+  // ============================================
+  // TRACES ENDPOINT (for UI)
+  // ============================================
+
   app.get("/api/traces", async (req: Request, res: Response) => {
     try {
-      // Group spans by traceId to create proper trace objects
       const traceGroups = new Map<string, any[]>();
 
-      // Filter and group spans
       traces.forEach(span => {
         const traceId = span.traceId;
         if (!traceGroups.has(traceId)) {
@@ -192,7 +275,6 @@ export function registerRoutes(app: Express) {
         traceGroups.get(traceId)?.push(span);
       });
 
-      // Create trace objects with grouped spans - authentic OpenTelemetry data only
       const formattedTraces = Array.from(traceGroups.entries()).map(([traceId, spans]) => {
         const rootSpan = spans.find(s => !s.parentSpanId) || spans[0];
         return {
@@ -205,77 +287,21 @@ export function registerRoutes(app: Express) {
             spanId: span.spanId,
             parentSpanId: span.parentSpanId,
             traceId: span.traceId,
-            operationName: (() => {
-              const httpMethod = span.attributes?.['http.method'];
-              const httpTarget = span.attributes?.['http.target'];
-              const messagingOperation = span.attributes?.['messaging.operation'];
-              const messagingSystem = span.attributes?.['messaging.system'];
-
-              if (messagingSystem === 'rabbitmq') {
-                return messagingOperation === 'publish' ? 'rabbitmq.publish' : 'rabbitmq.consume';
-              }
-
-              if (httpMethod && httpTarget) {
-                if (httpTarget.includes('/payments')) {
-                  return 'payments.process';
-                }
-                return `${httpMethod.toLowerCase()}.${httpTarget.replace('/api/', '')}`;
-              }
-
-              if (span.name === 'POST') {
-                return 'payments.process';
-              }
-
-              return span.name || 'unknown.operation';
-            })(),
-            serviceName: (() => {
-              const serviceName = span.serviceName || span.attributes?.['service.name'];
-              const httpUrl = span.attributes?.['http.url'];
-              const messagingSystem = span.attributes?.['messaging.system'];
-
-              if (messagingSystem === 'rabbitmq') {
-                return 'rabbitmq-broker';
-              }
-
-              if (httpUrl?.includes(':8000')) {
-                return 'kong-gateway';
-              }
-
-              return serviceName || 'payment-api';
-            })(),
+            operationName: getOperationName(span),
+            serviceName: getServiceName(span),
             duration: span.duration,
             startTime: span.startTime,
             endTime: span.endTime,
             tags: span.attributes || {},
-            status: 'completed' // All spans marked as completed/success
+            status: 'completed'
           }))
         };
       });
 
-      // Sort by most recent first
       formattedTraces.sort((a, b) => new Date(b.startTime).getTime() - new Date(a.startTime).getTime());
-
       res.json(formattedTraces.slice(0, 10));
     } catch (error: any) {
-      console.error(`Error fetching traces: ${error.message}`);
       res.status(500).json({ error: "Failed to fetch traces" });
-    }
-  });
-
-  // Get spans for a specific trace
-  app.get("/api/traces/:traceId/spans", async (req: Request, res: Response) => {
-    try {
-      const { traceId } = req.params;
-      const trace = traces.find(t => t.traceId === traceId);
-
-      if (!trace) {
-        return res.status(404).json({ error: "Trace not found" });
-      }
-
-      res.json(trace.spans || []);
-    } catch (error: any) {
-      console.error(`Error fetching spans: ${error.message}`);
-      res.status(500).json({ error: "Failed to fetch spans" });
     }
   });
 
@@ -283,24 +309,41 @@ export function registerRoutes(app: Express) {
   app.delete("/api/clear", async (req: Request, res: Response) => {
     try {
       const { clearTraces } = await import('../otel');
-      await paymentService.clearAllData();
+      await orderService.clearAllData();
       clearTraces();
-
-      res.json({
-        success: true,
-        message: "All recorded transactions cleared"
-      });
+      res.json({ success: true, message: "All data cleared" });
     } catch (error: any) {
-      console.error(`Clear operation error: ${error.message}`);
       res.status(500).json({ error: "Failed to clear data" });
     }
   });
 }
 
-function generateTraceId(): string {
-  return Array.from({ length: 32 }, () => Math.floor(Math.random() * 16).toString(16)).join('');
+// Helper functions
+function getOperationName(span: any): string {
+  const httpMethod = span.attributes?.['http.method'];
+  const httpTarget = span.attributes?.['http.target'];
+  const messagingOperation = span.attributes?.['messaging.operation'];
+  const messagingSystem = span.attributes?.['messaging.system'];
+
+  if (messagingSystem === 'rabbitmq') {
+    return messagingOperation === 'publish' ? 'order.submit' : 'order.match';
+  }
+
+  if (httpMethod && httpTarget) {
+    if (httpTarget.includes('/orders')) return 'order.submit';
+    if (httpTarget.includes('/transfer')) return 'btc.transfer';
+    return `${httpMethod.toLowerCase()}.${httpTarget.replace('/api/', '')}`;
+  }
+
+  return span.name || 'unknown';
 }
 
-function generateSpanId(): string {
-  return Array.from({ length: 16 }, () => Math.floor(Math.random() * 16).toString(16)).join('');
+function getServiceName(span: any): string {
+  const serviceName = span.serviceName || span.attributes?.['service.name'];
+  const httpUrl = span.attributes?.['http.url'];
+  const messagingSystem = span.attributes?.['messaging.system'];
+
+  if (messagingSystem === 'rabbitmq') return 'rabbitmq';
+  if (httpUrl?.includes(':8000')) return 'kong-gateway';
+  return serviceName || 'exchange-api';
 }

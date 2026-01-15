@@ -46,7 +46,13 @@ export const getQueryFn: <T>(options: {
 }) => QueryFunction<T> =
   ({ on401: unauthorizedBehavior }) =>
     async ({ queryKey }) => {
-      const res = await fetch(queryKey[0] as string, {
+      const url = queryKey[0] as string;
+
+      // Route all /api requests through Kong Gateway
+      const KONG_URL = 'http://localhost:8000';
+      const targetUrl = url.startsWith('/api') ? `${KONG_URL}${url}` : url;
+
+      const res = await fetch(targetUrl, {
         credentials: "same-origin",
         cache: "no-cache",
       });

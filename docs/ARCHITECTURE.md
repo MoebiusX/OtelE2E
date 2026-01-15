@@ -87,9 +87,7 @@ OtelE2E/
 │   └── workflows/
 │       └── e2e-tests.yml      # GitHub Actions CI pipeline
 │
-├── docker-compose.external.yml # Docker services (Kong, RabbitMQ, Jaeger, etc.)
-├── otel-collector-config.yaml  # OTEL Collector pipeline config
-├── tempo-config.yaml           # Grafana Tempo config
+├── docker-compose.yml          # Docker services (Kong, RabbitMQ, Jaeger, etc.)
 └── package.json                # Node dependencies and scripts
 ```
 
@@ -123,8 +121,8 @@ OtelE2E/
 | Kong Gateway | `docker-compose.external.yml` | API gateway, context injection |
 | RabbitMQ | `docker-compose.external.yml` | Message queue |
 | OTEL Collector | `otel-collector-config.yaml` | Trace aggregation, routing |
-| Jaeger | `docker-compose.external.yml` | Trace visualization |
-| Tempo | `tempo-config.yaml` | Trace storage backend |
+| Jaeger | `docker-compose.yml` | Trace visualization |
+| Prometheus | `prometheus.yml` | Metrics collection |
 
 ## Data Flow
 

@@ -10,9 +10,6 @@ async function enableOtel() {
     const params = new URLSearchParams();
     params.append('name', 'opentelemetry');
 
-    // Point to Tempo
-    params.append('config.endpoint', 'http://tempo:4318/v1/traces');
-
     // Basic attributes
     // params.append('config.resource_attributes.service.name', 'kong-gateway'); 
     // Nested fields in url-encoded are tricky with Kong versions. 

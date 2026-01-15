@@ -1,0 +1,26 @@
+# Prometheus Configuration for OtelE2E
+# Scrapes metrics from all services
+
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+
+scrape_configs:
+  # crypto-wallet service (main Express server)
+  - job_name: 'crypto-wallet'
+    static_configs:
+      - targets: ['host.docker.internal:5000']
+    metrics_path: /metrics
+    scrape_interval: 10s
+
+  # order-matcher service (payment processor)
+  - job_name: 'order-matcher'
+    static_configs:
+      - targets: ['payment-processor:3001']
+    metrics_path: /metrics
+    scrape_interval: 10s
+
+  # Prometheus itself
+  - job_name: 'prometheus'
+    static_configs:
+      - targets: ['localhost:9090']

@@ -1,37 +1,42 @@
 import * as amqp from 'amqplib';
 import { trace, context, SpanStatusCode, SpanKind, propagation } from '@opentelemetry/api';
 
-export interface PaymentMessage {
-  paymentId: number;
-  correlationId: string;  // Added for correlation
-  amount: number;
-  currency: string;
-  recipient: string;
-  description: string;
+export interface OrderMessage {
+  orderId: string;
+  correlationId: string;
+  pair: string;
+  side: "BUY" | "SELL";
+  quantity: number;
+  orderType: "MARKET";
+  currentPrice: number;
   traceId: string;
   spanId: string;
   timestamp: string;
 }
 
-export interface PaymentResponse {
-  paymentId: number;
+export interface ExecutionResponse {
+  orderId: string;
   correlationId: string;
-  status: 'acknowledged' | 'rejected' | 'error';
+  status: 'FILLED' | 'REJECTED';
+  fillPrice: number;
+  totalValue: number;
   processedAt: string;
   processorId: string;
 }
 
-type ResponseCallback = (response: PaymentResponse) => void;
+type ResponseCallback = (response: ExecutionResponse) => void;
 
 export class RabbitMQClient {
   private connection: amqp.Connection | null = null;
   private channel: amqp.Channel | null = null;
   private rabbitUrl: string;
-  private readonly PAYMENTS_QUEUE = 'payments';
-  private readonly RESPONSE_QUEUE = 'payment_response';
+  private readonly ORDERS_QUEUE = 'orders';
+  private readonly RESPONSE_QUEUE = 'order_response';
+  // Keep old queue names for compatibility during transition
+  private readonly LEGACY_QUEUE = 'payments';
+  private readonly LEGACY_RESPONSE = 'payment_response';
   private tracer;
 
-  // Map of correlationId -> callback for pending responses
   private pendingResponses: Map<string, ResponseCallback> = new Map();
 
   constructor() {
@@ -45,9 +50,12 @@ export class RabbitMQClient {
       this.connection = await amqp.connect(this.rabbitUrl);
       this.channel = await this.connection.createChannel();
 
-      // Declare both queues
-      await this.channel.assertQueue(this.PAYMENTS_QUEUE, { durable: true });
+      // Declare queues
+      await this.channel.assertQueue(this.ORDERS_QUEUE, { durable: true });
       await this.channel.assertQueue(this.RESPONSE_QUEUE, { durable: true });
+      // Keep legacy queues for backwards compat
+      await this.channel.assertQueue(this.LEGACY_QUEUE, { durable: true });
+      await this.channel.assertQueue(this.LEGACY_RESPONSE, { durable: true });
 
       console.log('[RABBITMQ] Connected successfully');
       return true;
@@ -58,69 +66,84 @@ export class RabbitMQClient {
   }
 
   /**
-   * Publish payment and wait for response from processor
-   * Returns the processor's acknowledgment response
+   * Publish order and wait for execution response from matcher
    */
-  async publishPaymentAndWait(payment: PaymentMessage, timeoutMs: number = 5000): Promise<PaymentResponse> {
+  async publishOrderAndWait(order: OrderMessage, timeoutMs: number = 5000): Promise<ExecutionResponse> {
     if (!this.channel) {
       throw new Error('No channel available');
     }
 
     return new Promise((resolve, reject) => {
-      const correlationId = payment.correlationId;
+      const correlationId = order.correlationId;
 
-      // Set up timeout
       const timeout = setTimeout(() => {
         this.pendingResponses.delete(correlationId);
-        reject(new Error(`Payment response timeout after ${timeoutMs}ms`));
+        reject(new Error(`Order execution timeout after ${timeoutMs}ms`));
       }, timeoutMs);
 
-      // Register callback for this correlation ID
-      this.pendingResponses.set(correlationId, (response: PaymentResponse) => {
+      this.pendingResponses.set(correlationId, (response: ExecutionResponse) => {
         clearTimeout(timeout);
         this.pendingResponses.delete(correlationId);
         resolve(response);
       });
 
-      // Create publish span
-      const span = this.tracer.startSpan('rabbitmq.publish', {
+      // Create span as child of the current active span
+      const parentContext = context.active();
+      const span = this.tracer.startSpan('publish orders', {
         kind: SpanKind.PRODUCER,
         attributes: {
           'messaging.system': 'rabbitmq',
-          'messaging.destination': this.PAYMENTS_QUEUE,
+          'messaging.destination': this.LEGACY_QUEUE,
           'messaging.operation': 'publish',
-          'payment.id': payment.paymentId,
-          'payment.correlationId': correlationId
+          'order.id': order.orderId,
+          'order.pair': order.pair,
+          'order.side': order.side,
+          'order.quantity': order.quantity
         }
-      });
+      }, parentContext);
 
-      context.with(trace.setSpan(context.active(), span), () => {
+      // Set span in context and inject for propagation
+      const spanContext = trace.setSpan(parentContext, span);
+
+      context.with(spanContext, () => {
         try {
-          const message = JSON.stringify(payment);
-          const headers: Record<string, string> = {};
-          propagation.inject(context.active(), headers);
+          const message = JSON.stringify(order);
 
+          // Inject publish span context for order-matcher
+          const publishHeaders: Record<string, string> = {};
+          propagation.inject(spanContext, publishHeaders);
+
+          // Also inject parent context (POST span) for response routing
+          const parentHeaders: Record<string, string> = {};
+          propagation.inject(parentContext, parentHeaders);
+
+          console.log(`[RABBITMQ] Injecting headers - publish: ${publishHeaders.traceparent?.slice(0, 40)}...`);
+          console.log(`[RABBITMQ] Injecting headers - parent for response: ${parentHeaders.traceparent?.slice(0, 40)}...`);
+
+          // Send to legacy queue with both contexts
           const sent = this.channel!.sendToQueue(
-            this.PAYMENTS_QUEUE,
+            this.LEGACY_QUEUE,
             Buffer.from(message),
             {
               persistent: true,
               correlationId: correlationId,
               headers: {
-                ...headers,
-                'x-correlation-id': correlationId
+                ...publishHeaders,
+                'x-correlation-id': correlationId,
+                'x-parent-traceparent': parentHeaders.traceparent || '',
+                'x-parent-tracestate': parentHeaders.tracestate || ''
               }
             }
           );
 
           if (sent) {
-            console.log(`[RABBITMQ] Published payment ${payment.paymentId} (correlation: ${correlationId.slice(0, 8)}...)`);
+            console.log(`[RABBITMQ] Published order ${order.orderId} (${order.side} ${order.quantity} BTC)`);
             span.setStatus({ code: SpanStatusCode.OK });
           } else {
             clearTimeout(timeout);
             this.pendingResponses.delete(correlationId);
             span.setStatus({ code: SpanStatusCode.ERROR, message: 'Failed to send' });
-            reject(new Error('Failed to send message to queue'));
+            reject(new Error('Failed to send order to queue'));
           }
         } catch (error: any) {
           clearTimeout(timeout);
@@ -134,29 +157,67 @@ export class RabbitMQClient {
     });
   }
 
+  // Legacy method for backwards compatibility
+  async publishPaymentAndWait(payment: any, timeoutMs: number = 5000): Promise<any> {
+    // Convert payment to order format
+    const order: OrderMessage = {
+      orderId: `ORD-${payment.paymentId}`,
+      correlationId: payment.correlationId,
+      pair: 'BTC/USD',
+      side: 'BUY',
+      quantity: payment.amount / 42500, // Convert to BTC
+      orderType: 'MARKET',
+      currentPrice: 42500,
+      traceId: payment.traceId,
+      spanId: payment.spanId,
+      timestamp: payment.timestamp
+    };
+
+    const response = await this.publishOrderAndWait(order, timeoutMs);
+
+    // Convert response back to legacy format
+    return {
+      paymentId: payment.paymentId,
+      correlationId: response.correlationId,
+      status: response.status === 'FILLED' ? 'acknowledged' : 'rejected',
+      processedAt: response.processedAt,
+      processorId: response.processorId
+    };
+  }
+
   async startConsumer(): Promise<void> {
     if (!this.channel) {
       console.warn('[RABBITMQ] No channel available for consumer');
       return;
     }
 
-    console.log('[RABBITMQ] Starting payment response consumer...');
+    console.log('[RABBITMQ] Starting order response consumer...');
 
-    await this.channel.consume(this.RESPONSE_QUEUE, (msg) => {
+    // Listen on legacy response queue
+    await this.channel.consume(this.LEGACY_RESPONSE, (msg) => {
       if (msg) {
         try {
-          const response: PaymentResponse = JSON.parse(msg.content.toString());
+          const response = JSON.parse(msg.content.toString());
           const correlationId = response.correlationId || msg.properties.correlationId;
 
-          console.log(`[RABBITMQ] Received response for payment ${response.paymentId} (correlation: ${correlationId?.slice(0, 8)}...)`);
+          console.log(`[RABBITMQ] Received execution for order (correlation: ${correlationId?.slice(0, 8)}...)`);
 
-          // Find and call the pending callback
+          // Convert legacy response format
+          const executionResponse: ExecutionResponse = {
+            orderId: response.orderId || `ORD-${response.paymentId}`,
+            correlationId,
+            // Handle both new (FILLED) and legacy (acknowledged) status formats
+            status: (response.status === 'FILLED' || response.status === 'acknowledged') ? 'FILLED' : 'REJECTED',
+            fillPrice: response.fillPrice || 42500,
+            totalValue: response.totalValue || 0,
+            processedAt: response.processedAt,
+            processorId: response.processorId
+          };
+
           const callback = this.pendingResponses.get(correlationId);
           if (callback) {
-            callback(response);
-            console.log(`[RABBITMQ] Response delivered to waiting caller`);
-          } else {
-            console.log(`[RABBITMQ] No pending request for correlation ${correlationId?.slice(0, 8)}... (may have timed out)`);
+            callback(executionResponse);
+            console.log(`[RABBITMQ] Execution delivered to waiting caller`);
           }
 
           this.channel!.ack(msg);
@@ -167,7 +228,7 @@ export class RabbitMQClient {
       }
     });
 
-    console.log('[RABBITMQ] Consumer started - listening for payment responses');
+    console.log('[RABBITMQ] Consumer started - listening for order executions');
   }
 
   async disconnect(): Promise<void> {

@@ -77,20 +77,6 @@ services:
       - kong-net
     restart: unless-stopped
 
-  # Grafana Tempo for trace storage (optional - not actively used, Jaeger is primary)
-  tempo:
-    image: grafana/tempo:latest
-    command: [ "-config.file=/etc/tempo.yaml" ]
-    volumes:
-      - ./config/tempo-config.yaml:/etc/tempo.yaml
-      - tempo_data:/tmp/tempo
-    ports:
-      - "3200:3200"   # Tempo HTTP API
-      # OTLP ports removed - Jaeger handles OTLP on 4317/4318
-    networks:
-      - kong-net
-    restart: unless-stopped
-
   # OpenTelemetry Collector for browser traces (with CORS support)
   otel-collector:
     image: otel/opentelemetry-collector-contrib:latest
@@ -109,35 +95,54 @@ services:
       COLLECTOR_OTLP_ENABLED: true
     ports:
       - "16686:16686" # Jaeger UI
-      - "14250:14250" # Jaeger gRPC
+      - "14350:14250" # Jaeger gRPC (host 14350 -> container 14250)
       - "4317:4317"   # OTLP gRPC (for server traces)
       - "4318:4318"   # OTLP HTTP (for server traces) 
     networks:
       - kong-net
     restart: unless-stopped
 
-  # Grafana for dashboards and observability
-  grafana:
-    image: grafana/grafana:latest
+  # Ollama - Local LLM for trace analysis
+  ollama:
+    image: ollama/ollama:latest
     ports:
-      - "3000:3000"
-    environment:
-      GF_SECURITY_ADMIN_PASSWORD: admin
-      GF_USERS_ALLOW_SIGN_UP: false
+      - "11434:11434"
     volumes:
-      - grafana_data:/var/lib/grafana
-      - ./config/grafana-datasources.yml:/etc/grafana/provisioning/datasources/datasources.yml
-    depends_on:
-      - tempo
+      - ollama_data:/root/.ollama
     networks:
       - kong-net
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
+    restart: unless-stopped
+
+  # Prometheus - Metrics collection and storage
+  prometheus:
+    image: prom/prometheus:latest
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./prometheus.yml:/etc/prometheus/prometheus.yml
+      - prometheus_data:/prometheus
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--web.enable-lifecycle'
+    networks:
+      - kong-net
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     restart: unless-stopped
 
 volumes:
   kong_data:
   rabbitmq_data:
-  tempo_data:
-  grafana_data:
+  ollama_data:
+  prometheus_data:
 
 networks:
   kong-net:

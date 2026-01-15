@@ -43,6 +43,20 @@ export default defineConfig({
       strict: true,
       deny: ["**/.*"],
     },
+    proxy: {
+      // Proxy all /api requests to Express server on port 5000
+      '/api': {
+        target: 'http://localhost:5000',
+        changeOrigin: true,
+        secure: false,
+      },
+      // Also proxy /kong routes
+      '/kong': {
+        target: 'http://localhost:5000',
+        changeOrigin: true,
+        secure: false,
+      },
+    },
   },
   optimizeDeps: {
     // Pre-bundle OpenTelemetry packages for better ESM compatibility

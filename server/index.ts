@@ -6,8 +6,16 @@ import { registerRoutes } from "./api/routes";
 import { setupVite, serveStatic, log } from "./vite";
 import { kongClient } from "./services/kong-client";
 import { rabbitMQClient } from "./services/rabbitmq-client";
+import { monitorRoutes, startMonitor } from "./monitor";
+import { metricsMiddleware, registerMetricsEndpoint } from "./metrics/prometheus";
 
 const app = express();
+
+// Register Prometheus metrics endpoint FIRST (before other middleware)
+registerMetricsEndpoint(app);
+
+// Apply metrics collection middleware
+app.use(metricsMiddleware);
 
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
@@ -18,7 +26,7 @@ app.use((req, res, next) => {
   res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
   res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept, Authorization, x-trace-id, x-span-id, traceparent');
   res.header('Access-Control-Allow-Credentials', 'true');
-  
+
   if (req.method === 'OPTIONS') {
     res.sendStatus(200);
   } else {
@@ -44,7 +52,7 @@ app.use((req, res, next) => {
       if (req.method === "GET" && (path.includes("/api/payments") || path.includes("/api/traces"))) {
         return;
       }
-      
+
       let logLine = `${req.method} ${path} ${res.statusCode} in ${duration}ms`;
       if (capturedJsonResponse) {
         logLine += ` :: ${JSON.stringify(capturedJsonResponse)}`;
@@ -64,10 +72,10 @@ app.use((req, res, next) => {
 (async () => {
   // Initialize external services
   console.log('[INIT] Initializing external services...');
-  
+
   // Setup Kong Gateway proxy routes
   app.use('/kong', kongClient.createProxy());
-  
+
   // Initialize RabbitMQ connection
   try {
     await rabbitMQClient.connect();
@@ -76,7 +84,7 @@ app.use((req, res, next) => {
   } catch (error) {
     console.warn('[INIT] RabbitMQ initialization failed - continuing without message queue');
   }
-  
+
   // Check Kong Gateway health
   const kongHealthy = await kongClient.checkHealth();
   if (kongHealthy) {
@@ -88,6 +96,12 @@ app.use((req, res, next) => {
 
   // Register API routes
   registerRoutes(app);
+
+  // Register monitor routes
+  app.use('/api/monitor', monitorRoutes);
+
+  // Start trace monitoring services (polls Jaeger for baselines/anomalies)
+  startMonitor();
 
   app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
     const status = err.status || err.statusCode || 500;

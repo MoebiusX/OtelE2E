@@ -2,7 +2,7 @@ import { useQuery, useMutation } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Trash2, Clock, Globe, ChevronDown, ChevronRight } from "lucide-react";
+import { Trash2, Clock, Activity, ChevronDown, ChevronRight, ExternalLink } from "lucide-react";
 import { formatTimeAgo, truncateId } from "@/lib/utils";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useState } from "react";
@@ -30,74 +30,73 @@ interface SpanData {
 
 function TraceItem({ trace }: { trace: TraceData }) {
   const [expanded, setExpanded] = useState(false);
-  
-  const httpMethod = trace.spans[0]?.tags?.['http.method'] || 'Unknown';
-  const httpUrl = trace.spans[0]?.tags?.['http.target'] || '/api/unknown';
-  const statusCode = trace.spans[0]?.tags?.['http.status_code'] || 'N/A';
-  
+
+  // Get operation info from spans
+  const orderSpan = trace.spans.find(s => s.operationName?.includes('order')) || trace.spans[0];
+  const operation = orderSpan?.operationName || 'Trade';
+
   return (
-    <div className="border rounded-lg bg-white hover:shadow-sm transition-shadow">
-      <div 
+    <div className="border border-slate-700 rounded-lg bg-slate-800 hover:bg-slate-750 transition-colors">
+      <div
         className="p-4 cursor-pointer flex items-center justify-between"
         onClick={() => setExpanded(!expanded)}
       >
         <div className="flex items-center space-x-3">
           {expanded ? (
-            <ChevronDown className="w-4 h-4 text-slate-500" />
+            <ChevronDown className="w-4 h-4 text-slate-400" />
           ) : (
-            <ChevronRight className="w-4 h-4 text-slate-500" />
+            <ChevronRight className="w-4 h-4 text-slate-400" />
           )}
-          <Globe className="w-4 h-4 text-blue-600" />
+          <Activity className="w-4 h-4 text-orange-400" />
           <div>
             <div className="flex items-center space-x-2">
-              <span className="font-medium text-slate-800">
-                {httpMethod} {httpUrl}
+              <span className="font-medium text-white text-sm">
+                {operation}
               </span>
-              <Badge variant={statusCode === 200 ? "default" : "destructive"}>
-                {statusCode}
+              <Badge className="bg-green-500/20 text-green-400 border-none text-xs">
+                OK
               </Badge>
             </div>
-            <div className="text-sm text-slate-500">
-              Trace ID: {truncateId(trace.traceId)} • 
-              Duration: {trace.duration.toFixed(2)}ms • 
-              {formatTimeAgo(new Date(trace.startTime))}
+            <div className="text-xs text-slate-500">
+              {truncateId(trace.traceId)} • {trace.duration?.toFixed(1)}ms • {formatTimeAgo(new Date(trace.startTime))}
             </div>
           </div>
         </div>
         <div className="flex items-center space-x-2">
-          <Badge className="bg-green-500/20 text-green-500">
+          <Badge className="bg-purple-500/20 text-purple-400 border-none text-xs">
             {trace.spans.length} spans
           </Badge>
+          <a
+            href={`http://localhost:16686/trace/${trace.traceId}`}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-slate-400 hover:text-white"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <ExternalLink className="w-4 h-4" />
+          </a>
         </div>
       </div>
-      
+
       {expanded && (
-        <div className="border-t bg-slate-50 p-4">
+        <div className="border-t border-slate-700 bg-slate-850 p-4">
           <div className="mb-3">
-            <h4 className="text-sm font-medium text-slate-600">Payment Processing Flow:</h4>
+            <h4 className="text-xs font-medium text-slate-400 uppercase tracking-wider">Trace Flow</h4>
           </div>
           <div className="space-y-2">
-            {trace.spans.map((span, index) => (
-              <div key={span.spanId} className="flex items-center justify-between text-sm py-1">
+            {trace.spans.map((span) => (
+              <div key={span.spanId} className="flex items-center justify-between text-sm py-1.5 px-2 bg-slate-900 rounded">
                 <div className="flex items-center space-x-3">
-                  <div className="w-4 h-4 rounded-full bg-blue-500 flex items-center justify-center">
-                    <div className="w-2 h-2 bg-white rounded-full"></div>
-                  </div>
-                  <span className="font-medium text-slate-700">{span.operationName}</span>
-                  <span className="text-slate-500">({span.serviceName})</span>
+                  <div className="w-2 h-2 rounded-full bg-orange-500"></div>
+                  <span className="font-medium text-slate-300">{span.operationName}</span>
+                  <span className="text-xs text-slate-500">({span.serviceName})</span>
                 </div>
                 <div className="flex items-center space-x-3">
-                  <div className="flex items-center space-x-1 text-slate-500">
-                    <div className="w-3 h-3">
-                      <svg viewBox="0 0 24 24" fill="none" className="w-3 h-3">
-                        <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="2"/>
-                        <path d="M12 6v6l4 2" stroke="currentColor" strokeWidth="2"/>
-                      </svg>
-                    </div>
-                    <span>{span.duration ? `${span.duration.toFixed(5)}ms` : '0.00000ms'}</span>
-                  </div>
-                  <div className="px-2 py-1 bg-green-500/20 text-green-600 rounded text-xs font-medium">
-                    Success
+                  <span className="text-xs text-slate-500 font-mono">
+                    {span.duration ? `${span.duration.toFixed(2)}ms` : '0ms'}
+                  </span>
+                  <div className="px-2 py-0.5 bg-green-500/20 text-green-400 rounded text-xs">
+                    ✓
                   </div>
                 </div>
               </div>
@@ -121,7 +120,8 @@ export function TraceViewer() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/traces'] });
-      queryClient.invalidateQueries({ queryKey: ['/api/payments'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/orders'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/wallet'] });
     }
   });
 
@@ -129,14 +129,14 @@ export function TraceViewer() {
 
   if (isLoading) {
     return (
-      <Card>
+      <Card className="bg-slate-900 border-slate-700">
         <CardHeader>
-          <CardTitle>OpenTelemetry Traces</CardTitle>
+          <CardTitle className="text-white">Traces</CardTitle>
         </CardHeader>
         <CardContent>
           <div className="space-y-3">
             {[1, 2, 3].map((i) => (
-              <div key={i} className="h-16 bg-slate-100 rounded animate-pulse"></div>
+              <div key={i} className="h-16 bg-slate-800 rounded animate-pulse"></div>
             ))}
           </div>
         </CardContent>
@@ -145,19 +145,19 @@ export function TraceViewer() {
   }
 
   return (
-    <Card>
+    <Card className="bg-slate-900 border-slate-700">
       <CardHeader>
         <div className="flex items-center justify-between">
-          <CardTitle className="flex items-center space-x-2">
-            <Clock className="w-5 h-5" />
-            <span>Recent Traces ({traceList.length})</span>
+          <CardTitle className="flex items-center space-x-2 text-white">
+            <Clock className="w-5 h-5 text-purple-400" />
+            <span>Traces ({traceList.length})</span>
           </CardTitle>
           <Button
             variant="outline"
             size="sm"
             onClick={() => clearMutation.mutate()}
             disabled={clearMutation.isPending}
-            className="text-red-600 hover:bg-red-50"
+            className="text-red-400 border-slate-600 hover:bg-red-500/10 hover:border-red-500/50"
           >
             <Trash2 className="w-4 h-4 mr-1" />
             Clear
@@ -174,8 +174,8 @@ export function TraceViewer() {
         ) : (
           <div className="text-center py-8 text-slate-500">
             <Clock className="w-8 h-8 mx-auto mb-2 opacity-50" />
-            <p className="font-medium">No traces captured yet</p>
-            <p className="text-sm">Submit a payment to see OpenTelemetry traces</p>
+            <p className="font-medium">No traces yet</p>
+            <p className="text-sm">Submit a trade to see OpenTelemetry traces</p>
           </div>
         )}
       </CardContent>

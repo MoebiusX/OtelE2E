@@ -24,7 +24,7 @@ export function initBrowserOtel(): void {
 
     // Create resource with service name using OTEL v2 API
     const resource = resourceFromAttributes({
-        [SemanticResourceAttributes.SERVICE_NAME]: 'react-client',
+        [SemanticResourceAttributes.SERVICE_NAME]: 'crypto-wallet',
         [SemanticResourceAttributes.SERVICE_NAMESPACE]: 'web',
         [SemanticResourceAttributes.SERVICE_VERSION]: '1.0.0',
     });

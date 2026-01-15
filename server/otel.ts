@@ -106,7 +106,7 @@ const jaegerExporter = new OTLPTraceExporter({
 
 // Initialize OpenTelemetry SDK with multiple exporters
 const sdk = new NodeSDK({
-  serviceName: 'payment-api',
+  serviceName: 'exchange-api',
   spanProcessors: [
     new SimpleSpanProcessor(traceCollector),     // For local UI
     new SimpleSpanProcessor(jaegerExporter)      // For Jaeger (immediate export)

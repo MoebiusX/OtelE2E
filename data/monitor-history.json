@@ -1,0 +1,1109 @@
+{
+  "baselines": [],
+  "anomalies": [],
+  "analyses": [
+    {
+      "traceId": "985e9a9994b349e8f0a15bf89ae4f1fd",
+      "summary": "The exchange-api service experienced a significant performance anomaly with a GET operation, resulting in an unusually long response time of 77.13ms, which is 3 standard deviations above the expected value.",
+      "possibleCauses": [
+        "Network congestion or high latency issues might have affected the underlying infrastructure, causing delays in data retrieval.",
+        "Overload on the API endpoint due to high traffic or increased load could be a contributing factor to the prolonged response time.",
+        "Potential issues with the service's caching mechanism or database performance might also lead to slower responses."
+      ],
+      "recommendations": [
+        "Monitor network latency and congestion metrics to identify potential bottlenecks and implement measures to optimize data retrieval.",
+        "Investigate API endpoint usage patterns and adjust load balancing or queueing strategies as needed to prevent overload.",
+        "Review cache and database performance to ensure they are not contributing to slow responses, and consider implementing caching invalidation or optimization techniques."
+      ],
+      "confidence": "low",
+      "analyzedAt": "2026-01-15T09:18:02.783Z"
+    },
+    {
+      "traceId": "7bfe0321d40307fbd717f8a5a175aa01",
+      "summary": "Unable to generate summary",
+      "possibleCauses": [],
+      "recommendations": [],
+      "confidence": "low",
+      "analyzedAt": "2026-01-15T09:19:45.130Z"
+    },
+    {
+      "traceId": "9c44e3f20870a890ec202cf098ebcaf9",
+      "summary": "Unable to generate summary",
+      "possibleCauses": [],
+      "recommendations": [],
+      "confidence": "low",
+      "analyzedAt": "2026-01-15T09:20:16.280Z"
+    },
+    {
+      "traceId": "c1e40dc9eaa8b8eb6f2752884e016397",
+      "summary": "** The jaeger-all-in-one service experienced a significant performance anomaly, with a span duration of 108.75ms (3.9σ from the mean), indicating an unexpected delay in handling incoming requests.",
+      "possibleCauses": [
+        "*",
+        "1. **Resource congestion**: The server might be experiencing high CPU or memory usage, causing it to slow down and leading to increased latency.",
+        "2. **Network issues**: A problem with the network connection between the client and server could be causing delays in data transmission, resulting in longer span durations.",
+        "3. **Instrumentation overhead**: Excessive instrumentation overhead due to the use of OpenTelemetry or other libraries might be contributing to the anomaly.",
+        "*"
+      ],
+      "recommendations": [
+        "*",
+        "1. **Monitor resource utilization**: Investigate the CPU and memory usage of the server to identify any potential bottlenecks that could be causing the performance issue.",
+        "2. **Verify network connectivity**: Check the network connection between the client and server to ensure it is stable and not experiencing any issues that could cause delays.",
+        "3. **Optimize instrumentation configuration**: Review the instrumentation configuration to ensure that it is not introducing unnecessary overhead, and consider optimizing or reducing it if necessary.",
+        "*"
+      ],
+      "confidence": "low",
+      "analyzedAt": "2026-01-15T09:20:37.773Z"
+    },
+    {
+      "traceId": "19e4919b5869520d92bac5a6abc384c2",
+      "summary": "The jaeger-all-in-one service experienced a critical performance anomaly with an unusually long duration for the /api/traces operation, indicating potential issues with request processing or network latency.",
+      "possibleCauses": [
+        "**High load or resource contention**: The system might be experiencing high traffic or resource constraints that are causing the /api/traces operation to take longer than expected.",
+        "**Network congestion or packet loss**: Network issues could be contributing to the prolonged duration, such as packet loss or increased latency due to network congestion.",
+        "**Instrumentation or configuration errors**: Misconfiguration or instrumentation issues with OpenTelemetry or Jaeger might be causing incorrect tracing data or inaccurate performance metrics."
+      ],
+      "recommendations": [
+        "Monitor system resources (CPU, memory, and network) to identify any potential bottlenecks that may be contributing to the anomaly.",
+        "Investigate network latency and packet loss by analyzing network logs and checking for any signs of congestion or packet loss.",
+        "Review OpenTelemetry instrumentation and Jaeger configuration to ensure accurate tracing data and correct error handling mechanisms."
+      ],
+      "confidence": "medium",
+      "analyzedAt": "2026-01-15T10:32:28.200Z"
+    },
+    {
+      "traceId": "15bf76e5b77500c3928822c60e37ae7e",
+      "summary": "The api-gateway service experienced a significant performance anomaly in the kong.dns operation, resulting in an average response time that is 11 times longer than expected and has a high deviation from the mean.",
+      "possibleCauses": [
+        "Overloading of the dns resolution: The long duration of the kong.dns operation may indicate that there is an excessive load on the DNS resolution process, causing it to take longer than usual to resolve hostnames.",
+        "Network congestion or connectivity issues: It's possible that there are network congestion or connectivity issues between the api-gateway service and the DNS server, resulting in slower DNS resolution times.",
+        "Congestion in the kong router: The long duration of the kong.dns operation may also indicate that the kong router is congested, causing it to delay the dns resolution process."
+      ],
+      "recommendations": [
+        "Increase dns resolution timeout: Temporarily increase the dns resolution timeout to see if it resolves the issue. If the problem persists, this will help identify whether the root cause is related to network congestion or connectivity issues.",
+        "Monitor and optimize kong router performance: Investigate ways to improve the performance of the kong router, such as adding more resources (e.g., CPU, memory) or optimizing the configuration.",
+        "Verify network connectivity and congestion: Perform a thorough investigation into network connectivity and congestion issues between the api-gateway service and the DNS server to ensure that there are no underlying problems."
+      ],
+      "confidence": "medium",
+      "analyzedAt": "2026-01-15T11:46:42.645Z"
+    },
+    {
+      "traceId": "ed80bd86712e2682ececcae068ca6dea",
+      "summary": "The exchange-api service experienced a performance anomaly with a tcp.connect operation that took significantly longer than expected, indicating potential issues with network connectivity or system resource utilization.",
+      "possibleCauses": [
+        "**Network Congestion**: The high duration could be due to network congestion or high latency between the client and server, causing the tcp.connect operation to take longer than usual.",
+        "**System Resource Utilization**: It's possible that the system resources (e.g., CPU, memory) are being overutilized, leading to a slow response time for the tcp.connect operation.",
+        "**Temporary Network Issue**: The unusual timestamp could be indicative of a temporary network issue or a misconfigured network setting."
+      ],
+      "recommendations": [
+        "**Monitor Network Utilization**: Closely monitor system resource utilization and network usage to identify any potential bottlenecks that may have contributed to the anomaly.",
+        "**Investigate Network Configuration**: Verify that the network configuration is correct and there are no temporary issues with the network connection between the client and server.",
+        "**Optimize System Resources**: Consider optimizing system resources (e.g., increasing CPU or memory allocation) to ensure that the system can handle increased traffic without performance degradation."
+      ],
+      "confidence": "medium",
+      "analyzedAt": "2026-01-15T11:56:10.188Z"
+    },
+    {
+      "traceId": "ce3df5e4b8ecb2ad71b2c60e4d266308",
+      "summary": "The exchange-api service experienced a critical performance anomaly with an unusually long tcp.connect operation, exceeding the expected duration by 22.68 standard deviations.",
+      "possibleCauses": [
+        "Network congestion or high latency on the localhost peer, causing a delay in the connection attempt.",
+        "Misconfiguration of the network transport (e.g., IP_TCP) leading to inefficient communication.",
+        "Potential issues with the underlying infrastructure or hardware that may be impacting performance."
+      ],
+      "recommendations": [
+        "Monitor and investigate network traffic patterns on localhost to identify potential bottlenecks and optimize connectivity.",
+        "Review and adjust the network transport configuration to ensure it aligns with expected performance characteristics.",
+        "Perform a thorough examination of the underlying infrastructure and hardware to determine if any issues are contributing to the anomaly."
+      ],
+      "confidence": "low",
+      "analyzedAt": "2026-01-15T12:06:39.633Z"
+    },
+    {
+      "traceId": "f51823967c9bd3045f3477b41422ff7a",
+      "summary": "Unable to generate summary",
+      "possibleCauses": [
+        "**Network Congestion**: The long latency could be caused by network congestion or high traffic volumes, which might be affecting the performance of the api-gateway service.",
+        "**Service Failure or Bottleneck**: A specific service like kong.balancer is experiencing issues, causing a ripple effect and leading to the prolonged response times for downstream services.",
+        "**System Overload**: The system might be overloaded due to high request volumes or resource-intensive tasks, resulting in performance degradation.",
+        "##"
+      ],
+      "recommendations": [
+        "**Investigate Downstream Services**: Analyze the performance of kong.balancer and its dependencies to identify any issues that may be contributing to the overall anomaly. This could involve checking for errors, monitoring resource utilization, or verifying configuration settings.",
+        "**Optimize API Gateway Configuration**: Review the api-gateway service's configuration to ensure it is properly optimized for high-performance environments. This might include tweaking settings related to caching, connection pooling, or latency reduction techniques.",
+        "**Implement Monitoring and Alerting Enhancements**: Consider enhancing monitoring and alerting capabilities to provide more timely insights into performance issues like this one. This could involve setting up additional metrics, adjusting thresholds, or integrating with other observability tools.",
+        "##"
+      ],
+      "confidence": "medium",
+      "analyzedAt": "2026-01-15T12:09:53.456Z"
+    },
+    {
+      "traceId": "86c46526dabd73fcd456096d3cd6b9e6",
+      "summary": "Unable to generate summary",
+      "possibleCauses": [
+        "**Overload due to high traffic**: The sudden spike in requests could have overwhelmed the api-gateway service, causing delays and increased latency for subsequent requests.",
+        "**System resource constraints**: Insufficient resources (e.g., CPU, memory) might have led to performance degradation and slow down the opentelemetry span execution.",
+        "**Interference from other services or system components**: Interactions with other services or system components could have introduced latency and affected the opentelemetry span.",
+        "##"
+      ],
+      "recommendations": [
+        "**Conduct a thorough traffic analysis**: Investigate the sudden surge in requests to identify the root cause of the overload and measure the impact on subsequent requests.",
+        "**Monitor system resource utilization**: Continuously monitor CPU, memory, and other resource utilization metrics for api-gateway service to ensure they are within healthy ranges.",
+        "**Optimize opentelemetry configuration**: Review and adjust the opentelemetry configuration to optimize its performance, such as reducing sampling rates or adjusting tracing settings.",
+        "##"
+      ],
+      "confidence": "medium",
+      "analyzedAt": "2026-01-15T12:11:47.942Z"
+    },
+    {
+      "traceId": "afd95371d7394133c7a6cf7eac95a178",
+      "summary": "Unable to generate summary",
+      "possibleCauses": [
+        "**Network Congestion**: The high latency of 393.24ms could be due to network congestion caused by a large number of concurrent requests or a slow network connection.",
+        "**System Resource Overload**: It's possible that the system is experiencing resource overload, leading to slower performance and increased execution times.",
+        "**Temporary Service Issue**: A temporary issue with the service itself, such as a misconfigured server or a software bug, could also be causing the anomaly.",
+        "##"
+      ],
+      "recommendations": [
+        "**Monitor Network Performance**: Regularly monitor network performance metrics, such as latency and throughput, to identify any potential issues that may be contributing to the anomaly.",
+        "**Investigate Service Configuration**: Review the service configuration to ensure that it is optimized for high-performance and resource-efficient operation.",
+        "**Implement Load Balancing**: Consider implementing load balancing techniques to distribute incoming traffic across multiple servers, reducing the likelihood of resource overload.",
+        "##"
+      ],
+      "confidence": "medium",
+      "analyzedAt": "2026-01-15T15:06:28.095Z"
+    },
+    {
+      "traceId": "ed8670bfdb881c3d0fdc467309230bba",
+      "summary": "The exchange-api service experienced an unexpected performance anomaly, resulting in a significantly longer response time (336.5ms) compared to the expected value of 12.8ms ± 46.07ms.",
+      "possibleCauses": [
+        "**Network congestion or packet loss**: High network traffic or packet loss could be causing delays in the request-response cycle.",
+        "**Resource-intensive database query**: The GET operation might have involved a resource-intensive database query that took longer than usual to complete, leading to the observed anomaly.",
+        "**Server-side overload**: The exchange-api service might be experiencing an unexpected increase in requests, causing it to become overloaded and resulting in slower response times."
+      ],
+      "recommendations": [
+        "**Investigate network traffic patterns**: Monitor network traffic patterns to identify any potential bottlenecks or issues that could be contributing to the anomaly.",
+        "**Optimize database queries**: Review database query performance to ensure they are efficient and not causing unnecessary delays, and consider optimizing or rewriting resource-intensive queries.",
+        "**Monitor server-side load and adjust as needed**: Continuously monitor server-side load and adjust resources (e.g., increase memory or CPU allocation) to prevent overloading and maintain optimal performance."
+      ],
+      "confidence": "low",
+      "analyzedAt": "2026-01-15T15:10:42.698Z"
+    },
+    {
+      "traceId": "a5179d73fe34bb8ef7365059e0ea7ce5",
+      "summary": "The api-gateway service experienced a significant performance anomaly in the kong.access.plugin.opentelemetry operation, with a duration that is approximately 72 times longer than expected.",
+      "possibleCauses": [
+        "**Service Load**: A sudden increase in incoming requests to the api-gateway service may have caused the opentelemetry plugin to become overwhelmed, leading to an extended response time.",
+        "**Plugin Configuration**: An incorrect or incomplete configuration of the opentelemetry plugin could be causing it to behave erratically, resulting in prolonged execution times for the kong.access.plugin.opentelemetry operation.",
+        "**External Service Impact**: The api-gateway service may be experiencing issues with one of its external dependencies, such as the crypto-wallet service (HTTP GET), which is causing a cascade effect on the overall system performance."
+      ],
+      "recommendations": [
+        "**Monitor Plugin Performance**: Continuously monitor the opentelemetry plugin's performance and adjust its configuration or resource allocation as needed to prevent similar anomalies in the future.",
+        "**Implement Caching or Load Balancing**: Consider implementing caching mechanisms or load balancing strategies for the api-gateway service to distribute incoming requests more efficiently, reducing the likelihood of service overload.",
+        "**Analyze External Service Dependencies**: Investigate and address any issues with external dependencies, such as the crypto-wallet service, to prevent cascading effects on system performance."
+      ],
+      "confidence": "medium",
+      "analyzedAt": "2026-01-15T15:18:38.584Z"
+    },
+    {
+      "traceId": "2b9665bd9e0cf35f92138e4f89a8ff0b",
+      "summary": "Unable to generate summary",
+      "possibleCauses": [],
+      "recommendations": [],
+      "confidence": "low",
+      "analyzedAt": "2026-01-15T16:38:21.134Z"
+    },
+    {
+      "traceId": "494717d19741b4e2f3ecdc771fd2b73d",
+      "summary": "The api-gateway service experienced a performance anomaly, with the opentelemetry span taking significantly longer than expected to complete (8.22ms vs 1.17ms ± 1.79ms), indicating potential issues with tracing or instrumentation.",
+      "possibleCauses": [
+        "**Instrumentation issues**: There might be problems with instrumenting the api-gateway service correctly, leading to inaccurate timing data and incorrect tracing.",
+        "**Tracing bottleneck**: The anomaly could be caused by a bottleneck in the tracing pipeline, where the opentelemetry span is taking longer than usual to propagate through the system.",
+        "**External service issues**: The crypto-wallet service, which is called from within the api-gateway service, might be experiencing issues that are causing delays and impacting the performance of the opentelemetry span."
+      ],
+      "recommendations": [
+        "**Verify instrumentation**: Double-check that the opentelemetry instrumentation is correctly configured and up-to-date on all nodes in the api-gateway service.",
+        "**Analyze tracing pipeline**: Investigate the tracing pipeline to identify potential bottlenecks or issues that could be causing delays in the propagation of the opentelemetry span.",
+        "**Monitor external services**: Monitor the crypto-wallet service for any signs of issues or performance degradation, and consider implementing circuit breakers or fallbacks if needed."
+      ],
+      "confidence": "medium",
+      "analyzedAt": "2026-01-15T16:38:29.309Z"
+    },
+    {
+      "traceId": "e73ebc961ab9a43867618f35844045f3",
+      "summary": "The jaeger-all-in-one service experienced a significant performance anomaly when handling the /api/traces operation, resulting in an average response time that is 3.9 standard deviations above the expected value.",
+      "possibleCauses": [
+        "Overwhelming load on the service, potentially due to high traffic or sudden spikes in usage.",
+        "Configuration issues with the jaeger-all-in-one service, such as incorrect logging levels or inefficient data retention policies.",
+        "Resource constraints on the underlying infrastructure, including insufficient CPU, memory, or disk space."
+      ],
+      "recommendations": [
+        "Monitor and analyze the system logs and metrics to identify any potential bottlenecks or resource usage patterns that may be contributing to the anomaly.",
+        "Investigate and adjust the logging levels and data retention policies of the jaeger-all-in-one service to optimize its performance under heavy loads.",
+        "Perform a thorough analysis of the underlying infrastructure resources, including CPU, memory, and disk space, to ensure they meet the required capacity for the service."
+      ],
+      "confidence": "medium",
+      "analyzedAt": "2026-01-15T16:40:54.251Z"
+    },
+    {
+      "traceId": "0536142d04d20a35566886aff36c6943",
+      "summary": "The exchange-api service experienced a significant performance anomaly in the tcp.connect operation, resulting in an average duration of 31.86ms, which is approximately 5 times longer than the expected value.",
+      "possibleCauses": [
+        "**Network congestion**: High network traffic or temporary connectivity issues between the service and its peer might have caused the delay.",
+        "**Resource allocation**: Insufficient resources (e.g., CPU, memory) within the service or peer could lead to prolonged execution of the tcp.connect operation.",
+        "**Instrumentation overhead**: The use of OpenTelemetry instrumentation might introduce additional overhead that is contributing to the anomaly."
+      ],
+      "recommendations": [
+        "**Monitor network traffic and resource utilization**: Use tools like Prometheus and Grafana to monitor network traffic, CPU, memory usage, and other relevant metrics to identify potential bottlenecks.",
+        "**Optimize service configuration and resource allocation**: Review the service's configuration and ensure that it is properly allocated resources. Consider scaling or load balancing if necessary.",
+        "**Instrumentation tuning and profiling**: Analyze the instrumentation overhead by using tools like OpenTelemetry's tracing API and adjust settings to minimize impact on performance."
+      ],
+      "confidence": "medium",
+      "analyzedAt": "2026-01-15T16:41:46.931Z"
+    },
+    {
+      "traceId": "5edccb02101a5bfeb0f234a4064973ad",
+      "summary": "A critical performance anomaly occurred on the crypto-wallet service, resulting in a significant increase in HTTP GET request duration. This anomaly is likely related to an overload of system resources.",
+      "possibleCauses": [
+        "**Overloaded API Gateway**: The high CPU usage and active connections indicate that the API gateway was heavily loaded at the time of the anomaly. This could be due to an unexpected surge in incoming requests or a misconfigured load balancer.",
+        "**Insufficient Resource Utilization**: Although memory usage is within normal limits, the high P99 latency suggests that there might be resource constraints (e.g., CPU, disk I/O) that are not being utilized efficiently. This could lead to performance bottlenecks, especially during peak traffic periods.",
+        "**Network or DNS Issues**: The short span duration of the kong.dns and kong.header_filter.plugin.cors spans suggests that there might be network or DNS-related issues affecting the API gateway's ability to resolve hostnames or filter requests."
+      ],
+      "recommendations": [
+        "**Increase API Gateway Resources**: Consider increasing the CPU, memory, or both for the API gateway to handle the expected traffic load. This can help prevent overloading and maintain performance during peak periods.",
+        "**Optimize System Resource Utilization**: Implement resource utilization monitoring and optimize system configurations to ensure that resources are utilized efficiently. This might involve adjusting caching strategies, optimizing database queries, or using more efficient algorithms for compute-intensive tasks.",
+        "**Investigate Network and DNS Issues**: Perform a thorough investigation into network and DNS-related issues affecting the API gateway. This could involve verifying hostname resolution, checking DNS cache sizes, and monitoring network latency to ensure optimal performance."
+      ],
+      "confidence": "medium",
+      "analyzedAt": "2026-01-15T16:58:11.950Z"
+    },
+    {
+      "traceId": "8b1dfb66aef9be85b228812738a75aa0",
+      "summary": "The order-matcher service experienced a performance anomaly with an unusually long duration of 95.04ms, which is 7.57% above the expected value, likely due to a bottleneck in the system.",
+      "possibleCauses": [
+        "**Resource contention**: High CPU usage (0.4%) and memory consumption (88MB) could be indicative of resource utilization issues, particularly if other services are competing for resources.",
+        "**Network latency or connectivity issues**: The slow latency from the crypto-wallet service (192.00ms), which is a dependent service in the order-matching process, might have contributed to the anomaly.",
+        "**System overload due to high request rate**: Although the request rate is currently 0.0 req/s, an unexpected surge could lead to resource exhaustion and performance degradation."
+      ],
+      "recommendations": [
+        "**Monitor CPU and memory usage**: Implement monitoring tools to track these metrics in real-time and receive alerts when thresholds are exceeded.",
+        "**Investigate network latency and connectivity issues**: Verify the health of dependent services like crypto-wallet and ensure they can communicate with order-matcher without significant delays.",
+        "**Implement queue management or load balancing**: If resource contention is identified, consider implementing queuing mechanisms or load balancing to distribute incoming requests more efficiently."
+      ],
+      "confidence": "medium",
+      "analyzedAt": "2026-01-15T17:05:06.744Z"
+    },
+    {
+      "traceId": "76d037fc083b78fbc977bd6f3c4fd3fa",
+      "summary": "Unable to generate summary",
+      "possibleCauses": [
+        "High HTTP response body size (1064401 bytes), which may indicate a resource-constrained request or an inefficient data processing pipeline.",
+        "Insufficient CPU utilization (0.6%), suggesting that the service might not be handling the increased workload effectively.",
+        "The presence of a high P99 latency value (10000ms) in the correlated system metrics, indicating potential issues with network latency or service bottlenecks.",
+        "##"
+      ],
+      "recommendations": [
+        "**Optimize data processing and reduce response body sizes**: Review the request payload to identify areas for compression or optimization. Consider caching or buffering mechanisms to reduce the load on the service.",
+        "**Investigate CPU utilization and optimize server configuration**: Analyze the CPU usage pattern to determine if there are any specific processes or threads consuming excessive resources. Adjust server configurations, such as increasing memory allocation or optimizing worker thread counts, to improve handling of high workloads.",
+        "**Improve network latency and consider load balancing**: Investigate potential network issues or bottlenecks that could be contributing to the increased P99 latency value. Consider implementing load balancing or caching mechanisms to reduce the load on individual servers and improve overall system responsiveness.",
+        "##"
+      ],
+      "confidence": "medium",
+      "analyzedAt": "2026-01-15T17:13:27.016Z"
+    }
+  ],
+  "lastUpdated": "2026-01-15T09:09:39.700Z",
+  "timeBaselines": [
+    {
+      "spanKey": "api-gateway:kong.header_filter.plugin.cors",
+      "service": "api-gateway",
+      "operation": "kong.header_filter.plugin.cors",
+      "dayOfWeek": 4,
+      "hourOfDay": 17,
+      "mean": 0.29,
+      "stdDev": 0.41,
+      "sampleCount": 989,
+      "thresholds": {
+        "sev5": 1.9244893944984058,
+        "sev4": 2.518501399358357,
+        "sev3": 2.7958706412970944,
+        "sev2": 6.578401630921824,
+        "sev1": 6.8533162777991565
+      },
+      "lastUpdated": "2026-01-15T17:04:12.419Z"
+    },
+    {
+      "spanKey": "api-gateway:kong.header_filter.plugin.opentelemetry",
+      "service": "api-gateway",
+      "operation": "kong.header_filter.plugin.opentelemetry",
+      "dayOfWeek": 4,
+      "hourOfDay": 17,
+      "mean": 0.08,
+      "stdDev": 0.17,
+      "sampleCount": 989,
+      "thresholds": {
+        "sev5": 1.4115946345074482,
+        "sev4": 2.3624669301315584,
+        "sev3": 2.9703030178406418,
+        "sev2": 10.47497233836764,
+        "sev1": 10.47497233836764
+      },
+      "lastUpdated": "2026-01-15T17:04:12.419Z"
+    },
+    {
+      "spanKey": "api-gateway:kong.balancer",
+      "service": "api-gateway",
+      "operation": "kong.balancer",
+      "dayOfWeek": 4,
+      "hourOfDay": 17,
+      "mean": 30.04,
+      "stdDev": 131.29,
+      "sampleCount": 756,
+      "thresholds": {
+        "sev5": 0.9065794940613687,
+        "sev4": 8.778562199090914,
+        "sev3": 8.78348276907639,
+        "sev2": 8.841905016427155,
+        "sev1": 8.841905016427155
+      },
+      "lastUpdated": "2026-01-15T17:04:12.420Z"
+    },
+    {
+      "spanKey": "exchange-api:GET",
+      "service": "exchange-api",
+      "operation": "GET",
+      "dayOfWeek": 4,
+      "hourOfDay": 17,
+      "mean": 16.95,
+      "stdDev": 31.05,
+      "sampleCount": 1040,
+      "thresholds": {
+        "sev5": 2.3307242646067508,
+        "sev4": 2.816054194315971,
+        "sev3": 3.263320294357863,
+        "sev2": 5.782005835619043,
+        "sev1": 13.62547335600233
+      },
+      "lastUpdated": "2026-01-15T17:04:12.420Z"
+    },
+    {
+      "spanKey": "crypto-wallet:HTTP GET",
+      "service": "crypto-wallet",
+      "operation": "HTTP GET",
+      "dayOfWeek": 4,
+      "hourOfDay": 17,
+      "mean": 42.06,
+      "stdDev": 134.02,
+      "sampleCount": 708,
+      "thresholds": {
+        "sev5": 0.5,
+        "sev4": 1,
+        "sev3": 8.789268193408118,
+        "sev2": 8.789268193408118,
+        "sev1": 8.789268193408118
+      },
+      "lastUpdated": "2026-01-15T17:04:12.420Z"
+    },
+    {
+      "spanKey": "api-gateway:kong.access.plugin.opentelemetry",
+      "service": "api-gateway",
+      "operation": "kong.access.plugin.opentelemetry",
+      "dayOfWeek": 4,
+      "hourOfDay": 17,
+      "mean": 0.6,
+      "stdDev": 1.38,
+      "sampleCount": 756,
+      "thresholds": {
+        "sev5": 0.8528132168380884,
+        "sev4": 1.5114074382482001,
+        "sev3": 2.012054970695271,
+        "sev2": 14.1819198079072,
+        "sev1": 14.1819198079072
+      },
+      "lastUpdated": "2026-01-15T17:04:12.420Z"
+    },
+    {
+      "spanKey": "api-gateway:kong",
+      "service": "api-gateway",
+      "operation": "kong",
+      "dayOfWeek": 4,
+      "hourOfDay": 17,
+      "mean": 25.33,
+      "stdDev": 115.85,
+      "sampleCount": 995,
+      "thresholds": {
+        "sev5": 0.969762063893444,
+        "sev4": 2.7237227933838857,
+        "sev3": 10.08347145588356,
+        "sev2": 10.110842700196839,
+        "sev1": 10.110842700196839
+      },
+      "lastUpdated": "2026-01-15T17:04:12.420Z"
+    },
+    {
+      "spanKey": "api-gateway:kong.router",
+      "service": "api-gateway",
+      "operation": "kong.router",
+      "dayOfWeek": 4,
+      "hourOfDay": 17,
+      "mean": 0.15,
+      "stdDev": 0.2,
+      "sampleCount": 995,
+      "thresholds": {
+        "sev5": 1.6740687850376488,
+        "sev4": 3.1977340165335817,
+        "sev3": 3.6527883977521656,
+        "sev2": 5.099759070615753,
+        "sev1": 8.443641826986022
+      },
+      "lastUpdated": "2026-01-15T17:04:12.420Z"
+    },
+    {
+      "spanKey": "api-gateway:kong.access.plugin.cors",
+      "service": "api-gateway",
+      "operation": "kong.access.plugin.cors",
+      "dayOfWeek": 4,
+      "hourOfDay": 17,
+      "mean": 0.14,
+      "stdDev": 0.29,
+      "sampleCount": 995,
+      "thresholds": {
+        "sev5": 2.269772222411973,
+        "sev4": 3.1517645346570133,
+        "sev3": 5.090096476683905,
+        "sev2": 6.942964047369223,
+        "sev1": 7.910420730955837
+      },
+      "lastUpdated": "2026-01-15T17:04:12.420Z"
+    },
+    {
+      "spanKey": "api-gateway:kong.dns",
+      "service": "api-gateway",
+      "operation": "kong.dns",
+      "dayOfWeek": 4,
+      "hourOfDay": 17,
+      "mean": 0.38,
+      "stdDev": 1.18,
+      "sampleCount": 756,
+      "thresholds": {
+        "sev5": 3.7848063661598976,
+        "sev4": 5.210168607424083,
+        "sev3": 6.072999162966793,
+        "sev2": 6.906222787682059,
+        "sev1": 6.906222787682059
+      },
+      "lastUpdated": "2026-01-15T17:04:12.420Z"
+    },
+    {
+      "spanKey": "exchange-api:GET",
+      "service": "exchange-api",
+      "operation": "GET",
+      "dayOfWeek": 4,
+      "hourOfDay": 18,
+      "mean": 20.96,
+      "stdDev": 45.23,
+      "sampleCount": 497,
+      "thresholds": {
+        "sev5": 2.3207149498531985,
+        "sev4": 3.569593107931999,
+        "sev3": 5.062095485583971,
+        "sev2": 7.153221796481941,
+        "sev1": 7.153221796481941
+      },
+      "lastUpdated": "2026-01-15T17:04:12.420Z"
+    },
+    {
+      "spanKey": "api-gateway:kong",
+      "service": "api-gateway",
+      "operation": "kong",
+      "dayOfWeek": 4,
+      "hourOfDay": 18,
+      "mean": 25.1,
+      "stdDev": 37.31,
+      "sampleCount": 526,
+      "thresholds": {
+        "sev5": 3.0879395769928726,
+        "sev4": 3.222360303538598,
+        "sev3": 3.275083248526721,
+        "sev2": 4.091176540877205,
+        "sev1": 4.091176540877205
+      },
+      "lastUpdated": "2026-01-15T17:04:12.421Z"
+    },
+    {
+      "spanKey": "api-gateway:kong.router",
+      "service": "api-gateway",
+      "operation": "kong.router",
+      "dayOfWeek": 4,
+      "hourOfDay": 18,
+      "mean": 0.4,
+      "stdDev": 0.74,
+      "sampleCount": 526,
+      "thresholds": {
+        "sev5": 1.349350376897324,
+        "sev4": 2.898347449456802,
+        "sev3": 5.552998627909519,
+        "sev2": 6.459959392034658,
+        "sev1": 7.395304919269526
+      },
+      "lastUpdated": "2026-01-15T17:04:12.421Z"
+    },
+    {
+      "spanKey": "api-gateway:kong.access.plugin.cors",
+      "service": "api-gateway",
+      "operation": "kong.access.plugin.cors",
+      "dayOfWeek": 4,
+      "hourOfDay": 18,
+      "mean": 0.37,
+      "stdDev": 0.69,
+      "sampleCount": 526,
+      "thresholds": {
+        "sev5": 2.359478440838669,
+        "sev4": 3.5166941348235485,
+        "sev3": 4.532327883726634,
+        "sev2": 5.6808752953595665,
+        "sev1": 5.808010103188117
+      },
+      "lastUpdated": "2026-01-15T17:04:12.421Z"
+    },
+    {
+      "spanKey": "api-gateway:kong.header_filter.plugin.cors",
+      "service": "api-gateway",
+      "operation": "kong.header_filter.plugin.cors",
+      "dayOfWeek": 4,
+      "hourOfDay": 18,
+      "mean": 0.68,
+      "stdDev": 0.82,
+      "sampleCount": 526,
+      "thresholds": {
+        "sev5": 1.5293054360151677,
+        "sev4": 2.151370658158516,
+        "sev3": 3.457829837866256,
+        "sev2": 6.009641593927773,
+        "sev1": 6.009641593927773
+      },
+      "lastUpdated": "2026-01-15T17:04:12.421Z"
+    },
+    {
+      "spanKey": "api-gateway:kong.header_filter.plugin.opentelemetry",
+      "service": "api-gateway",
+      "operation": "kong.header_filter.plugin.opentelemetry",
+      "dayOfWeek": 4,
+      "hourOfDay": 18,
+      "mean": 0.19,
+      "stdDev": 0.33,
+      "sampleCount": 526,
+      "thresholds": {
+        "sev5": 1.5711481625875918,
+        "sev4": 1.9176963180802318,
+        "sev3": 4.391748802075512,
+        "sev2": 5.410299033001706,
+        "sev1": 9.18616719676064
+      },
+      "lastUpdated": "2026-01-15T17:04:12.421Z"
+    },
+    {
+      "spanKey": "api-gateway:kong.balancer",
+      "service": "api-gateway",
+      "operation": "kong.balancer",
+      "dayOfWeek": 4,
+      "hourOfDay": 18,
+      "mean": 25.31,
+      "stdDev": 39.45,
+      "sampleCount": 411,
+      "thresholds": {
+        "sev5": 2.8408911751617216,
+        "sev4": 3.0232118666625096,
+        "sev3": 3.7218712462178103,
+        "sev2": 3.7218712462178103,
+        "sev1": 3.7218712462178103
+      },
+      "lastUpdated": "2026-01-15T17:04:12.421Z"
+    },
+    {
+      "spanKey": "crypto-wallet:HTTP GET",
+      "service": "crypto-wallet",
+      "operation": "HTTP GET",
+      "dayOfWeek": 4,
+      "hourOfDay": 18,
+      "mean": 41.31,
+      "stdDev": 22.5,
+      "sampleCount": 363,
+      "thresholds": {
+        "sev5": 1.5419880011485387,
+        "sev4": 1.764213522991051,
+        "sev3": 2.208664566676075,
+        "sev2": 4.075358950153177,
+        "sev1": 4.075358950153177
+      },
+      "lastUpdated": "2026-01-15T17:04:12.421Z"
+    },
+    {
+      "spanKey": "api-gateway:kong.access.plugin.opentelemetry",
+      "service": "api-gateway",
+      "operation": "kong.access.plugin.opentelemetry",
+      "dayOfWeek": 4,
+      "hourOfDay": 18,
+      "mean": 1.85,
+      "stdDev": 3.6,
+      "sampleCount": 411,
+      "thresholds": {
+        "sev5": 1.2909807078871745,
+        "sev4": 2.1177627443070373,
+        "sev3": 5.016225929146813,
+        "sev2": 7.794869659481895,
+        "sev1": 7.794869659481895
+      },
+      "lastUpdated": "2026-01-15T17:04:12.421Z"
+    },
+    {
+      "spanKey": "api-gateway:kong.dns",
+      "service": "api-gateway",
+      "operation": "kong.dns",
+      "dayOfWeek": 4,
+      "hourOfDay": 18,
+      "mean": 0.5,
+      "stdDev": 1.33,
+      "sampleCount": 411,
+      "thresholds": {
+        "sev5": 1.7610117504877543,
+        "sev4": 5.77120726925874,
+        "sev3": 6.323089788480468,
+        "sev2": 6.379635128564661,
+        "sev1": 6.379635128564661
+      },
+      "lastUpdated": "2026-01-15T17:04:12.421Z"
+    },
+    {
+      "spanKey": "exchange-api:POST",
+      "service": "exchange-api",
+      "operation": "POST",
+      "dayOfWeek": 4,
+      "hourOfDay": 17,
+      "mean": 7371.8,
+      "stdDev": 12447.57,
+      "sampleCount": 72,
+      "thresholds": {
+        "sev5": 1.825678211264922,
+        "sev4": 1.8269877041668923,
+        "sev3": 1.8330123355598098,
+        "sev2": 2,
+        "sev1": 2.5
+      },
+      "lastUpdated": "2026-01-15T17:04:12.421Z"
+    },
+    {
+      "spanKey": "exchange-api:payment_response process",
+      "service": "exchange-api",
+      "operation": "payment_response process",
+      "dayOfWeek": 4,
+      "hourOfDay": 17,
+      "mean": 0.59,
+      "stdDev": 0.49,
+      "sampleCount": 40,
+      "thresholds": {
+        "sev5": 1.3,
+        "sev4": 1.65,
+        "sev3": 2,
+        "sev2": 2.6,
+        "sev1": 3.3
+      },
+      "lastUpdated": "2026-01-15T17:04:12.421Z"
+    },
+    {
+      "spanKey": "order-matcher:order.response",
+      "service": "order-matcher",
+      "operation": "order.response",
+      "dayOfWeek": 4,
+      "hourOfDay": 17,
+      "mean": 0.73,
+      "stdDev": 0.59,
+      "sampleCount": 40,
+      "thresholds": {
+        "sev5": 2.138522267710067,
+        "sev4": 2.138522267710067,
+        "sev3": 2.138522267710067,
+        "sev2": 2.138522267710067,
+        "sev1": 2.5
+      },
+      "lastUpdated": "2026-01-15T17:04:12.421Z"
+    },
+    {
+      "spanKey": "order-matcher:order.match",
+      "service": "order-matcher",
+      "operation": "order.match",
+      "dayOfWeek": 4,
+      "hourOfDay": 17,
+      "mean": 91.2,
+      "stdDev": 5.04,
+      "sampleCount": 40,
+      "thresholds": {
+        "sev5": 1.113707033509781,
+        "sev4": 1.7429133226349065,
+        "sev3": 1.7429133226349065,
+        "sev2": 2,
+        "sev1": 2.5
+      },
+      "lastUpdated": "2026-01-15T17:04:12.421Z"
+    },
+    {
+      "spanKey": "crypto-wallet:order.submit.client",
+      "service": "crypto-wallet",
+      "operation": "order.submit.client",
+      "dayOfWeek": 4,
+      "hourOfDay": 17,
+      "mean": 154.41,
+      "stdDev": 73.9,
+      "sampleCount": 40,
+      "thresholds": {
+        "sev5": 2.8372984159847943,
+        "sev4": 2.8372984159847943,
+        "sev3": 2.8372984159847943,
+        "sev2": 2.8372984159847943,
+        "sev1": 2.8372984159847943
+      },
+      "lastUpdated": "2026-01-15T17:04:12.421Z"
+    },
+    {
+      "spanKey": "crypto-wallet:HTTP POST",
+      "service": "crypto-wallet",
+      "operation": "HTTP POST",
+      "dayOfWeek": 4,
+      "hourOfDay": 17,
+      "mean": 4509.83,
+      "stdDev": 10312.67,
+      "sampleCount": 60,
+      "thresholds": {
+        "sev5": 2.4838541715514535,
+        "sev4": 2.491708588058432,
+        "sev3": 2.491708588058432,
+        "sev2": 2.491708588058432,
+        "sev1": 2.5
+      },
+      "lastUpdated": "2026-01-15T17:04:12.421Z"
+    },
+    {
+      "spanKey": "exchange-api:publish <default>",
+      "service": "exchange-api",
+      "operation": "publish <default>",
+      "dayOfWeek": 4,
+      "hourOfDay": 17,
+      "mean": 0.59,
+      "stdDev": 0.44,
+      "sampleCount": 40,
+      "thresholds": {
+        "sev5": 1.8591638126648629,
+        "sev4": 1.8591638126648629,
+        "sev3": 1.8591638126648629,
+        "sev2": 2,
+        "sev1": 2.5
+      },
+      "lastUpdated": "2026-01-15T17:04:12.421Z"
+    },
+    {
+      "spanKey": "exchange-api:publish orders",
+      "service": "exchange-api",
+      "operation": "publish orders",
+      "dayOfWeek": 4,
+      "hourOfDay": 17,
+      "mean": 3.79,
+      "stdDev": 2.42,
+      "sampleCount": 40,
+      "thresholds": {
+        "sev5": 2.0133769240778396,
+        "sev4": 2.0133769240778396,
+        "sev3": 2.0133769240778396,
+        "sev2": 2.0133769240778396,
+        "sev1": 2.5
+      },
+      "lastUpdated": "2026-01-15T17:04:12.421Z"
+    },
+    {
+      "spanKey": "crypto-wallet:order.response.received",
+      "service": "crypto-wallet",
+      "operation": "order.response.received",
+      "dayOfWeek": 4,
+      "hourOfDay": 17,
+      "mean": 0.04,
+      "stdDev": 0.05,
+      "sampleCount": 40,
+      "thresholds": {
+        "sev5": 1.209338662244782,
+        "sev4": 1.209338662244782,
+        "sev3": 1.5,
+        "sev2": 2,
+        "sev1": 2.5
+      },
+      "lastUpdated": "2026-01-15T17:04:12.421Z"
+    },
+    {
+      "spanKey": "exchange-api:publish <default>",
+      "service": "exchange-api",
+      "operation": "publish <default>",
+      "dayOfWeek": 4,
+      "hourOfDay": 18,
+      "mean": 0.66,
+      "stdDev": 0.64,
+      "sampleCount": 48,
+      "thresholds": {
+        "sev5": 1.3,
+        "sev4": 1.65,
+        "sev3": 2,
+        "sev2": 2.6,
+        "sev1": 3.3
+      },
+      "lastUpdated": "2026-01-15T17:04:12.421Z"
+    },
+    {
+      "spanKey": "exchange-api:payment_response process",
+      "service": "exchange-api",
+      "operation": "payment_response process",
+      "dayOfWeek": 4,
+      "hourOfDay": 18,
+      "mean": 0.53,
+      "stdDev": 0.4,
+      "sampleCount": 48,
+      "thresholds": {
+        "sev5": 2.608978429986643,
+        "sev4": 2.608978429986643,
+        "sev3": 2.608978429986643,
+        "sev2": 2.608978429986643,
+        "sev1": 2.608978429986643
+      },
+      "lastUpdated": "2026-01-15T17:04:12.421Z"
+    },
+    {
+      "spanKey": "crypto-wallet:order.response.received",
+      "service": "crypto-wallet",
+      "operation": "order.response.received",
+      "dayOfWeek": 4,
+      "hourOfDay": 18,
+      "mean": 0.17,
+      "stdDev": 0.44,
+      "sampleCount": 48,
+      "thresholds": {
+        "sev5": 1.3,
+        "sev4": 1.65,
+        "sev3": 2,
+        "sev2": 2.6,
+        "sev1": 3.3
+      },
+      "lastUpdated": "2026-01-15T17:04:12.421Z"
+    },
+    {
+      "spanKey": "order-matcher:order.response",
+      "service": "order-matcher",
+      "operation": "order.response",
+      "dayOfWeek": 4,
+      "hourOfDay": 18,
+      "mean": 0.65,
+      "stdDev": 0.23,
+      "sampleCount": 48,
+      "thresholds": {
+        "sev5": 1.3894530919174892,
+        "sev4": 1.6255599509971863,
+        "sev3": 1.6255599509971863,
+        "sev2": 2,
+        "sev1": 2.5
+      },
+      "lastUpdated": "2026-01-15T17:04:12.421Z"
+    },
+    {
+      "spanKey": "exchange-api:publish orders",
+      "service": "exchange-api",
+      "operation": "publish orders",
+      "dayOfWeek": 4,
+      "hourOfDay": 18,
+      "mean": 5.9,
+      "stdDev": 2.43,
+      "sampleCount": 48,
+      "thresholds": {
+        "sev5": 0.8023643429975907,
+        "sev4": 2.0054484490145543,
+        "sev3": 2.0054484490145543,
+        "sev2": 2.0054484490145543,
+        "sev1": 2.5
+      },
+      "lastUpdated": "2026-01-15T17:04:12.421Z"
+    },
+    {
+      "spanKey": "exchange-api:POST",
+      "service": "exchange-api",
+      "operation": "POST",
+      "dayOfWeek": 4,
+      "hourOfDay": 18,
+      "mean": 124.29,
+      "stdDev": 15.62,
+      "sampleCount": 48,
+      "thresholds": {
+        "sev5": 0.9642568089812312,
+        "sev4": 2.22275154975643,
+        "sev3": 2.22275154975643,
+        "sev2": 2.22275154975643,
+        "sev1": 2.5
+      },
+      "lastUpdated": "2026-01-15T17:04:12.421Z"
+    },
+    {
+      "spanKey": "crypto-wallet:order.submit.client",
+      "service": "crypto-wallet",
+      "operation": "order.submit.client",
+      "dayOfWeek": 4,
+      "hourOfDay": 18,
+      "mean": 159.56,
+      "stdDev": 28.37,
+      "sampleCount": 48,
+      "thresholds": {
+        "sev5": 1.2247069285192118,
+        "sev4": 1.8169374797052829,
+        "sev3": 1.8169374797052829,
+        "sev2": 2,
+        "sev1": 2.5
+      },
+      "lastUpdated": "2026-01-15T17:04:12.421Z"
+    },
+    {
+      "spanKey": "crypto-wallet:HTTP POST",
+      "service": "crypto-wallet",
+      "operation": "HTTP POST",
+      "dayOfWeek": 4,
+      "hourOfDay": 18,
+      "mean": 157.17,
+      "stdDev": 27.04,
+      "sampleCount": 48,
+      "thresholds": {
+        "sev5": 1.2880262586380704,
+        "sev4": 1.7317482233363528,
+        "sev3": 1.7317482233363528,
+        "sev2": 2,
+        "sev1": 2.5
+      },
+      "lastUpdated": "2026-01-15T17:04:12.421Z"
+    },
+    {
+      "spanKey": "order-matcher:order.match",
+      "service": "order-matcher",
+      "operation": "order.match",
+      "dayOfWeek": 4,
+      "hourOfDay": 18,
+      "mean": 90.13,
+      "stdDev": 4.33,
+      "sampleCount": 48,
+      "thresholds": {
+        "sev5": 1.134708135166806,
+        "sev4": 1.6238253908854372,
+        "sev3": 1.6238253908854372,
+        "sev2": 2,
+        "sev1": 2.5
+      },
+      "lastUpdated": "2026-01-15T17:04:12.421Z"
+    },
+    {
+      "spanKey": "exchange-api:tcp.connect",
+      "service": "exchange-api",
+      "operation": "tcp.connect",
+      "dayOfWeek": 4,
+      "hourOfDay": 17,
+      "mean": 11.33,
+      "stdDev": 27.08,
+      "sampleCount": 281,
+      "thresholds": {
+        "sev5": 1.3477330822712228,
+        "sev4": 1.5988170631376266,
+        "sev3": 1.9695721001787385,
+        "sev2": 14.094122143298721,
+        "sev1": 14.094122143298721
+      },
+      "lastUpdated": "2026-01-15T17:04:12.421Z"
+    },
+    {
+      "spanKey": "jaeger-all-in-one:/api/traces/{traceID}",
+      "service": "jaeger-all-in-one",
+      "operation": "/api/traces/{traceID}",
+      "dayOfWeek": 4,
+      "hourOfDay": 17,
+      "mean": 3.73,
+      "stdDev": 1.46,
+      "sampleCount": 10,
+      "thresholds": {
+        "sev5": 1.3,
+        "sev4": 1.65,
+        "sev3": 2,
+        "sev2": 2.6,
+        "sev1": 3.3
+      },
+      "lastUpdated": "2026-01-15T17:04:12.421Z"
+    },
+    {
+      "spanKey": "jaeger-all-in-one:/api/traces",
+      "service": "jaeger-all-in-one",
+      "operation": "/api/traces",
+      "dayOfWeek": 4,
+      "hourOfDay": 17,
+      "mean": 40.57,
+      "stdDev": 36.11,
+      "sampleCount": 177,
+      "thresholds": {
+        "sev5": 1.471059475936684,
+        "sev4": 2.1402019564889847,
+        "sev3": 2.858825427389169,
+        "sev2": 4.947382864412217,
+        "sev1": 4.947382864412217
+      },
+      "lastUpdated": "2026-01-15T17:04:12.421Z"
+    },
+    {
+      "spanKey": "exchange-api:tcp.connect",
+      "service": "exchange-api",
+      "operation": "tcp.connect",
+      "dayOfWeek": 4,
+      "hourOfDay": 18,
+      "mean": 3.65,
+      "stdDev": 2.38,
+      "sampleCount": 109,
+      "thresholds": {
+        "sev5": 1.5035858064918055,
+        "sev4": 2.5237991191718385,
+        "sev3": 2.7160619991284474,
+        "sev2": 3.3538530844987275,
+        "sev1": 3.3538530844987275
+      },
+      "lastUpdated": "2026-01-15T17:04:12.421Z"
+    },
+    {
+      "spanKey": "jaeger-all-in-one:/api/traces",
+      "service": "jaeger-all-in-one",
+      "operation": "/api/traces",
+      "dayOfWeek": 4,
+      "hourOfDay": 18,
+      "mean": 66.05,
+      "stdDev": 56.84,
+      "sampleCount": 107,
+      "thresholds": {
+        "sev5": 1.651382360727379,
+        "sev4": 2.6597441533508754,
+        "sev3": 2.875712354168191,
+        "sev2": 3.451750705370646,
+        "sev1": 3.451750705370646
+      },
+      "lastUpdated": "2026-01-15T17:04:12.421Z"
+    },
+    {
+      "spanKey": "order-matcher:tcp.connect",
+      "service": "order-matcher",
+      "operation": "tcp.connect",
+      "dayOfWeek": 4,
+      "hourOfDay": 17,
+      "mean": 21.67,
+      "stdDev": 0,
+      "sampleCount": 1,
+      "thresholds": {
+        "sev5": 1.3,
+        "sev4": 1.65,
+        "sev3": 2,
+        "sev2": 2.6,
+        "sev1": 3.3
+      },
+      "lastUpdated": "2026-01-15T17:04:12.421Z"
+    }
+  ]
+}

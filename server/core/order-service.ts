@@ -1,0 +1,341 @@
+// Order Service - Crypto Exchange Core Business Logic
+// Handles trade orders and BTC transfers between users
+
+import { storage } from '../storage';
+import { rabbitMQClient } from '../services/rabbitmq-client';
+import { trace, SpanStatusCode } from '@opentelemetry/api';
+
+// ============================================
+// PRICE SIMULATION
+// ============================================
+
+let currentPrice = 42500;
+
+export function getPrice() {
+    const fluctuation = (Math.random() - 0.5) * 0.01;
+    currentPrice = currentPrice * (1 + fluctuation);
+    currentPrice = Math.max(35000, Math.min(55000, currentPrice));
+    return Math.round(currentPrice * 100) / 100;
+}
+
+// ============================================
+// REQUEST/RESPONSE TYPES
+// ============================================
+
+export interface OrderRequest {
+    userId: string;
+    pair: string;
+    side: "BUY" | "SELL";
+    quantity: number;
+    orderType: "MARKET";
+}
+
+export interface OrderResult {
+    orderId: string;
+    traceId: string;
+    spanId: string;
+    order: any;
+    execution?: {
+        status: string;
+        fillPrice: number;
+        totalValue: number;
+        processedAt: string;
+        processorId: string;
+    };
+}
+
+export interface TransferRequest {
+    fromUserId: string;
+    toUserId: string;
+    amount: number;
+}
+
+export interface TransferResult {
+    transferId: string;
+    traceId: string;
+    spanId: string;
+    transfer: any;
+    status: string;
+    message?: string;
+}
+
+// ============================================
+// ORDER SERVICE
+// ============================================
+
+export class OrderService {
+    private orderCounter = 0;
+    private transferCounter = 0;
+
+    // Get wallet for a specific user
+    async getWallet(userId: string = 'alice') {
+        return storage.getWallet(userId);
+    }
+
+    // Get all users
+    async getUsers() {
+        return storage.getUsers();
+    }
+
+    // Submit a trade order
+    async submitOrder(request: OrderRequest): Promise<OrderResult> {
+        const activeSpan = trace.getActiveSpan();
+        const spanContext = activeSpan?.spanContext();
+
+        const traceId = spanContext?.traceId || this.generateTraceId();
+        const spanId = spanContext?.spanId || this.generateSpanId();
+        const correlationId = this.generateCorrelationId();
+        const orderId = `ORD-${Date.now()}-${++this.orderCounter}`;
+        const userId = request.userId || 'alice';
+
+        console.log(`[ORDER] User ${userId}: ${request.side} ${request.quantity} BTC @ market`);
+
+        const wallet = await storage.getWallet(userId);
+        if (!wallet) {
+            return {
+                orderId,
+                traceId,
+                spanId,
+                order: null,
+                execution: {
+                    status: 'REJECTED',
+                    fillPrice: 0,
+                    totalValue: 0,
+                    processedAt: new Date().toISOString(),
+                    processorId: 'local-validator'
+                }
+            };
+        }
+
+        const price = getPrice();
+        const totalValue = price * request.quantity;
+
+        // Validation
+        if (request.side === 'BUY' && totalValue > wallet.usd) {
+            console.log(`[ORDER] Rejected: Insufficient USD for ${userId}`);
+            return {
+                orderId, traceId, spanId,
+                order: null,
+                execution: { status: 'REJECTED', fillPrice: price, totalValue, processedAt: new Date().toISOString(), processorId: 'local-validator' }
+            };
+        }
+
+        if (request.side === 'SELL' && request.quantity > wallet.btc) {
+            console.log(`[ORDER] Rejected: Insufficient BTC for ${userId}`);
+            return {
+                orderId, traceId, spanId,
+                order: null,
+                execution: { status: 'REJECTED', fillPrice: price, totalValue, processedAt: new Date().toISOString(), processorId: 'local-validator' }
+            };
+        }
+
+        // Store order
+        const order = await storage.createOrder({
+            orderId,
+            pair: request.pair,
+            side: request.side,
+            quantity: request.quantity,
+            orderType: request.orderType,
+            traceId,
+            spanId,
+            userId
+        });
+
+        // Process via RabbitMQ
+        if (rabbitMQClient.isConnected()) {
+            try {
+                const executionResponse = await rabbitMQClient.publishOrderAndWait({
+                    orderId,
+                    correlationId,
+                    pair: request.pair,
+                    side: request.side,
+                    quantity: request.quantity,
+                    orderType: request.orderType,
+                    currentPrice: price,
+                    traceId,
+                    spanId,
+                    userId,
+                    timestamp: new Date().toISOString()
+                }, 5000);
+
+                console.log(`[ORDER] Execution: ${executionResponse.status} @ $${executionResponse.fillPrice}`);
+
+                if (executionResponse.status === 'FILLED') {
+                    await this.updateUserWallet(userId, request.side, request.quantity, executionResponse.fillPrice);
+                }
+
+                await storage.updateOrder(orderId, {
+                    status: executionResponse.status as "PENDING" | "FILLED" | "REJECTED",
+                    fillPrice: executionResponse.fillPrice,
+                    totalValue: executionResponse.totalValue
+                });
+
+                return {
+                    orderId, traceId, spanId,
+                    order,
+                    execution: {
+                        status: executionResponse.status,
+                        fillPrice: executionResponse.fillPrice,
+                        totalValue: executionResponse.totalValue,
+                        processedAt: executionResponse.processedAt,
+                        processorId: executionResponse.processorId
+                    }
+                };
+            } catch (error: any) {
+                console.warn(`[ORDER] Matcher timeout: ${error.message}`);
+                return { orderId, traceId, spanId, order };
+            }
+        } else {
+            // Fallback: local execution
+            await this.updateUserWallet(userId, request.side, request.quantity, price);
+            return {
+                orderId, traceId, spanId,
+                order,
+                execution: {
+                    status: 'FILLED',
+                    fillPrice: price,
+                    totalValue,
+                    processedAt: new Date().toISOString(),
+                    processorId: 'local-fallback'
+                }
+            };
+        }
+    }
+
+    // Process BTC transfer between users
+    async processTransfer(request: TransferRequest): Promise<TransferResult> {
+        const tracer = trace.getTracer('exchange-api');
+
+        return tracer.startActiveSpan('btc.transfer', async (span) => {
+            const activeSpan = trace.getActiveSpan();
+            const spanContext = activeSpan?.spanContext();
+
+            const traceId = spanContext?.traceId || this.generateTraceId();
+            const spanId = spanContext?.spanId || this.generateSpanId();
+            const transferId = `TXN-${Date.now()}-${++this.transferCounter}`;
+
+            span.setAttribute('transfer.id', transferId);
+            span.setAttribute('transfer.from', request.fromUserId);
+            span.setAttribute('transfer.to', request.toUserId);
+            span.setAttribute('transfer.amount', request.amount);
+
+            console.log(`[TRANSFER] ${request.fromUserId} → ${request.toUserId}: ${request.amount} BTC`);
+
+            try {
+                // Get both wallets
+                const fromWallet = await storage.getWallet(request.fromUserId);
+                const toWallet = await storage.getWallet(request.toUserId);
+
+                if (!fromWallet || !toWallet) {
+                    span.setStatus({ code: SpanStatusCode.ERROR, message: 'User not found' });
+                    span.end();
+                    return {
+                        transferId, traceId, spanId,
+                        transfer: null,
+                        status: 'FAILED',
+                        message: 'User not found'
+                    };
+                }
+
+                // Check balance
+                if (fromWallet.btc < request.amount) {
+                    span.setStatus({ code: SpanStatusCode.ERROR, message: 'Insufficient BTC' });
+                    span.end();
+                    return {
+                        transferId, traceId, spanId,
+                        transfer: null,
+                        status: 'FAILED',
+                        message: `Insufficient BTC. ${request.fromUserId} has ${fromWallet.btc} BTC`
+                    };
+                }
+
+                // Create transfer record
+                const transfer = await storage.createTransfer({
+                    transferId,
+                    fromUserId: request.fromUserId,
+                    toUserId: request.toUserId,
+                    amount: request.amount,
+                    traceId,
+                    spanId
+                });
+
+                // Update wallets
+                await storage.updateWallet(request.fromUserId, { btc: fromWallet.btc - request.amount });
+                await storage.updateWallet(request.toUserId, { btc: toWallet.btc + request.amount });
+
+                // Update transfer status
+                await storage.updateTransfer(transferId, 'COMPLETED');
+
+                console.log(`[TRANSFER] Complete: ${request.fromUserId} now has ${fromWallet.btc - request.amount} BTC`);
+                console.log(`[TRANSFER] Complete: ${request.toUserId} now has ${toWallet.btc + request.amount} BTC`);
+
+                span.setAttribute('transfer.status', 'COMPLETED');
+                span.setStatus({ code: SpanStatusCode.OK });
+                span.end();
+
+                return {
+                    transferId, traceId, spanId,
+                    transfer: { ...transfer, status: 'COMPLETED' },
+                    status: 'COMPLETED'
+                };
+            } catch (error: any) {
+                span.setStatus({ code: SpanStatusCode.ERROR, message: error.message });
+                span.end();
+                return {
+                    transferId, traceId, spanId,
+                    transfer: null,
+                    status: 'FAILED',
+                    message: error.message
+                };
+            }
+        });
+    }
+
+    // Update user's wallet after trade
+    private async updateUserWallet(userId: string, side: "BUY" | "SELL", quantity: number, price: number) {
+        const wallet = await storage.getWallet(userId);
+        if (!wallet) return;
+
+        const totalValue = quantity * price;
+
+        if (side === 'BUY') {
+            await storage.updateWallet(userId, {
+                btc: wallet.btc + quantity,
+                usd: wallet.usd - totalValue
+            });
+        } else {
+            await storage.updateWallet(userId, {
+                btc: wallet.btc - quantity,
+                usd: wallet.usd + totalValue
+            });
+        }
+
+        console.log(`[WALLET] ${userId}: ${wallet.btc.toFixed(6)} BTC, $${wallet.usd.toFixed(2)} USD`);
+    }
+
+    async getOrders(limit: number = 10) {
+        return storage.getOrders(limit);
+    }
+
+    async getTransfers(limit: number = 10) {
+        return storage.getTransfers(limit);
+    }
+
+    async clearAllData() {
+        return storage.clearAllData();
+    }
+
+    private generateCorrelationId(): string {
+        return `corr-${Date.now()}-${Math.random().toString(36).slice(2, 11)}`;
+    }
+
+    private generateTraceId(): string {
+        return Array.from({ length: 32 }, () => Math.floor(Math.random() * 16).toString(16)).join('');
+    }
+
+    private generateSpanId(): string {
+        return Array.from({ length: 16 }, () => Math.floor(Math.random() * 16).toString(16)).join('');
+    }
+}
+
+export const orderService = new OrderService();
