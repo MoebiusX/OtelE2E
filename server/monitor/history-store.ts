@@ -14,6 +14,9 @@ import type {
     MonitorHistory,
     TimeBaseline
 } from './types';
+import { createLogger } from '../lib/logger';
+
+const logger = createLogger('history-store');
 
 const DATA_DIR = path.join(process.cwd(), 'data');
 const HISTORY_FILE = path.join(DATA_DIR, 'monitor-history.json');
@@ -50,7 +53,7 @@ export class HistoryStore {
                 this.save();
             }
         }, SAVE_INTERVAL);
-        console.log('[HISTORY] History store started');
+        logger.info('History store started');
     }
 
     /**
@@ -62,7 +65,7 @@ export class HistoryStore {
             this.saveInterval = null;
         }
         this.save();
-        console.log('[HISTORY] History store stopped');
+        logger.info('History store stopped');
     }
 
     /**
@@ -225,16 +228,16 @@ export class HistoryStore {
             if (fs.existsSync(HISTORY_FILE)) {
                 const data = fs.readFileSync(HISTORY_FILE, 'utf-8');
                 this.history = JSON.parse(data);
-                console.log(`[HISTORY] Loaded ${this.history.anomalies.length} anomalies, ${this.history.baselines.length} baselines`);
+                logger.info({ anomaliesCount: this.history.anomalies.length, baselinesCount: this.history.baselines.length }, 'Loaded history from file');
             }
             // Also load time baselines
             if (fs.existsSync(TIME_BASELINES_FILE)) {
                 const data = fs.readFileSync(TIME_BASELINES_FILE, 'utf-8');
                 this.history.timeBaselines = JSON.parse(data);
-                console.log(`[HISTORY] Loaded ${this.history.timeBaselines?.length || 0} time baselines`);
+                logger.info({ timeBaselinesCount: this.history.timeBaselines?.length || 0 }, 'Loaded time baselines from file');
             }
         } catch (error: any) {
-            console.warn('[HISTORY] Could not load history:', error.message);
+            logger.warn({ err: error }, 'Could not load history from file');
         }
     }
 
@@ -246,9 +249,9 @@ export class HistoryStore {
             const data = JSON.stringify(this.history, null, 2);
             fs.writeFileSync(HISTORY_FILE, data, 'utf-8');
             this.dirty = false;
-            console.log(`[HISTORY] Saved ${this.history.anomalies.length} anomalies`);
+            logger.info({ anomaliesCount: this.history.anomalies.length }, 'Saved history to file');
         } catch (error: any) {
-            console.error('[HISTORY] Could not save history:', error.message);
+            logger.error({ err: error }, 'Could not save history to file');
         }
     }
 
@@ -260,10 +263,10 @@ export class HistoryStore {
             if (this.history.timeBaselines && this.history.timeBaselines.length > 0) {
                 const data = JSON.stringify(this.history.timeBaselines, null, 2);
                 fs.writeFileSync(TIME_BASELINES_FILE, data, 'utf-8');
-                console.log(`[HISTORY] Saved ${this.history.timeBaselines.length} time baselines`);
+                logger.info({ timeBaselinesCount: this.history.timeBaselines.length }, 'Saved time baselines to file');
             }
         } catch (error: any) {
-            console.error('[HISTORY] Could not save time baselines:', error.message);
+            logger.error({ err: error }, 'Could not save time baselines to file');
         }
     }
 }

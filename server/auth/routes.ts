@@ -7,7 +7,10 @@
 import { Router, Request, Response, NextFunction } from 'express';
 import { authService, registerSchema, loginSchema, verifySchema, User } from './auth-service';
 import { ZodError } from 'zod';
+import { createLogger } from '../lib/logger';
+import { AuthenticationError, ValidationError } from '../lib/errors';
 
+const logger = createLogger('auth-routes');
 const router = Router();
 
 // Extend Express Request to include user
@@ -24,7 +27,11 @@ declare global {
  */
 export const authenticate = async (req: Request, res: Response, next: NextFunction) => {
     const authHeader = req.headers.authorization;
-    console.log(`[AUTH] Authenticate called, header: ${authHeader?.substring(0, 30)}...`);
+    
+    logger.debug({
+        path: req.path,
+        hasAuth: !!authHeader
+    }, 'Authentication check');
 
     if (!authHeader?.startsWith('Bearer ')) {
         return res.status(401).json({ error: 'No token provided' });
@@ -32,14 +39,15 @@ export const authenticate = async (req: Request, res: Response, next: NextFuncti
 
     const token = authHeader.slice(7);
     const decoded = authService.verifyToken(token);
-    console.log(`[AUTH] Token decoded:`, decoded);
 
     if (!decoded) {
+        logger.warn({ path: req.path }, 'Invalid or expired token');
         return res.status(401).json({ error: 'Invalid or expired token' });
     }
 
     const user = await authService.getUserById(decoded.userId);
     if (!user) {
+        logger.warn({ userId: decoded.userId }, 'User not found for valid token');
         return res.status(401).json({ error: 'User not found' });
     }
 

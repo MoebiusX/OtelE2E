@@ -1,6 +1,12 @@
 // Initialize OpenTelemetry first
 import "./otel";
 
+// Initialize configuration and logging
+import { config } from "./config";
+import { createLogger } from "./lib/logger";
+import { requestLogger } from "./middleware/request-logger";
+import { errorHandler, notFoundHandler, handleUnhandledRejection, handleUncaughtException } from "./middleware/error-handler";
+
 import express, { type Request, Response, NextFunction } from "express";
 import { registerRoutes } from "./api/routes";
 import { setupVite, serveStatic, log } from "./vite";
@@ -8,17 +14,27 @@ import { kongClient } from "./services/kong-client";
 import { rabbitMQClient } from "./services/rabbitmq-client";
 import { monitorRoutes, startMonitor } from "./monitor";
 import { metricsMiddleware, registerMetricsEndpoint } from "./metrics/prometheus";
+import { transparencyService } from "./services/transparency-service";
 import authRoutes from "./auth/routes";
 import walletRoutes from "./wallet/routes";
 import tradeRoutes from "./trade/routes";
+import publicRoutes from "./api/public-routes";
 
+const logger = createLogger('server');
 const app = express();
+
+// Setup global error handlers for unhandled errors
+handleUnhandledRejection();
+handleUncaughtException();
 
 // Register Prometheus metrics endpoint FIRST (before other middleware)
 registerMetricsEndpoint(app);
 
 // Apply metrics collection middleware
 app.use(metricsMiddleware);
+
+// Request logging with correlation IDs (early in middleware chain)
+app.use(requestLogger);
 
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
@@ -37,47 +53,20 @@ app.use((req, res, next) => {
   }
 });
 
-app.use((req, res, next) => {
-  const start = Date.now();
-  const path = req.path;
-  let capturedJsonResponse: Record<string, any> | undefined = undefined;
-
-  const originalResJson = res.json;
-  res.json = function (bodyJson, ...args) {
-    capturedJsonResponse = bodyJson;
-    return originalResJson.apply(res, [bodyJson, ...args]);
-  };
-
-  res.on("finish", () => {
-    const duration = Date.now() - start;
-    if (path.startsWith("/api")) {
-      // Filter out GET requests to payments and traces endpoints to reduce console noise
-      if (req.method === "GET" && (path.includes("/api/payments") || path.includes("/api/traces"))) {
-        return;
-      }
-
-      let logLine = `${req.method} ${path} ${res.statusCode} in ${duration}ms`;
-      if (capturedJsonResponse) {
-        logLine += ` :: ${JSON.stringify(capturedJsonResponse)}`;
-      }
-
-      if (logLine.length > 80) {
-        logLine = logLine.slice(0, 79) + "…";
-      }
-
-      log(logLine);
-    }
-  });
-
-  next();
-});
-
 (async () => {
   // Initialize external services
-  console.log('[INIT] Initializing external services...');
+  logger.info('Initializing external services...');
 
-  // Setup Kong Gateway proxy routes
-  app.use('/kong', kongClient.createProxy());
+  // Setup Kong Gateway proxy routes with OTEL span attribute middleware
+  app.use('/kong', async (req, res, next) => {
+    // Mark this span as api-gateway component for proper service identification
+    const { trace } = await import('@opentelemetry/api');
+    const span = trace.getActiveSpan();
+    if (span) {
+      span.setAttribute('component', 'api-gateway');
+    }
+    next();
+  }, kongClient.createProxy());
 
   // Initialize RabbitMQ connection
   try {
@@ -112,16 +101,20 @@ app.use((req, res, next) => {
   // Register monitor routes
   app.use('/api/monitor', monitorRoutes);
 
+  // Register public transparency routes (unauthenticated)
+  app.use('/api/public', publicRoutes);
+
   // Start trace monitoring services (polls Jaeger for baselines/anomalies)
   startMonitor();
 
-  app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
-    const status = err.status || err.statusCode || 500;
-    const message = err.message || "Internal Server Error";
+  // Start transparency service for public metrics
+  transparencyService.start();
 
-    res.status(status).json({ message });
-    throw err;
-  });
+  // 404 handler for undefined routes (before error handler)
+  app.use(notFoundHandler);
+
+  // Global error handler (MUST be last)
+  app.use(errorHandler);
 
   // Create server
   const { createServer } = await import("http");
@@ -138,12 +131,42 @@ app.use((req, res, next) => {
     serveStatic(app);
   }
 
+  // Setup Vite in development or serve static in production
+  if (app.get("env") === "development") {
+    await setupVite(app, server);
+  } else {
+    serveStatic(app);
+  }
+
   // ALWAYS serve the app on port 5000
   // this serves both the API and the client.
-  // It is the only port that is not firewalled.
-  const port = 5000;
-  server.listen(port, "0.0.0.0", () => {
-    log(`serving on port ${port}`);
-    log(`WebSocket available at ws://localhost:${port}/ws/monitor`);
+  // Start server
+  const port = config.server.port;
+  const host = config.server.host;
+  
+  server.listen(port, host, () => {
+    logger.info({
+      port,
+      host,
+      env: config.env,
+    }, `Server started successfully`);
+    logger.info(`Serving on http://${host}:${port}`);
+    logger.info(`WebSocket available at ws://localhost:${port}/ws/monitor`);
   });
+
+  // Graceful shutdown
+  const shutdown = async () => {
+    logger.info('Shutting down gracefully...');
+    
+    server.close(() => {
+      logger.info('HTTP server closed');
+    });
+
+    await rabbitMQClient.disconnect();
+    
+    process.exit(0);
+  };
+
+  process.on('SIGTERM', shutdown);
+  process.on('SIGINT', shutdown);
 })();

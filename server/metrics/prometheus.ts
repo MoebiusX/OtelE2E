@@ -12,6 +12,9 @@ import {
     Histogram,
     Gauge,
 } from 'prom-client';
+import { createLogger } from '../lib/logger';
+
+const logger = createLogger('prometheus-metrics');
 
 // Create a custom registry
 const register = new Registry();
@@ -147,12 +150,12 @@ export function registerMetricsEndpoint(app: Express): void {
             res.set('Content-Type', register.contentType);
             res.end(await register.metrics());
         } catch (error: any) {
-            console.error('[METRICS] Error generating metrics:', error.message);
+            logger.error({ err: error }, 'Error generating Prometheus metrics');
             res.status(500).end('Error generating metrics');
         }
     });
 
-    console.log('[METRICS] Prometheus metrics endpoint registered at /metrics');
+    logger.info('Prometheus metrics endpoint registered at /metrics');
 }
 
 /**

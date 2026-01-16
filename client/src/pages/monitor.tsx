@@ -12,14 +12,15 @@ import {
     TableHeader,
     TableRow,
 } from "@/components/ui/table";
+import Layout from "@/components/Layout";
 
 // Severity configuration (SEV 1-5)
 const SEVERITY_CONFIG = {
-    1: { name: 'Critical', color: 'bg-red-600', textColor: 'text-red-400', icon: '🔴' },
-    2: { name: 'Major', color: 'bg-orange-600', textColor: 'text-orange-400', icon: '🟠' },
-    3: { name: 'Moderate', color: 'bg-amber-600', textColor: 'text-amber-400', icon: '🟡' },
-    4: { name: 'Minor', color: 'bg-yellow-600', textColor: 'text-yellow-400', icon: '🟢' },
-    5: { name: 'Low', color: 'bg-lime-600', textColor: 'text-lime-400', icon: '⚪' },
+    1: { name: 'Critical', color: 'bg-red-600', textColor: 'text-red-400', badge: 'SEV1' },
+    2: { name: 'Major', color: 'bg-orange-600', textColor: 'text-orange-400', badge: 'SEV2' },
+    3: { name: 'Moderate', color: 'bg-amber-600', textColor: 'text-amber-400', badge: 'SEV3' },
+    4: { name: 'Minor', color: 'bg-yellow-600', textColor: 'text-yellow-400', badge: 'SEV4' },
+    5: { name: 'Low', color: 'bg-lime-600', textColor: 'text-lime-400', badge: 'SEV5' },
 } as const;
 
 type SeverityLevel = 1 | 2 | 3 | 4 | 5;
@@ -317,9 +318,8 @@ export default function Monitor() {
         const config = SEVERITY_CONFIG[severity];
         return {
             className: `${config.color} text-white font-bold`,
-            label: `SEV${severity}`,
+            label: config.badge,
             name: config.name,
-            icon: config.icon,
         };
     };
 
@@ -332,12 +332,12 @@ export default function Monitor() {
         }
     };
 
-    const getStatusIcon = (status: string) => {
+    const getStatusBadge = (status: string) => {
         switch (status) {
-            case 'healthy': return '✅';
-            case 'warning': return '⚠️';
-            case 'critical': return '🔴';
-            default: return '⚪';
+            case 'healthy': return { label: 'HEALTHY', className: 'bg-emerald-600/20 text-emerald-400 border-emerald-500/30' };
+            case 'warning': return { label: 'WARNING', className: 'bg-amber-600/20 text-amber-400 border-amber-500/30' };
+            case 'critical': return { label: 'CRITICAL', className: 'bg-red-600/20 text-red-400 border-red-500/30' };
+            default: return { label: 'UNKNOWN', className: 'bg-slate-600/20 text-slate-400 border-slate-500/30' };
         }
     };
 
@@ -354,44 +354,39 @@ export default function Monitor() {
     };
 
     return (
-        <div className="min-h-screen bg-slate-950 text-white p-8">
+        <Layout>
+        <div className="min-h-screen bg-gradient-to-br from-slate-950 via-blue-950 to-slate-900 text-cyan-100 p-6 sm:p-8">
             {/* Header */}
-            <div className="flex items-center justify-between mb-8">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8">
                 <div className="flex items-center gap-4">
-                    <h1 className="text-3xl font-bold">🔍 Trace Monitor</h1>
+                    <h1 className="text-3xl font-bold bg-gradient-to-r from-cyan-400 via-blue-400 to-indigo-400 bg-clip-text text-transparent">Trace Monitor</h1>
                     <Badge
-                        className={`${getStatusColor(healthData?.status || 'unknown')} text-white text-base px-3 py-1`}
+                        className={`${getStatusColor(healthData?.status || 'unknown')} text-white text-sm sm:text-base px-3 py-1 shadow-lg`}
                     >
                         {healthData?.status?.toUpperCase() || 'LOADING'}
                     </Badge>
                 </div>
-                <div className="flex gap-3">
-                    <button
-                        onClick={() => navigate("/")}
-                        className="px-4 py-2 rounded-md border border-slate-600 bg-slate-800 text-white hover:bg-slate-700 text-base font-medium transition-colors"
-                    >
-                        ← Dashboard
-                    </button>
+                <div className="flex flex-wrap gap-2 sm:gap-3">
                     <button
                         onClick={() => {
                             queryClient.invalidateQueries({ queryKey: ["/api/monitor"] });
                         }}
-                        className="px-4 py-2 rounded-md border border-slate-600 bg-slate-800 text-white hover:bg-slate-700 text-base font-medium transition-colors"
+                        className="px-4 py-2 rounded-lg border border-cyan-500/30 bg-slate-800/50 text-cyan-100 hover:bg-slate-800 hover:border-cyan-400/50 text-sm sm:text-base font-medium transition-all duration-300 backdrop-blur"
                     >
                         ↻ Refresh
                     </button>
                     <button
                         onClick={() => recalculateMutation.mutate()}
                         disabled={recalculateMutation.isPending}
-                        className="px-4 py-2 rounded-md bg-purple-700 text-white hover:bg-purple-600 text-base font-medium transition-colors disabled:opacity-50"
+                        className="px-4 py-2 rounded-lg bg-gradient-to-r from-purple-600 to-indigo-600 text-white hover:from-purple-500 hover:to-indigo-500 text-sm sm:text-base font-medium transition-all duration-300 disabled:opacity-50 shadow-lg shadow-purple-500/25"
                     >
-                        {recalculateMutation.isPending ? '⏳ Calculating...' : '📊 Recalculate Baselines'}
+                        {recalculateMutation.isPending ? 'Calculating...' : 'Recalculate Baselines'}
                     </button>
                     <button
                         onClick={() => window.open("http://localhost:16686", "_blank")}
-                        className="px-4 py-2 rounded-md border border-slate-600 bg-slate-800 text-white hover:bg-slate-700 text-base font-medium transition-colors"
+                        className="px-4 py-2 rounded-lg border border-cyan-500/30 bg-slate-800/50 text-cyan-100 hover:bg-slate-800 hover:border-cyan-400/50 text-sm sm:text-base font-medium transition-all duration-300 backdrop-blur"
                     >
-                        🔍 Jaeger
+                        View in Jaeger
                     </button>
                 </div>
             </div>
@@ -407,21 +402,21 @@ export default function Monitor() {
             )}
 
             {/* Live Analysis Panel */}
-            <Card className="mb-6 bg-slate-900 border-slate-700">
+            <Card className="mb-6 bg-slate-800/50 backdrop-blur border-cyan-500/30 shadow-xl">
                 <CardHeader className="pb-3">
                     <div className="flex items-center justify-between">
-                        <CardTitle className="text-white text-xl font-semibold flex items-center gap-3">
-                            <span className={`h-3 w-3 rounded-full ${wsConnected ? 'bg-green-500 animate-pulse' : 'bg-red-500'}`}></span>
-                            🔴 Live Analysis
-                            {isStreaming && <span className="text-sm text-slate-400 font-normal">(streaming...)</span>}
+                        <CardTitle className="text-cyan-100 text-xl font-semibold flex items-center gap-3">
+                            <span className={`h-3 w-3 rounded-full ${wsConnected ? 'bg-emerald-500 animate-pulse' : 'bg-red-500'}`}></span>
+                            Live Analysis
+                            {isStreaming && <span className="text-sm text-cyan-400/70 font-normal">(streaming...)</span>}
                         </CardTitle>
                         <div className="flex items-center gap-3">
                             {lastUpdated && (
-                                <span className="text-sm text-slate-400">
+                                <span className="text-sm text-cyan-400/70">
                                     Last updated: {lastUpdated.toLocaleTimeString()}
                                 </span>
                             )}
-                            <Badge className={`${wsConnected ? 'bg-green-900 text-green-400' : 'bg-red-900 text-red-400'}`}>
+                            <Badge className={`${wsConnected ? 'bg-emerald-900/50 text-emerald-400 border-emerald-500/30' : 'bg-red-900/50 text-red-400 border-red-500/30'}`}>
                                 {wsConnected ? 'Connected' : 'Disconnected'}
                             </Badge>
                         </div>
@@ -442,8 +437,14 @@ export default function Monitor() {
                                         }`}
                                 >
                                     <span className="font-medium">
-                                        {alert.severity === 'critical' ? '🔴' : alert.severity === 'high' ? '🟠' : '🟡'}
-                                        {' '}{alert.message}
+                                        <Badge className={`mr-2 ${
+                                            alert.severity === 'critical' ? 'bg-red-600 text-white' : 
+                                            alert.severity === 'high' ? 'bg-orange-600 text-white' : 
+                                            'bg-amber-600 text-white'
+                                        }`}>
+                                            {alert.severity === 'critical' ? 'CRITICAL' : alert.severity === 'high' ? 'HIGH' : 'MEDIUM'}
+                                        </Badge>
+                                        {alert.message}
                                     </span>
                                     <span className="text-xs text-slate-400 ml-2">
                                         {new Date(alert.timestamp).toLocaleTimeString()}
@@ -455,10 +456,10 @@ export default function Monitor() {
 
                     {/* Streaming Output */}
                     {(streamingText || isStreaming) ? (
-                        <div className="bg-slate-800 rounded-lg p-4 border border-slate-700">
-                            <div className="font-mono text-sm text-green-400 whitespace-pre-wrap min-h-[100px] max-h-[300px] overflow-y-auto">
-                                {streamingText || 'Waiting for LLM analysis...'}
-                                {isStreaming && <span className="animate-pulse">▊</span>}
+                        <div className="bg-slate-900/50 rounded-lg p-4 border border-cyan-500/20">
+                            <div className="font-mono text-sm text-cyan-300/90 whitespace-pre-wrap min-h-[100px] max-h-[300px] overflow-y-auto leading-relaxed">
+                                {streamingText || 'Waiting for analysis...'}
+                                {isStreaming && <span className="animate-pulse text-cyan-400">|</span>}
                             </div>
                             {streamingAnomalyIds.length > 0 && (
                                 <div className="mt-2 text-xs text-slate-500">
@@ -468,9 +469,9 @@ export default function Monitor() {
                             )}
                         </div>
                     ) : (
-                        <div className="bg-slate-800 rounded-lg p-4 border border-slate-700 text-slate-400 text-center">
-                            <p className="text-base">Waiting for SEV1-3 anomalies...</p>
-                            <p className="text-sm mt-1">Analysis will stream automatically when critical alerts are detected</p>
+                        <div className="bg-slate-900/50 rounded-lg p-4 border border-cyan-500/20 text-cyan-400/70 text-center">
+                            <p className="text-base font-medium">Monitoring for Critical Anomalies</p>
+                            <p className="text-sm mt-1 text-cyan-400/50">Real-time analysis will begin when SEV1-3 alerts are detected</p>
                         </div>
                     )}
                 </CardContent>
@@ -478,19 +479,21 @@ export default function Monitor() {
 
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
                 {/* Service Health Panel */}
-                <Card className="bg-slate-900 border-slate-700">
+                <Card className="bg-slate-800/50 backdrop-blur border-cyan-500/30 shadow-xl">
                     <CardHeader className="pb-4">
-                        <CardTitle className="text-white text-xl font-semibold">Service Health</CardTitle>
+                        <CardTitle className="text-cyan-100 text-xl font-semibold">Service Health</CardTitle>
                     </CardHeader>
                     <CardContent>
                         <div className="space-y-3">
                             {healthData?.services?.map((service) => (
                                 <div
                                     key={service.name}
-                                    className="flex items-center justify-between p-4 rounded-lg bg-slate-800 border border-slate-700"
+                                    className="flex items-center justify-between p-4 rounded-lg bg-slate-900/50 border border-cyan-500/20 hover:border-cyan-400/30 transition-all duration-300"
                                 >
                                     <div className="flex items-center gap-3">
-                                        <span className="text-xl">{getStatusIcon(service.status)}</span>
+                                        <Badge className={`${getStatusBadge(service.status).className} border text-xs px-2 py-1`}>
+                                            {getStatusBadge(service.status).label}
+                                        </Badge>
                                         <span className="font-mono text-base text-white">{service.name}</span>
                                     </div>
                                     <div className="text-right">
@@ -515,21 +518,21 @@ export default function Monitor() {
                 </Card>
 
                 {/* Active Anomalies Panel */}
-                <Card className="bg-slate-900 border-slate-700 lg:col-span-2">
+                <Card className="bg-slate-800/50 backdrop-blur border-cyan-500/30 shadow-xl lg:col-span-2">
                     <CardHeader className="pb-4">
                         <div className="flex items-center justify-between">
-                            <CardTitle className="text-white text-xl font-semibold flex items-center gap-3">
+                            <CardTitle className="text-cyan-100 text-xl font-semibold flex items-center gap-3">
                                 Active Alerts
                                 {anomaliesData?.active && anomaliesData.active.length > 0 && (
                                     <Badge variant="destructive" className="text-base px-3">{anomaliesData.active.length}</Badge>
                                 )}
                             </CardTitle>
                             <div className="flex items-center gap-2">
-                                <span className="text-slate-400 text-sm">Min Level:</span>
+                                <span className="text-cyan-400/70 text-sm">Min Level:</span>
                                 <select
                                     value={minSeverity}
                                     onChange={(e) => setMinSeverity(Number(e.target.value) as SeverityLevel)}
-                                    className="bg-slate-800 border border-slate-600 text-white rounded-md px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-purple-500"
+                                    className="bg-slate-900/50 border border-cyan-500/30 text-cyan-100 rounded-md px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-cyan-500/50 transition-all backdrop-blur"
                                 >
                                     <option value={5}>All (SEV5+)</option>
                                     <option value={4}>SEV4+ Minor</option>
@@ -751,12 +754,12 @@ export default function Monitor() {
             </Card>
 
             {/* Correlated Metrics Panel */}
-            <Card className="bg-slate-900 border-slate-700 mt-6">
+            <Card className="bg-slate-800/50 backdrop-blur border-cyan-500/30 shadow-xl mt-6">
                 <CardHeader className="pb-4">
-                    <CardTitle className="text-white text-xl font-semibold flex items-center gap-3">
-                        📊 Correlated Metrics
+                    <CardTitle className="text-cyan-100 text-xl font-semibold flex items-center gap-3">
+                        Correlated Metrics
                         {correlationMutation.isPending && (
-                            <span className="text-slate-400 text-sm font-normal">Loading...</span>
+                            <span className="text-cyan-400/70 text-sm font-normal">Loading...</span>
                         )}
                     </CardTitle>
                 </CardHeader>
@@ -767,8 +770,8 @@ export default function Monitor() {
                                 {/* Metrics Grid */}
                                 <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
                                     {/* CPU */}
-                                    <div className="bg-slate-800 rounded-lg p-4 border border-slate-700">
-                                        <div className="text-slate-400 text-sm mb-1">CPU Usage</div>
+                                    <div className="bg-slate-900/50 rounded-lg p-4 border border-cyan-500/20">
+                                        <div className="text-cyan-400/70 text-sm mb-1">CPU Usage</div>
                                         <div className={`text-2xl font-bold ${(correlationMutation.data.metrics.cpuPercent ?? 0) >= 80
                                             ? 'text-red-400'
                                             : (correlationMutation.data.metrics.cpuPercent ?? 0) >= 60
@@ -782,8 +785,8 @@ export default function Monitor() {
                                     </div>
 
                                     {/* Memory */}
-                                    <div className="bg-slate-800 rounded-lg p-4 border border-slate-700">
-                                        <div className="text-slate-400 text-sm mb-1">Memory</div>
+                                    <div className="bg-slate-900/50 rounded-lg p-4 border border-cyan-500/20">
+                                        <div className="text-cyan-400/70 text-sm mb-1">Memory</div>
                                         <div className={`text-2xl font-bold ${(correlationMutation.data.metrics.memoryMB ?? 0) >= 512
                                             ? 'text-amber-400'
                                             : 'text-emerald-400'
@@ -795,9 +798,9 @@ export default function Monitor() {
                                     </div>
 
                                     {/* Request Rate */}
-                                    <div className="bg-slate-800 rounded-lg p-4 border border-slate-700">
-                                        <div className="text-slate-400 text-sm mb-1">Request Rate</div>
-                                        <div className="text-2xl font-bold text-white">
+                                    <div className="bg-slate-900/50 rounded-lg p-4 border border-cyan-500/20">
+                                        <div className="text-cyan-400/70 text-sm mb-1">Request Rate</div>
+                                        <div className="text-2xl font-bold text-cyan-100">
                                             {correlationMutation.data.metrics.requestRate !== null
                                                 ? `${correlationMutation.data.metrics.requestRate.toFixed(1)}/s`
                                                 : 'N/A'}
@@ -805,8 +808,8 @@ export default function Monitor() {
                                     </div>
 
                                     {/* Error Rate */}
-                                    <div className="bg-slate-800 rounded-lg p-4 border border-slate-700">
-                                        <div className="text-slate-400 text-sm mb-1">Error Rate</div>
+                                    <div className="bg-slate-900/50 rounded-lg p-4 border border-cyan-500/20">
+                                        <div className="text-cyan-400/70 text-sm mb-1">Error Rate</div>
                                         <div className={`text-2xl font-bold ${(correlationMutation.data.metrics.errorRate ?? 0) >= 5
                                             ? 'text-red-400'
                                             : (correlationMutation.data.metrics.errorRate ?? 0) >= 1
@@ -820,9 +823,9 @@ export default function Monitor() {
                                     </div>
 
                                     {/* P99 Latency */}
-                                    <div className="bg-slate-800 rounded-lg p-4 border border-slate-700">
-                                        <div className="text-slate-400 text-sm mb-1">P99 Latency</div>
-                                        <div className="text-2xl font-bold text-white">
+                                    <div className="bg-slate-900/50 rounded-lg p-4 border border-cyan-500/20">
+                                        <div className="text-cyan-400/70 text-sm mb-1">P99 Latency</div>
+                                        <div className="text-2xl font-bold text-cyan-100">
                                             {correlationMutation.data.metrics.p99LatencyMs !== null
                                                 ? `${correlationMutation.data.metrics.p99LatencyMs.toFixed(0)}ms`
                                                 : 'N/A'}
@@ -830,11 +833,11 @@ export default function Monitor() {
                                     </div>
 
                                     {/* Active Connections */}
-                                    <div className="bg-slate-800 rounded-lg p-4 border border-slate-700">
-                                        <div className="text-slate-400 text-sm mb-1">Connections</div>
+                                    <div className="bg-slate-900/50 rounded-lg p-4 border border-cyan-500/20">
+                                        <div className="text-cyan-400/70 text-sm mb-1">Connections</div>
                                         <div className={`text-2xl font-bold ${(correlationMutation.data.metrics.activeConnections ?? 0) >= 100
                                             ? 'text-amber-400'
-                                            : 'text-white'
+                                            : 'text-cyan-100'
                                             }`}>
                                             {correlationMutation.data.metrics.activeConnections !== null
                                                 ? correlationMutation.data.metrics.activeConnections
@@ -846,7 +849,7 @@ export default function Monitor() {
                                 {/* Auto-Insights */}
                                 {correlationMutation.data.insights.length > 0 && (
                                     <div className="bg-amber-900/30 rounded-lg p-4 border border-amber-700/50">
-                                        <div className="text-amber-400 font-semibold mb-2">💡 Auto-Insights</div>
+                                        <div className="text-amber-400 font-semibold mb-2">Auto-Insights</div>
                                         <ul className="space-y-1">
                                             {correlationMutation.data.insights.map((insight, i) => (
                                                 <li key={i} className="text-white text-base">{insight}</li>
@@ -880,12 +883,12 @@ export default function Monitor() {
             </Card>
 
             {/* Baselines Table */}
-            <Card className="bg-slate-900 border-slate-700 mt-6">
+            <Card className="bg-slate-800/50 backdrop-blur border-cyan-500/30 shadow-xl mt-6">
                 <CardHeader className="pb-4">
-                    <CardTitle className="text-white text-xl font-semibold">
+                    <CardTitle className="text-cyan-100 text-xl font-semibold">
                         Baseline Statistics
                         {baselinesData?.baselines && (
-                            <span className="text-base font-normal text-slate-400 ml-3">
+                            <span className="text-base font-normal text-cyan-400/70 ml-3">
                                 ({baselinesData.baselines.length} spans tracked)
                             </span>
                         )}
@@ -895,39 +898,39 @@ export default function Monitor() {
                     <div className="overflow-x-auto">
                         <Table>
                             <TableHeader>
-                                <TableRow className="border-slate-700 hover:bg-transparent">
-                                    <TableHead className="text-slate-300 text-base font-semibold">Span</TableHead>
-                                    <TableHead className="text-slate-300 text-base font-semibold text-right">Mean</TableHead>
-                                    <TableHead className="text-slate-300 text-base font-semibold text-right">Std Dev (σ)</TableHead>
-                                    <TableHead className="text-slate-300 text-base font-semibold text-right">P95</TableHead>
-                                    <TableHead className="text-slate-300 text-base font-semibold text-right">P99</TableHead>
-                                    <TableHead className="text-slate-300 text-base font-semibold text-right">Samples</TableHead>
+                                <TableRow className="border-cyan-500/20 hover:bg-transparent">
+                                    <TableHead className="text-cyan-100 text-base font-semibold">Span</TableHead>
+                                    <TableHead className="text-cyan-100 text-base font-semibold text-right">Mean</TableHead>
+                                    <TableHead className="text-cyan-100 text-base font-semibold text-right">Std Dev (σ)</TableHead>
+                                    <TableHead className="text-cyan-100 text-base font-semibold text-right">P95</TableHead>
+                                    <TableHead className="text-cyan-100 text-base font-semibold text-right">P99</TableHead>
+                                    <TableHead className="text-cyan-100 text-base font-semibold text-right">Samples</TableHead>
                                 </TableRow>
                             </TableHeader>
                             <TableBody>
                                 {baselinesData?.baselines?.slice(0, 15).map((baseline, index) => (
                                     <TableRow
                                         key={baseline.spanKey}
-                                        className={`border-slate-700 ${index % 2 === 0 ? 'bg-slate-800/50' : 'bg-slate-900'}`}
+                                        className={`border-cyan-500/20 ${index % 2 === 0 ? 'bg-slate-900/30' : 'bg-slate-900/50'} hover:bg-slate-800/50 transition-colors`}
                                     >
                                         <TableCell className="font-mono text-base py-3">
                                             <span className="text-cyan-400 font-medium">{baseline.service}</span>
-                                            <span className="text-slate-500 mx-1">:</span>
-                                            <span className="text-white">{baseline.operation}</span>
+                                            <span className="text-cyan-500/50 mx-1">:</span>
+                                            <span className="text-cyan-100">{baseline.operation}</span>
                                         </TableCell>
-                                        <TableCell className="text-right text-base text-white font-medium">
+                                        <TableCell className="text-right text-base text-cyan-100 font-medium">
                                             {formatDuration(baseline.mean)}
                                         </TableCell>
-                                        <TableCell className="text-right text-base text-slate-300">
+                                        <TableCell className="text-right text-base text-cyan-300/70">
                                             ±{formatDuration(baseline.stdDev)}
                                         </TableCell>
-                                        <TableCell className="text-right text-base text-white">
+                                        <TableCell className="text-right text-base text-cyan-100">
                                             {formatDuration(baseline.p95)}
                                         </TableCell>
-                                        <TableCell className="text-right text-base text-white">
+                                        <TableCell className="text-right text-base text-cyan-100">
                                             {formatDuration(baseline.p99)}
                                         </TableCell>
-                                        <TableCell className="text-right text-base text-slate-300">
+                                        <TableCell className="text-right text-base text-cyan-300/70">
                                             {baseline.sampleCount.toLocaleString()}
                                         </TableCell>
                                     </TableRow>
@@ -935,7 +938,7 @@ export default function Monitor() {
                             </TableBody>
                         </Table>
                         {(!baselinesData?.baselines || baselinesData.baselines.length === 0) && (
-                            <div className="text-slate-400 text-center py-10 text-lg">
+                            <div className="text-cyan-400/70 text-center py-10 text-lg">
                                 Collecting baseline data from Jaeger...
                             </div>
                         )}
@@ -943,5 +946,6 @@ export default function Monitor() {
                 </CardContent>
             </Card>
         </div>
+        </Layout>
     );
 }

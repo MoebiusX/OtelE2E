@@ -82,14 +82,14 @@ export default function MyWallet() {
         <Layout>
             <div className="container mx-auto px-4 py-8">
                 {/* Total Balance Card */}
-                <Card className="bg-gradient-to-r from-purple-900/50 to-pink-900/50 border-purple-700 mb-8">
+                <Card className="bg-gradient-to-r from-cyan-900/30 to-blue-900/30 border-cyan-500/30 mb-8 backdrop-blur">
                     <CardContent className="py-8">
                         <div className="text-center">
-                            <p className="text-slate-400 mb-2">Total Balance (Est.)</p>
-                            <p className="text-5xl font-bold text-white">
+                            <p className="text-cyan-100/60 mb-2">Total Balance (Est.)</p>
+                            <p className="text-5xl font-bold text-cyan-100">
                                 ${calculateTotalUSD().toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                             </p>
-                            <p className="text-slate-400 mt-2 text-sm">
+                            <p className="text-cyan-100/60 mt-2 text-sm">
                                 Welcome bonus credited! Start trading now.
                             </p>
                         </div>
@@ -98,22 +98,22 @@ export default function MyWallet() {
 
                 {/* Quick Actions */}
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
-                    <Button className="h-16 bg-emerald-600 hover:bg-emerald-700 text-lg">
-                        💰 Deposit
+                    <Button className="h-16 bg-emerald-600 hover:bg-emerald-700 text-lg font-semibold">
+                        Deposit
                     </Button>
-                    <Button className="h-16 bg-blue-600 hover:bg-blue-700 text-lg">
-                        📤 Withdraw
+                    <Button className="h-16 bg-blue-600 hover:bg-blue-700 text-lg font-semibold">
+                        Withdraw
                     </Button>
-                    <Button className="h-16 bg-purple-600 hover:bg-purple-700 text-lg">
-                        🔄 Convert
+                    <Button className="h-16 bg-cyan-600 hover:bg-cyan-700 text-lg font-semibold">
+                        Convert
                     </Button>
-                    <Button className="h-16 bg-pink-600 hover:bg-pink-700 text-lg">
-                        📈 Trade
+                    <Button className="h-16 bg-indigo-600 hover:bg-indigo-700 text-lg font-semibold">
+                        Trade
                     </Button>
                 </div>
 
                 {/* Wallets Grid */}
-                <h2 className="text-2xl font-semibold text-white mb-4">Your Assets</h2>
+                <h2 className="text-2xl font-semibold text-cyan-100 mb-4">Your Assets</h2>
 
                 {isLoading ? (
                     <div className="text-center py-8 text-slate-400">Loading wallets...</div>
@@ -129,7 +129,7 @@ export default function MyWallet() {
                             );
 
                             return (
-                                <Card key={wallet.asset} className="bg-slate-800/50 border-slate-700 hover:border-purple-600 transition-colors">
+                                <Card key={wallet.asset} className="bg-slate-800/50 border-cyan-500/30 hover:border-cyan-400/50 transition-all backdrop-blur">
                                     <CardContent className="p-6">
                                         <div className="flex items-center gap-4">
                                             <div className={`text-4xl ${config.color}`}>

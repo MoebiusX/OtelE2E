@@ -38,38 +38,40 @@ export default function Layout({ children, showAuth = true }: LayoutProps) {
     };
 
     return (
-        <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 flex flex-col">
+        <div className="min-h-screen bg-gradient-to-br from-slate-950 via-blue-950 to-slate-900 flex flex-col">
             {/* Header */}
-            <header className="border-b border-slate-700 bg-slate-900/80 backdrop-blur-lg sticky top-0 z-50">
+            <header className="border-b border-cyan-500/20 bg-slate-900/80 backdrop-blur-lg sticky top-0 z-50">
                 <div className="container mx-auto px-4 py-3 flex items-center justify-between">
                     <div className="flex items-center gap-6">
                         {/* Logo */}
-                        <a href="/" className="flex items-center gap-2">
-                            <span className="text-2xl">💎</span>
-                            <h1 className="text-2xl font-bold bg-gradient-to-r from-purple-400 via-pink-400 to-purple-400 bg-clip-text text-transparent">
+                        <a href={user ? "/trading" : "/"} className="flex items-center gap-2 hover:opacity-80 transition-opacity">
+                            <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-cyan-400 to-blue-500 flex items-center justify-center shadow-lg shadow-cyan-500/25">
+                                <span className="text-white text-sm font-bold">K</span>
+                            </div>
+                            <h1 className="text-xl font-bold bg-gradient-to-r from-cyan-400 via-blue-400 to-indigo-400 bg-clip-text text-transparent">
                                 Krystaline
                             </h1>
                         </a>
 
                         {/* Nav Links */}
-                        <nav className="hidden md:flex items-center gap-4">
+                        <nav className="hidden md:flex items-center gap-1">
                             <a
-                                href="/"
-                                className={`text-sm transition-colors ${location === '/' ? 'text-purple-400' : 'text-slate-400 hover:text-white'}`}
+                                href={user ? "/trading" : "/"}
+                                className={`px-3 py-2 rounded-lg text-sm font-medium transition-all ${(location === '/' && !user) || (location === '/trading' && user) ? 'bg-cyan-500/10 text-cyan-400' : 'text-cyan-100/70 hover:text-cyan-100 hover:bg-slate-800/50'}`}
                             >
-                                Dashboard
+                                Home
                             </a>
                             {user && (
                                 <>
                                     <a
                                         href="/my-wallet"
-                                        className={`text-sm transition-colors ${location === '/my-wallet' ? 'text-purple-400' : 'text-slate-400 hover:text-white'}`}
+                                        className={`px-3 py-2 rounded-lg text-sm font-medium transition-all ${location === '/my-wallet' ? 'bg-cyan-500/10 text-cyan-400' : 'text-cyan-100/70 hover:text-cyan-100 hover:bg-slate-800/50'}`}
                                     >
                                         Wallet
                                     </a>
                                     <a
                                         href="/convert"
-                                        className={`text-sm transition-colors ${location === '/convert' ? 'text-purple-400' : 'text-slate-400 hover:text-white'}`}
+                                        className={`px-3 py-2 rounded-lg text-sm font-medium transition-all ${location === '/convert' ? 'bg-cyan-500/10 text-cyan-400' : 'text-cyan-100/70 hover:text-cyan-100 hover:bg-slate-800/50'}`}
                                     >
                                         Convert
                                     </a>
@@ -77,7 +79,7 @@ export default function Layout({ children, showAuth = true }: LayoutProps) {
                             )}
                             <a
                                 href="/monitor"
-                                className={`text-sm transition-colors ${location === '/monitor' ? 'text-purple-400' : 'text-slate-400 hover:text-white'}`}
+                                className={`px-3 py-2 rounded-lg text-sm font-medium transition-all ${location === '/monitor' ? 'bg-cyan-500/10 text-cyan-400' : 'text-cyan-100/70 hover:text-cyan-100 hover:bg-slate-800/50'}`}
                             >
                                 Monitor
                             </a>
@@ -86,18 +88,18 @@ export default function Layout({ children, showAuth = true }: LayoutProps) {
 
                     {/* Right side */}
                     {showAuth && (
-                        <div className="flex items-center gap-4">
+                        <div className="flex items-center gap-3">
                             {user ? (
                                 <>
-                                    <span className="text-slate-400 text-sm hidden sm:inline">{user.email}</span>
-                                    <Badge variant="outline" className="border-emerald-500 text-emerald-400 hidden sm:flex">
-                                        ✓ Verified
+                                    <span className="text-cyan-100/70 text-sm hidden sm:inline">{user.email}</span>
+                                    <Badge variant="outline" className="border-emerald-500/30 text-emerald-400 hidden sm:flex bg-emerald-500/5">
+                                        Verified
                                     </Badge>
                                     <Button
                                         variant="ghost"
                                         size="sm"
                                         onClick={handleLogout}
-                                        className="text-slate-400 hover:text-white"
+                                        className="text-cyan-100/70 hover:text-cyan-100 hover:bg-slate-800/50"
                                     >
                                         Logout
                                     </Button>
@@ -105,12 +107,12 @@ export default function Layout({ children, showAuth = true }: LayoutProps) {
                             ) : (
                                 <>
                                     <a href="/login">
-                                        <Button variant="ghost" size="sm" className="text-slate-400 hover:text-white">
+                                        <Button variant="ghost" size="sm" className="text-cyan-100/70 hover:text-cyan-100 hover:bg-slate-800/50">
                                             Sign In
                                         </Button>
                                     </a>
                                     <a href="/register">
-                                        <Button size="sm" className="bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700">
+                                        <Button size="sm" className="bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-cyan-500 hover:to-blue-500 text-white shadow-lg shadow-cyan-500/25">
                                             Get Started
                                         </Button>
                                     </a>
@@ -127,50 +129,52 @@ export default function Layout({ children, showAuth = true }: LayoutProps) {
             </main>
 
             {/* Footer */}
-            <footer className="border-t border-slate-700 bg-slate-900/80 backdrop-blur-lg mt-auto">
+            <footer className="border-t border-cyan-500/20 bg-slate-900/80 backdrop-blur-lg mt-auto">
                 <div className="container mx-auto px-4 py-8">
                     <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
                         {/* Brand */}
                         <div className="col-span-1 md:col-span-2">
                             <div className="flex items-center gap-2 mb-4">
-                                <span className="text-2xl">💎</span>
-                                <h2 className="text-xl font-bold bg-gradient-to-r from-purple-400 to-pink-400 bg-clip-text text-transparent">
+                                <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-cyan-400 to-blue-500 flex items-center justify-center shadow-lg shadow-cyan-500/25">
+                                    <span className="text-white text-sm font-bold">K</span>
+                                </div>
+                                <h2 className="text-xl font-bold bg-gradient-to-r from-cyan-400 to-blue-400 bg-clip-text text-transparent">
                                     Krystaline
                                 </h2>
                             </div>
-                            <p className="text-slate-400 text-sm mb-2">Crystal Clear Crypto</p>
-                            <p className="text-slate-500 text-xs">
-                                Proof of Observability • Proof of Trust
+                            <p className="text-cyan-100/70 text-sm mb-2">The First Crypto Exchange with Proof of Observability™</p>
+                            <p className="text-cyan-100/50 text-xs">
+                                Building trust through transparency • Powered by OpenTelemetry
                             </p>
                         </div>
 
                         {/* Links */}
                         <div>
-                            <h3 className="text-white font-semibold mb-3">Platform</h3>
+                            <h3 className="text-cyan-100 font-semibold mb-3">Platform</h3>
                             <ul className="space-y-2 text-sm">
-                                <li><a href="/my-wallet" className="text-slate-400 hover:text-purple-400 transition-colors">Wallet</a></li>
-                                <li><a href="#" className="text-slate-400 hover:text-purple-400 transition-colors">Trade</a></li>
-                                <li><a href="#" className="text-slate-400 hover:text-purple-400 transition-colors">Convert</a></li>
+                                <li><a href="/trading" className="text-cyan-100/60 hover:text-cyan-400 transition-colors">Trading</a></li>
+                                <li><a href="/my-wallet" className="text-cyan-100/60 hover:text-cyan-400 transition-colors">Wallet</a></li>
+                                <li><a href="/convert" className="text-cyan-100/60 hover:text-cyan-400 transition-colors">Convert</a></li>
                             </ul>
                         </div>
 
                         <div>
-                            <h3 className="text-white font-semibold mb-3">Resources</h3>
+                            <h3 className="text-cyan-100 font-semibold mb-3">Transparency</h3>
                             <ul className="space-y-2 text-sm">
-                                <li><a href="/monitor" className="text-slate-400 hover:text-purple-400 transition-colors">Observability</a></li>
-                                <li><a href="#" className="text-slate-400 hover:text-purple-400 transition-colors">API Docs</a></li>
-                                <li><a href="#" className="text-slate-400 hover:text-purple-400 transition-colors">Support</a></li>
+                                <li><a href="/" className="text-cyan-100/60 hover:text-cyan-400 transition-colors">Live Dashboard</a></li>
+                                <li><a href="/monitor" className="text-cyan-100/60 hover:text-cyan-400 transition-colors">System Monitor</a></li>
+                                <li><a href="#" className="text-cyan-100/60 hover:text-cyan-400 transition-colors">API Status</a></li>
                             </ul>
                         </div>
                     </div>
 
-                    <div className="border-t border-slate-800 mt-8 pt-6 flex flex-col md:flex-row items-center justify-between gap-4">
-                        <p className="text-slate-500 text-xs">
+                    <div className="border-t border-cyan-500/20 mt-8 pt-6 flex flex-col md:flex-row items-center justify-between gap-4">
+                        <p className="text-cyan-100/50 text-xs">
                             © 2026 Krystaline. All rights reserved.
                         </p>
-                        <Badge variant="outline" className="border-purple-500/50 text-purple-400 text-xs">
-                            Demo Mode - Test Environment
-                        </Badge>
+                        <p className="text-cyan-100/40 text-xs">
+                            Last updated: {new Date().toLocaleString()}
+                        </p>
                     </div>
                 </div>
             </footer>

@@ -4,44 +4,89 @@
  * PostgreSQL connection pool for the crypto exchange.
  */
 
-import { Pool } from 'pg';
+import { Pool, PoolClient } from 'pg';
+import { config } from '../config';
+import { createLogger } from '../lib/logger';
+import { DatabaseError } from '../lib/errors';
 
+const logger = createLogger('database');
+
+// Create connection pool with config
 const pool = new Pool({
-    host: process.env.DB_HOST || 'localhost',
-    port: parseInt(process.env.DB_PORT || '5433'),
-    database: process.env.DB_NAME || 'crypto_exchange',
-    user: process.env.DB_USER || 'exchange',
-    password: process.env.DB_PASSWORD || 'exchange123',
-    max: 20,
-    idleTimeoutMillis: 30000,
-    connectionTimeoutMillis: 2000,
+    host: config.database.host,
+    port: config.database.port,
+    database: config.database.name,
+    user: config.database.user,
+    password: config.database.password,
+    max: config.database.maxConnections,
+    idleTimeoutMillis: config.database.idleTimeoutMs,
+    connectionTimeoutMillis: config.database.connectionTimeoutMs,
 });
 
 // Test connection on startup
-pool.on('connect', () => {
-    console.log('[DB] Connected to PostgreSQL');
+pool.on('connect', (client: PoolClient) => {
+    logger.info({
+        host: config.database.host,
+        port: config.database.port,
+        database: config.database.name,
+    }, 'Connected to PostgreSQL');
 });
 
-pool.on('error', (err) => {
-    console.error('[DB] Unexpected error:', err.message);
+pool.on('error', (err: Error) => {
+    logger.error({
+        err: {
+            message: err.message,
+            name: err.name,
+        },
+    }, 'Unexpected database error');
 });
 
 export const db = {
-    query: (text: string, params?: any[]) => pool.query(text, params),
+    query: async (text: string, params?: any[]) => {
+        try {
+            const start = Date.now();
+            const result = await pool.query(text, params);
+            const duration = Date.now() - start;
+            
+            logger.debug({
+                query: text.substring(0, 100),
+                duration,
+                rows: result.rowCount,
+            }, 'Query executed');
+            
+            return result;
+        } catch (error) {
+            logger.error({
+                query: text.substring(0, 100),
+                err: error,
+            }, 'Query failed');
+            throw new DatabaseError('Query execution failed', { query: text, error });
+        }
+    },
 
-    getClient: () => pool.connect(),
+    getClient: async () => {
+        try {
+            return await pool.connect();
+        } catch (error) {
+            logger.error({ err: error }, 'Failed to get database client');
+            throw new DatabaseError('Failed to acquire database connection');
+        }
+    },
 
     // Transaction helper
-    async transaction<T>(callback: (client: any) => Promise<T>): Promise<T> {
+    async transaction<T>(callback: (client: PoolClient) => Promise<T>): Promise<T> {
         const client = await pool.connect();
         try {
+            logger.debug('Transaction started');
             await client.query('BEGIN');
             const result = await callback(client);
             await client.query('COMMIT');
+            logger.debug('Transaction committed');
             return result;
         } catch (error) {
             await client.query('ROLLBACK');
-            throw error;
+            logger.warn({ err: error }, 'Transaction rolled back');
+            throw new DatabaseError('Transaction failed', { error });
         } finally {
             client.release();
         }
@@ -51,8 +96,10 @@ export const db = {
     async checkHealth(): Promise<boolean> {
         try {
             await pool.query('SELECT 1');
+            logger.debug('Database health check passed');
             return true;
-        } catch {
+        } catch (error) {
+            logger.error({ err: error }, 'Database health check failed');
             return false;
         }
     }

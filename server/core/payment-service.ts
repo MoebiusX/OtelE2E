@@ -5,6 +5,10 @@ import { storage } from '../storage';
 import { rabbitMQClient } from '../services/rabbitmq-client';
 import { InsertPayment } from '@shared/schema';
 import { trace } from '@opentelemetry/api';
+import { createLogger } from '../lib/logger';
+import { PaymentError, ValidationError, TimeoutError } from '../lib/errors';
+
+const logger = createLogger('payment');
 
 export interface PaymentRequest {
   amount: number;
@@ -35,7 +39,12 @@ export class PaymentService {
     const spanId = spanContext?.spanId || this.generateSpanId();
     const correlationId = this.generateCorrelationId();
 
-    console.log(`[PAYMENT] Using OTEL trace context: traceId=${traceId.slice(0, 8)}... spanId=${spanId.slice(0, 8)}...`);
+    logger.info({
+      traceId: traceId.slice(0, 8),
+      spanId: spanId.slice(0, 8),
+      amount: request.amount,
+      currency: request.currency
+    }, 'Processing payment with OTEL trace context');
 
     // Store payment record
     const payment = await storage.createPayment({
@@ -59,7 +68,11 @@ export class PaymentService {
           timestamp: payment.createdAt instanceof Date ? payment.createdAt.toISOString() : new Date().toISOString()
         }, 5000); // 5 second timeout
 
-        console.log(`[PAYMENT] Processor response: ${processorResponse.status}`);
+        logger.info({
+          paymentId: payment.id,
+          status: processorResponse.status,
+          processorId: processorResponse.processorId
+        }, 'Payment processor response received');
 
         return {
           paymentId: payment.id,
@@ -72,7 +85,11 @@ export class PaymentService {
           }
         };
       } catch (error: any) {
-        console.warn(`[PAYMENT] Processor response timeout or error: ${error.message}`);
+        logger.warn({
+          err: error,
+          paymentId: payment.id
+        }, 'Payment processor timeout or error');
+        
         // Return without processor response on timeout
         return {
           paymentId: payment.id,
@@ -81,7 +98,7 @@ export class PaymentService {
         };
       }
     } else {
-      console.warn('[PAYMENT] RabbitMQ not connected - payment processed without queue');
+      logger.warn({ paymentId: payment.id }, 'RabbitMQ not connected - payment processed without queue');
     }
 
     return {

@@ -4,6 +4,10 @@
  * Exports all monitor services and starts background processes.
  */
 
+import { createLogger } from '../lib/logger';
+
+const logger = createLogger('monitor');
+
 export { traceProfiler } from './trace-profiler';
 export { anomalyDetector } from './anomaly-detector';
 export { historyStore } from './history-store';
@@ -19,7 +23,7 @@ import { historyStore } from './history-store';
  * Start all monitor services
  */
 export function startMonitor(): void {
-    console.log('[MONITOR] Starting trace monitoring services...');
+    logger.info('Starting trace monitoring services');
 
     // Start history store (for auto-save)
     historyStore.start();
@@ -33,18 +37,18 @@ export function startMonitor(): void {
         anomalyDetector.start();
     }, 35000); // Start after first baseline collection
 
-    console.log('[MONITOR] ✅ Monitor services started');
+    logger.info('Monitor services started successfully');
 }
 
 /**
  * Stop all monitor services
  */
 export function stopMonitor(): void {
-    console.log('[MONITOR] Stopping trace monitoring services...');
+    logger.info('Stopping trace monitoring services');
 
     anomalyDetector.stop();
     traceProfiler.stop();
     historyStore.stop();
 
-    console.log('[MONITOR] Stopped');
+    logger.info('Monitor services stopped');
 }

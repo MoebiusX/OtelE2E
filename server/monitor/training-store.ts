@@ -7,6 +7,9 @@
 
 import * as fs from 'fs';
 import * as path from 'path';
+import { createLogger } from '../lib/logger';
+
+const logger = createLogger('training-store');
 
 // Training example structure
 export interface TrainingExample {
@@ -66,14 +69,14 @@ class TrainingStore {
             if (fs.existsSync(TRAINING_FILE)) {
                 const data = fs.readFileSync(TRAINING_FILE, 'utf-8');
                 this.examples = JSON.parse(data);
-                console.log(`[TRAINING] Loaded ${this.examples.length} training examples`);
+                logger.info({ examplesCount: this.examples.length }, 'Loaded training examples');
             } else {
                 this.examples = [];
-                console.log('[TRAINING] No existing training data, starting fresh');
+                logger.info('No existing training data, starting fresh');
             }
             this.loaded = true;
         } catch (error: any) {
-            console.error('[TRAINING] Failed to load training data:', error.message);
+            logger.error({ err: error }, 'Failed to load training data');
             this.examples = [];
         }
     }
@@ -82,7 +85,7 @@ class TrainingStore {
         try {
             fs.writeFileSync(TRAINING_FILE, JSON.stringify(this.examples, null, 2));
         } catch (error: any) {
-            console.error('[TRAINING] Failed to save training data:', error.message);
+            logger.error({ err: error }, 'Failed to save training data');
         }
     }
 
@@ -99,7 +102,7 @@ class TrainingStore {
         this.examples.push(newExample);
         this.save();
 
-        console.log(`[TRAINING] Added ${example.rating} example for ${example.anomaly.service}`);
+        logger.info({ rating: example.rating, service: example.anomaly.service }, 'Added training example');
         return newExample;
     }
 
@@ -171,7 +174,7 @@ class TrainingStore {
     clear(): void {
         this.examples = [];
         this.save();
-        console.log('[TRAINING] Cleared all training data');
+        logger.info('Cleared all training data');
     }
 
     /**

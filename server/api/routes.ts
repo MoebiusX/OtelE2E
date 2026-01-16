@@ -8,9 +8,12 @@ import { fromZodError } from "zod-validation-error";
 import { orderService, getPrice } from "../core/order-service";
 import { insertOrderSchema, insertTransferSchema } from "@shared/schema";
 import { traces } from "../otel";
+import { createLogger } from "../lib/logger";
+
+const logger = createLogger('api-routes');
 
 export function registerRoutes(app: Express) {
-  console.log("Registering API routes...");
+  logger.info('Registering API routes');
 
   // ============================================
   // USER ENDPOINTS
@@ -92,7 +95,7 @@ export function registerRoutes(app: Express) {
     try {
       const incomingTraceparent = req.headers['traceparent'];
       if (incomingTraceparent) {
-        console.log(`[ROUTES] Incoming traceparent: ${incomingTraceparent}`);
+        logger.debug({ traceparent: incomingTraceparent }, 'Incoming trace context from client');
       }
 
       // Extend schema to include userId
@@ -136,7 +139,7 @@ export function registerRoutes(app: Express) {
       });
 
     } catch (error: any) {
-      console.error(`Order processing error: ${error.message}`);
+      logger.error({ err: error }, 'Order processing failed');
       res.status(500).json({ error: "Failed to process order" });
     }
   });
@@ -160,7 +163,7 @@ export function registerRoutes(app: Express) {
     try {
       const incomingTraceparent = req.headers['traceparent'];
       if (incomingTraceparent) {
-        console.log(`[ROUTES] Transfer traceparent: ${incomingTraceparent}`);
+        logger.debug({ traceparent: incomingTraceparent }, 'Incoming trace context for transfer');
       }
 
       const validation = insertTransferSchema.safeParse(req.body);
@@ -198,7 +201,7 @@ export function registerRoutes(app: Express) {
       });
 
     } catch (error: any) {
-      console.error(`Transfer error: ${error.message}`);
+      logger.error({ err: error }, 'Transfer processing failed');
       res.status(500).json({ error: "Failed to process transfer" });
     }
   });

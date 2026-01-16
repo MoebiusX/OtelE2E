@@ -1,373 +1,157 @@
 [
   {
-    "spanKey": "api-gateway:kong.access.plugin.opentelemetry",
-    "service": "api-gateway",
-    "operation": "kong.access.plugin.opentelemetry",
-    "dayOfWeek": 4,
-    "hourOfDay": 19,
-    "mean": 0.61,
-    "stdDev": 1.11,
-    "sampleCount": 699,
+    "spanKey": "exchange-api:pg-pool.connect",
+    "service": "exchange-api",
+    "operation": "pg-pool.connect",
+    "dayOfWeek": 5,
+    "hourOfDay": 15,
+    "mean": 1.25,
+    "stdDev": 8.86,
+    "sampleCount": 320,
     "thresholds": {
-      "sev5": 1.5255448420510063,
-      "sev4": 2.823129120782312,
-      "sev3": 5.5529356013166264,
-      "sev2": 7.803828664213341,
-      "sev1": 7.803828664213341
+      "sev5": 1.3,
+      "sev4": 1.65,
+      "sev3": 2,
+      "sev2": 2.6,
+      "sev1": 3.3
     },
-    "lastUpdated": "2026-01-15T18:44:56.174Z"
+    "lastUpdated": "2026-01-16T15:11:12.715Z"
   },
   {
-    "spanKey": "api-gateway:kong.header_filter.plugin.cors",
-    "service": "api-gateway",
-    "operation": "kong.header_filter.plugin.cors",
-    "dayOfWeek": 4,
-    "hourOfDay": 19,
-    "mean": 0.27,
-    "stdDev": 0.44,
-    "sampleCount": 908,
+    "spanKey": "exchange-api:pg.query:SELECT crypto_exchange",
+    "service": "exchange-api:pg.query",
+    "operation": "SELECT crypto_exchange",
+    "dayOfWeek": 5,
+    "hourOfDay": 15,
+    "mean": 10.81,
+    "stdDev": 8.39,
+    "sampleCount": 320,
     "thresholds": {
-      "sev5": 2.0456831178882666,
-      "sev4": 2.6625707032338837,
-      "sev3": 3.30894188640852,
-      "sev2": 8.033121446242786,
-      "sev1": 8.033121446242786
+      "sev5": 1.9916915012365795,
+      "sev4": 2.4009288442180394,
+      "sev3": 4.082329447632543,
+      "sev2": 5.2943107458624326,
+      "sev1": 5.2943107458624326
     },
-    "lastUpdated": "2026-01-15T18:44:56.174Z"
-  },
-  {
-    "spanKey": "api-gateway:kong.header_filter.plugin.opentelemetry",
-    "service": "api-gateway",
-    "operation": "kong.header_filter.plugin.opentelemetry",
-    "dayOfWeek": 4,
-    "hourOfDay": 19,
-    "mean": 0.08,
-    "stdDev": 0.19,
-    "sampleCount": 908,
-    "thresholds": {
-      "sev5": 1.8595711874783536,
-      "sev4": 2.9502435364990474,
-      "sev3": 3.3865124761073244,
-      "sev2": 10.481076422594311,
-      "sev1": 10.481076422594311
-    },
-    "lastUpdated": "2026-01-15T18:44:56.175Z"
-  },
-  {
-    "spanKey": "api-gateway:kong.balancer",
-    "service": "api-gateway",
-    "operation": "kong.balancer",
-    "dayOfWeek": 4,
-    "hourOfDay": 19,
-    "mean": 22.98,
-    "stdDev": 44.3,
-    "sampleCount": 699,
-    "thresholds": {
-      "sev5": 2.497790213376178,
-      "sev4": 2.6975828695293855,
-      "sev3": 2.90985833427515,
-      "sev2": 8.542516912427029,
-      "sev1": 8.542516912427029
-    },
-    "lastUpdated": "2026-01-15T18:44:56.175Z"
-  },
-  {
-    "spanKey": "crypto-wallet:HTTP GET",
-    "service": "crypto-wallet",
-    "operation": "HTTP GET",
-    "dayOfWeek": 4,
-    "hourOfDay": 19,
-    "mean": 34.78,
-    "stdDev": 27,
-    "sampleCount": 621,
-    "thresholds": {
-      "sev5": 1.7856680204635496,
-      "sev4": 2.1930386328867035,
-      "sev3": 2.5633755532713893,
-      "sev2": 3.3781167781176977,
-      "sev1": 3.3781167781176977
-    },
-    "lastUpdated": "2026-01-15T18:44:56.175Z"
+    "lastUpdated": "2026-01-16T15:11:12.715Z"
   },
   {
     "spanKey": "exchange-api:GET",
     "service": "exchange-api",
     "operation": "GET",
-    "dayOfWeek": 4,
-    "hourOfDay": 19,
-    "mean": 14.99,
-    "stdDev": 36.1,
-    "sampleCount": 887,
+    "dayOfWeek": 5,
+    "hourOfDay": 15,
+    "mean": 34.46,
+    "stdDev": 112.3,
+    "sampleCount": 270,
     "thresholds": {
-      "sev5": 1.4288578275065902,
-      "sev4": 1.8560053592589028,
-      "sev3": 3.8316873475623026,
-      "sev2": 12.257961886386711,
-      "sev1": 13.225636641685254
+      "sev5": 0.5,
+      "sev4": 1,
+      "sev3": 1.5,
+      "sev2": 15.953583182137448,
+      "sev1": 15.953583182137448
     },
-    "lastUpdated": "2026-01-15T18:44:56.175Z"
+    "lastUpdated": "2026-01-16T15:11:12.715Z"
   },
   {
-    "spanKey": "api-gateway:kong.router",
-    "service": "api-gateway",
-    "operation": "kong.router",
-    "dayOfWeek": 4,
-    "hourOfDay": 19,
-    "mean": 0.18,
-    "stdDev": 0.47,
-    "sampleCount": 914,
-    "thresholds": {
-      "sev5": 1.793352562523792,
-      "sev4": 2.756679569061882,
-      "sev3": 4.0064584387775986,
-      "sev2": 12.171397472166525,
-      "sev1": 12.171397472166525
-    },
-    "lastUpdated": "2026-01-15T18:44:56.175Z"
-  },
-  {
-    "spanKey": "api-gateway:kong.access.plugin.cors",
-    "service": "api-gateway",
-    "operation": "kong.access.plugin.cors",
-    "dayOfWeek": 4,
-    "hourOfDay": 19,
-    "mean": 0.16,
-    "stdDev": 0.33,
-    "sampleCount": 914,
-    "thresholds": {
-      "sev5": 2.073829274936076,
-      "sev4": 3.4719173959063916,
-      "sev3": 4.254361506991731,
-      "sev2": 7.823883672679501,
-      "sev1": 8.1999420826585
-    },
-    "lastUpdated": "2026-01-15T18:44:56.176Z"
-  },
-  {
-    "spanKey": "api-gateway:kong.dns",
-    "service": "api-gateway",
-    "operation": "kong.dns",
-    "dayOfWeek": 4,
-    "hourOfDay": 19,
-    "mean": 0.62,
-    "stdDev": 2.21,
-    "sampleCount": 699,
-    "thresholds": {
-      "sev5": 2.5921357728543515,
-      "sev4": 4.381341684361136,
-      "sev3": 8.246062580543635,
-      "sev2": 8.269093752044604,
-      "sev1": 8.269093752044604
-    },
-    "lastUpdated": "2026-01-15T18:44:56.176Z"
-  },
-  {
-    "spanKey": "api-gateway:kong",
-    "service": "api-gateway",
-    "operation": "kong",
-    "dayOfWeek": 4,
-    "hourOfDay": 19,
-    "mean": 20.42,
-    "stdDev": 40.82,
-    "sampleCount": 914,
-    "thresholds": {
-      "sev5": 2.7521906111238006,
-      "sev4": 3.0333470384157657,
-      "sev3": 3.263201482547275,
-      "sev2": 9.462950599381998,
-      "sev1": 9.462950599381998
-    },
-    "lastUpdated": "2026-01-15T18:44:56.176Z"
-  },
-  {
-    "spanKey": "order-matcher:order.response",
-    "service": "order-matcher",
-    "operation": "order.response",
-    "dayOfWeek": 4,
-    "hourOfDay": 19,
-    "mean": 1.22,
-    "stdDev": 1.24,
-    "sampleCount": 56,
-    "thresholds": {
-      "sev5": 3.383607188047105,
-      "sev4": 3.383607188047105,
-      "sev3": 3.383607188047105,
-      "sev2": 3.383607188047105,
-      "sev1": 3.383607188047105
-    },
-    "lastUpdated": "2026-01-15T18:44:56.176Z"
-  },
-  {
-    "spanKey": "order-matcher:order.match",
-    "service": "order-matcher",
-    "operation": "order.match",
-    "dayOfWeek": 4,
-    "hourOfDay": 19,
-    "mean": 91.81,
-    "stdDev": 4.65,
-    "sampleCount": 56,
-    "thresholds": {
-      "sev5": 0.924573329718413,
-      "sev4": 2.610597027469844,
-      "sev3": 2.610597027469844,
-      "sev2": 2.610597027469844,
-      "sev1": 2.610597027469844
-    },
-    "lastUpdated": "2026-01-15T18:44:56.176Z"
-  },
-  {
-    "spanKey": "exchange-api:publish <default>",
-    "service": "exchange-api",
-    "operation": "publish <default>",
-    "dayOfWeek": 4,
-    "hourOfDay": 19,
-    "mean": 1.12,
-    "stdDev": 0.92,
-    "sampleCount": 56,
-    "thresholds": {
-      "sev5": 0.732700429506667,
-      "sev4": 3.0099225153324647,
-      "sev3": 3.0099225153324647,
-      "sev2": 3.0099225153324647,
-      "sev1": 3.0099225153324647
-    },
-    "lastUpdated": "2026-01-15T18:44:56.176Z"
-  },
-  {
-    "spanKey": "crypto-wallet:order.submit.client",
+    "spanKey": "crypto-wallet:HTTP GET",
     "service": "crypto-wallet",
-    "operation": "order.submit.client",
-    "dayOfWeek": 4,
-    "hourOfDay": 19,
-    "mean": 175.19,
-    "stdDev": 75,
-    "sampleCount": 56,
+    "operation": "HTTP GET",
+    "dayOfWeek": 5,
+    "hourOfDay": 15,
+    "mean": 743.51,
+    "stdDev": 2735.32,
+    "sampleCount": 188,
     "thresholds": {
-      "sev5": 3.445455493729443,
-      "sev4": 3.445455493729443,
-      "sev3": 3.445455493729443,
-      "sev2": 3.445455493729443,
-      "sev1": 3.445455493729443
+      "sev5": 4.415386278677489,
+      "sev4": 6.234917405759661,
+      "sev3": 6.405646969020133,
+      "sev2": 6.405646969020133,
+      "sev1": 6.405646969020133
     },
-    "lastUpdated": "2026-01-15T18:44:56.176Z"
+    "lastUpdated": "2026-01-16T15:11:12.715Z"
   },
   {
-    "spanKey": "crypto-wallet:order.response.received",
+    "spanKey": "exchange-api:pg-pool.connect",
+    "service": "exchange-api",
+    "operation": "pg-pool.connect",
+    "dayOfWeek": 5,
+    "hourOfDay": 16,
+    "mean": 0.21,
+    "stdDev": 0.18,
+    "sampleCount": 1080,
+    "thresholds": {
+      "sev5": 1.3397936763234088,
+      "sev4": 1.8637058800901303,
+      "sev3": 2.324976407319526,
+      "sev2": 9.517379813377888,
+      "sev1": 10.422836774235591
+    },
+    "lastUpdated": "2026-01-16T15:11:12.716Z"
+  },
+  {
+    "spanKey": "exchange-api:pg.query:SELECT crypto_exchange",
+    "service": "exchange-api:pg.query",
+    "operation": "SELECT crypto_exchange",
+    "dayOfWeek": 5,
+    "hourOfDay": 16,
+    "mean": 10.57,
+    "stdDev": 6.17,
+    "sampleCount": 1080,
+    "thresholds": {
+      "sev5": 1.6413218723164102,
+      "sev4": 2.1136286475947936,
+      "sev3": 2.503759878924604,
+      "sev2": 3.5164478445866973,
+      "sev1": 4.8001368151442785
+    },
+    "lastUpdated": "2026-01-16T15:11:12.716Z"
+  },
+  {
+    "spanKey": "exchange-api:GET",
+    "service": "exchange-api",
+    "operation": "GET",
+    "dayOfWeek": 5,
+    "hourOfDay": 16,
+    "mean": 32.3,
+    "stdDev": 30.98,
+    "sampleCount": 943,
+    "thresholds": {
+      "sev5": 1.3617639319106012,
+      "sev4": 1.8415999402629295,
+      "sev3": 2.6572727350866754,
+      "sev2": 5.301325697087857,
+      "sev1": 7.182127907828305
+    },
+    "lastUpdated": "2026-01-16T15:11:12.717Z"
+  },
+  {
+    "spanKey": "crypto-wallet:HTTP GET",
     "service": "crypto-wallet",
-    "operation": "order.response.received",
-    "dayOfWeek": 4,
-    "hourOfDay": 19,
-    "mean": 0.04,
-    "stdDev": 0.06,
-    "sampleCount": 56,
+    "operation": "HTTP GET",
+    "dayOfWeek": 5,
+    "hourOfDay": 16,
+    "mean": 52.77,
+    "stdDev": 31.64,
+    "sampleCount": 581,
     "thresholds": {
-      "sev5": 0.9094326083734474,
-      "sev4": 2.5009396730269806,
-      "sev3": 2.5009396730269806,
-      "sev2": 2.5009396730269806,
-      "sev1": 2.5009396730269806
+      "sev5": 1.4927645446372384,
+      "sev4": 1.8088115530310274,
+      "sev3": 2.0300444589066795,
+      "sev2": 4.59002522689637,
+      "sev1": 4.59002522689637
     },
-    "lastUpdated": "2026-01-15T18:44:56.176Z"
-  },
-  {
-    "spanKey": "crypto-wallet:HTTP POST",
-    "service": "crypto-wallet",
-    "operation": "HTTP POST",
-    "dayOfWeek": 4,
-    "hourOfDay": 19,
-    "mean": 1190.67,
-    "stdDev": 4287.17,
-    "sampleCount": 76,
-    "thresholds": {
-      "sev5": 1.3,
-      "sev4": 1.65,
-      "sev3": 2,
-      "sev2": 2.6,
-      "sev1": 3.3
-    },
-    "lastUpdated": "2026-01-15T18:44:56.176Z"
-  },
-  {
-    "spanKey": "exchange-api:publish orders",
-    "service": "exchange-api",
-    "operation": "publish orders",
-    "dayOfWeek": 4,
-    "hourOfDay": 19,
-    "mean": 7.46,
-    "stdDev": 3.66,
-    "sampleCount": 56,
-    "thresholds": {
-      "sev5": 1.365257325587824,
-      "sev4": 1.538059405389002,
-      "sev3": 1.538059405389002,
-      "sev2": 2,
-      "sev1": 2.5
-    },
-    "lastUpdated": "2026-01-15T18:44:56.176Z"
-  },
-  {
-    "spanKey": "exchange-api:payment_response process",
-    "service": "exchange-api",
-    "operation": "payment_response process",
-    "dayOfWeek": 4,
-    "hourOfDay": 19,
-    "mean": 0.8,
-    "stdDev": 0.6,
-    "sampleCount": 56,
-    "thresholds": {
-      "sev5": 1.3140606057269573,
-      "sev4": 2.8078719604921143,
-      "sev3": 2.8078719604921143,
-      "sev2": 2.8078719604921143,
-      "sev1": 2.8078719604921143
-    },
-    "lastUpdated": "2026-01-15T18:44:56.176Z"
-  },
-  {
-    "spanKey": "exchange-api:POST",
-    "service": "exchange-api",
-    "operation": "POST",
-    "dayOfWeek": 4,
-    "hourOfDay": 19,
-    "mean": 3376.9,
-    "stdDev": 11688.7,
-    "sampleCount": 99,
-    "thresholds": {
-      "sev5": 1.7876549910447654,
-      "sev4": 1.7927030273327074,
-      "sev3": 1.7927030273327074,
-      "sev2": 8.782471414099179,
-      "sev1": 8.782471414099179
-    },
-    "lastUpdated": "2026-01-15T18:44:56.176Z"
+    "lastUpdated": "2026-01-16T15:11:12.717Z"
   },
   {
     "spanKey": "exchange-api:tcp.connect",
     "service": "exchange-api",
     "operation": "tcp.connect",
-    "dayOfWeek": 4,
-    "hourOfDay": 19,
-    "mean": 8.32,
-    "stdDev": 31.35,
-    "sampleCount": 204,
-    "thresholds": {
-      "sev5": 0.5,
-      "sev4": 1,
-      "sev3": 1.5,
-      "sev2": 13.651172088775983,
-      "sev1": 13.651172088775983
-    },
-    "lastUpdated": "2026-01-15T18:44:56.176Z"
-  },
-  {
-    "spanKey": "jaeger-all-in-one:/api/traces/{traceID}",
-    "service": "jaeger-all-in-one",
-    "operation": "/api/traces/{traceID}",
-    "dayOfWeek": 4,
-    "hourOfDay": 19,
-    "mean": 4.73,
-    "stdDev": 6.42,
-    "sampleCount": 6,
+    "dayOfWeek": 5,
+    "hourOfDay": 15,
+    "mean": 27.22,
+    "stdDev": 194.47,
+    "sampleCount": 86,
     "thresholds": {
       "sev5": 1.3,
       "sev4": 1.65,
@@ -375,71 +159,35 @@
       "sev2": 2.6,
       "sev1": 3.3
     },
-    "lastUpdated": "2026-01-15T18:44:56.176Z"
+    "lastUpdated": "2026-01-16T15:11:12.717Z"
   },
   {
-    "spanKey": "crypto-wallet:CORS Preflight",
-    "service": "crypto-wallet",
-    "operation": "CORS Preflight",
-    "dayOfWeek": 4,
-    "hourOfDay": 19,
-    "mean": 30.2,
-    "stdDev": 0,
-    "sampleCount": 3,
-    "thresholds": {
-      "sev5": 1.3,
-      "sev4": 1.65,
-      "sev3": 2,
-      "sev2": 2.6,
-      "sev1": 3.3
-    },
-    "lastUpdated": "2026-01-15T18:44:56.176Z"
-  },
-  {
-    "spanKey": "crypto-wallet:transfer.submit.client",
-    "service": "crypto-wallet",
-    "operation": "transfer.submit.client",
-    "dayOfWeek": 4,
-    "hourOfDay": 19,
-    "mean": 32.75,
-    "stdDev": 6.3,
-    "sampleCount": 6,
-    "thresholds": {
-      "sev5": 1.3,
-      "sev4": 1.65,
-      "sev3": 2,
-      "sev2": 2.6,
-      "sev1": 3.3
-    },
-    "lastUpdated": "2026-01-15T18:44:56.176Z"
-  },
-  {
-    "spanKey": "crypto-wallet:transfer.response.received",
-    "service": "crypto-wallet",
-    "operation": "transfer.response.received",
-    "dayOfWeek": 4,
-    "hourOfDay": 19,
-    "mean": 0,
-    "stdDev": 0,
-    "sampleCount": 6,
-    "thresholds": {
-      "sev5": 1.3,
-      "sev4": 1.65,
-      "sev3": 2,
-      "sev2": 2.6,
-      "sev1": 3.3
-    },
-    "lastUpdated": "2026-01-15T18:44:56.176Z"
-  },
-  {
-    "spanKey": "exchange-api:btc.transfer",
+    "spanKey": "exchange-api:dns.lookup",
     "service": "exchange-api",
-    "operation": "btc.transfer",
-    "dayOfWeek": 4,
-    "hourOfDay": 19,
-    "mean": 0.98,
-    "stdDev": 0.07,
-    "sampleCount": 6,
+    "operation": "dns.lookup",
+    "dayOfWeek": 5,
+    "hourOfDay": 15,
+    "mean": 2.32,
+    "stdDev": 2.81,
+    "sampleCount": 90,
+    "thresholds": {
+      "sev5": 1.7794028851606503,
+      "sev4": 2.945960541640145,
+      "sev3": 3.105085128898715,
+      "sev2": 5.362375974103622,
+      "sev1": 5.362375974103622
+    },
+    "lastUpdated": "2026-01-16T15:11:12.717Z"
+  },
+  {
+    "spanKey": "exchange-api:pg.connect",
+    "service": "exchange-api",
+    "operation": "pg.connect",
+    "dayOfWeek": 5,
+    "hourOfDay": 15,
+    "mean": 78.6,
+    "stdDev": 3.35,
+    "sampleCount": 4,
     "thresholds": {
       "sev5": 1.3,
       "sev4": 1.65,
@@ -447,33 +195,267 @@
       "sev2": 2.6,
       "sev1": 3.3
     },
-    "lastUpdated": "2026-01-15T18:44:56.176Z"
+    "lastUpdated": "2026-01-16T15:11:12.717Z"
+  },
+  {
+    "spanKey": "api-gateway:kong.balancer",
+    "service": "api-gateway",
+    "operation": "kong.balancer",
+    "dayOfWeek": 5,
+    "hourOfDay": 16,
+    "mean": 22.25,
+    "stdDev": 10.83,
+    "sampleCount": 27,
+    "thresholds": {
+      "sev5": 1.8647010974392537,
+      "sev4": 1.8647010974392537,
+      "sev3": 1.8647010974392537,
+      "sev2": 2,
+      "sev1": 2.5
+    },
+    "lastUpdated": "2026-01-16T15:11:12.717Z"
+  },
+  {
+    "spanKey": "api-gateway:kong.router",
+    "service": "api-gateway",
+    "operation": "kong.router",
+    "dayOfWeek": 5,
+    "hourOfDay": 16,
+    "mean": 4.3,
+    "stdDev": 3.58,
+    "sampleCount": 27,
+    "thresholds": {
+      "sev5": 1.221958149439477,
+      "sev4": 1.221958149439477,
+      "sev3": 1.5,
+      "sev2": 2,
+      "sev1": 2.5
+    },
+    "lastUpdated": "2026-01-16T15:11:12.717Z"
+  },
+  {
+    "spanKey": "api-gateway:kong.access.plugin.cors",
+    "service": "api-gateway",
+    "operation": "kong.access.plugin.cors",
+    "dayOfWeek": 5,
+    "hourOfDay": 16,
+    "mean": 1.08,
+    "stdDev": 0.88,
+    "sampleCount": 27,
+    "thresholds": {
+      "sev5": 1.1301022477267013,
+      "sev4": 1.47988072991208,
+      "sev3": 1.5,
+      "sev2": 2,
+      "sev1": 2.5
+    },
+    "lastUpdated": "2026-01-16T15:11:12.717Z"
+  },
+  {
+    "spanKey": "api-gateway:kong.dns",
+    "service": "api-gateway",
+    "operation": "kong.dns",
+    "dayOfWeek": 5,
+    "hourOfDay": 16,
+    "mean": 4.08,
+    "stdDev": 4.32,
+    "sampleCount": 27,
+    "thresholds": {
+      "sev5": 1.2968890746514574,
+      "sev4": 1.2968890746514574,
+      "sev3": 1.5,
+      "sev2": 2,
+      "sev1": 2.5
+    },
+    "lastUpdated": "2026-01-16T15:11:12.717Z"
+  },
+  {
+    "spanKey": "api-gateway:kong.header_filter.plugin.cors",
+    "service": "api-gateway",
+    "operation": "kong.header_filter.plugin.cors",
+    "dayOfWeek": 5,
+    "hourOfDay": 16,
+    "mean": 1.16,
+    "stdDev": 0.8,
+    "sampleCount": 27,
+    "thresholds": {
+      "sev5": 1.3,
+      "sev4": 1.65,
+      "sev3": 2,
+      "sev2": 2.6,
+      "sev1": 3.3
+    },
+    "lastUpdated": "2026-01-16T15:11:12.717Z"
+  },
+  {
+    "spanKey": "api-gateway:kong",
+    "service": "api-gateway",
+    "operation": "kong",
+    "dayOfWeek": 5,
+    "hourOfDay": 16,
+    "mean": 61.69,
+    "stdDev": 33.7,
+    "sampleCount": 27,
+    "thresholds": {
+      "sev5": 0.9742520893080124,
+      "sev4": 1.26031838713131,
+      "sev3": 1.5,
+      "sev2": 2,
+      "sev1": 2.5
+    },
+    "lastUpdated": "2026-01-16T15:11:12.717Z"
+  },
+  {
+    "spanKey": "api-gateway:kong.access.plugin.opentelemetry",
+    "service": "api-gateway",
+    "operation": "kong.access.plugin.opentelemetry",
+    "dayOfWeek": 5,
+    "hourOfDay": 16,
+    "mean": 10.99,
+    "stdDev": 6.93,
+    "sampleCount": 27,
+    "thresholds": {
+      "sev5": 0.7825347418082439,
+      "sev4": 1.7007171735907443,
+      "sev3": 1.7007171735907443,
+      "sev2": 2,
+      "sev1": 2.5
+    },
+    "lastUpdated": "2026-01-16T15:11:12.717Z"
+  },
+  {
+    "spanKey": "api-gateway:kong.header_filter.plugin.opentelemetry",
+    "service": "api-gateway",
+    "operation": "kong.header_filter.plugin.opentelemetry",
+    "dayOfWeek": 5,
+    "hourOfDay": 16,
+    "mean": 0.34,
+    "stdDev": 0.47,
+    "sampleCount": 27,
+    "thresholds": {
+      "sev5": 1.3,
+      "sev4": 1.65,
+      "sev3": 2,
+      "sev2": 2.6,
+      "sev1": 3.3
+    },
+    "lastUpdated": "2026-01-16T15:11:12.717Z"
   },
   {
     "spanKey": "jaeger-all-in-one:/api/traces",
     "service": "jaeger-all-in-one",
     "operation": "/api/traces",
-    "dayOfWeek": 4,
-    "hourOfDay": 19,
-    "mean": 43.1,
-    "stdDev": 51.21,
-    "sampleCount": 125,
+    "dayOfWeek": 5,
+    "hourOfDay": 15,
+    "mean": 12.87,
+    "stdDev": 14.2,
+    "sampleCount": 76,
     "thresholds": {
-      "sev5": 1.6189225631742594,
-      "sev4": 2.444971772124514,
-      "sev3": 3.4062157487712845,
-      "sev2": 6.932879548836164,
-      "sev1": 6.932879548836164
+      "sev5": 1.5038658821183153,
+      "sev4": 2.124390069909974,
+      "sev3": 3.4710311072596323,
+      "sev2": 3.6891197535762372,
+      "sev1": 3.6891197535762372
     },
-    "lastUpdated": "2026-01-15T18:44:56.177Z"
+    "lastUpdated": "2026-01-16T15:11:12.717Z"
+  },
+  {
+    "spanKey": "jaeger-all-in-one:/api/traces",
+    "service": "jaeger-all-in-one",
+    "operation": "/api/traces",
+    "dayOfWeek": 5,
+    "hourOfDay": 16,
+    "mean": 32.91,
+    "stdDev": 37.26,
+    "sampleCount": 289,
+    "thresholds": {
+      "sev5": 1.1316711492950045,
+      "sev4": 1.873047248055457,
+      "sev3": 3.415252327758556,
+      "sev2": 3.7348753169348883,
+      "sev1": 5.456727412640438
+    },
+    "lastUpdated": "2026-01-16T15:11:12.717Z"
+  },
+  {
+    "spanKey": "exchange-api:tcp.connect",
+    "service": "exchange-api",
+    "operation": "tcp.connect",
+    "dayOfWeek": 5,
+    "hourOfDay": 16,
+    "mean": 4.96,
+    "stdDev": 3.07,
+    "sampleCount": 314,
+    "thresholds": {
+      "sev5": 1.433233022142433,
+      "sev4": 1.8689806165001739,
+      "sev3": 2.3183961712485233,
+      "sev2": 3.9123406948961814,
+      "sev1": 9.907043036691508
+    },
+    "lastUpdated": "2026-01-16T15:11:12.718Z"
+  },
+  {
+    "spanKey": "exchange-api:dns.lookup",
+    "service": "exchange-api",
+    "operation": "dns.lookup",
+    "dayOfWeek": 5,
+    "hourOfDay": 16,
+    "mean": 1.63,
+    "stdDev": 1.42,
+    "sampleCount": 314,
+    "thresholds": {
+      "sev5": 1.4146081762529796,
+      "sev4": 1.7902140184536293,
+      "sev3": 2.4696807667042426,
+      "sev2": 4.912525504462401,
+      "sev1": 10.249786048691858
+    },
+    "lastUpdated": "2026-01-16T15:11:12.718Z"
+  },
+  {
+    "spanKey": "exchange-api:POST",
+    "service": "exchange-api",
+    "operation": "POST",
+    "dayOfWeek": 5,
+    "hourOfDay": 16,
+    "mean": 4725.24,
+    "stdDev": 1564.52,
+    "sampleCount": 19,
+    "thresholds": {
+      "sev5": 0.8929085926785103,
+      "sev4": 1,
+      "sev3": 1.5,
+      "sev2": 2,
+      "sev1": 2.5
+    },
+    "lastUpdated": "2026-01-16T15:11:12.718Z"
+  },
+  {
+    "spanKey": "exchange-api:POST",
+    "service": "exchange-api",
+    "operation": "POST",
+    "dayOfWeek": 5,
+    "hourOfDay": 15,
+    "mean": 30029.89,
+    "stdDev": 55889.26,
+    "sampleCount": 4,
+    "thresholds": {
+      "sev5": 1.3,
+      "sev4": 1.65,
+      "sev3": 2,
+      "sev2": 2.6,
+      "sev1": 3.3
+    },
+    "lastUpdated": "2026-01-16T15:11:12.718Z"
   },
   {
     "spanKey": "order-matcher:tcp.connect",
     "service": "order-matcher",
     "operation": "tcp.connect",
-    "dayOfWeek": 4,
-    "hourOfDay": 19,
-    "mean": 159.7,
+    "dayOfWeek": 5,
+    "hourOfDay": 15,
+    "mean": 158.72,
     "stdDev": 0,
     "sampleCount": 1,
     "thresholds": {
@@ -483,6 +465,6 @@
       "sev2": 2.6,
       "sev1": 3.3
     },
-    "lastUpdated": "2026-01-15T18:44:56.177Z"
+    "lastUpdated": "2026-01-16T15:11:12.718Z"
   }
 ]

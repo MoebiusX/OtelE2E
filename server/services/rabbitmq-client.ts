@@ -1,5 +1,10 @@
 import * as amqp from 'amqplib';
 import { trace, context, SpanStatusCode, SpanKind, propagation } from '@opentelemetry/api';
+import { config } from '../config';
+import { createLogger } from '../lib/logger';
+import { ExternalServiceError, TimeoutError } from '../lib/errors';
+
+const logger = createLogger('rabbitmq');
 
 export interface OrderMessage {
   orderId: string;
@@ -29,25 +34,26 @@ type ResponseCallback = (response: ExecutionResponse) => void;
 export class RabbitMQClient {
   private connection: amqp.Connection | null = null;
   private channel: amqp.Channel | null = null;
-  private rabbitUrl: string;
-  private readonly ORDERS_QUEUE = 'orders';
-  private readonly RESPONSE_QUEUE = 'order_response';
-  // Keep old queue names for compatibility during transition
-  private readonly LEGACY_QUEUE = 'payments';
-  private readonly LEGACY_RESPONSE = 'payment_response';
+  private readonly ORDERS_QUEUE: string;
+  private readonly RESPONSE_QUEUE: string;
+  private readonly LEGACY_QUEUE: string;
+  private readonly LEGACY_RESPONSE: string;
   private tracer;
 
   private pendingResponses: Map<string, ResponseCallback> = new Map();
 
   constructor() {
-    this.rabbitUrl = process.env.RABBITMQ_URL || 'amqp://admin:admin123@localhost:5672';
+    this.ORDERS_QUEUE = config.rabbitmq.ordersQueue;
+    this.RESPONSE_QUEUE = config.rabbitmq.responseQueue;
+    this.LEGACY_QUEUE = config.rabbitmq.legacyQueue;
+    this.LEGACY_RESPONSE = config.rabbitmq.legacyResponseQueue;
     this.tracer = trace.getTracer('rabbitmq-client', '1.0.0');
   }
 
   async connect(): Promise<boolean> {
     try {
-      console.log('[RABBITMQ] Connecting to RabbitMQ...');
-      this.connection = await amqp.connect(this.rabbitUrl);
+      logger.info({ url: config.rabbitmq.url.replace(/\/\/.*@/, '//*****@') }, 'Connecting to RabbitMQ...');
+      this.connection = await amqp.connect(config.rabbitmq.url);
       this.channel = await this.connection.createChannel();
 
       // Declare queues
@@ -57,11 +63,13 @@ export class RabbitMQClient {
       await this.channel.assertQueue(this.LEGACY_QUEUE, { durable: true });
       await this.channel.assertQueue(this.LEGACY_RESPONSE, { durable: true });
 
-      console.log('[RABBITMQ] Connected successfully');
+      logger.info({
+        queues: [this.ORDERS_QUEUE, this.RESPONSE_QUEUE, this.LEGACY_QUEUE, this.LEGACY_RESPONSE],
+      }, 'RabbitMQ connected successfully');
       return true;
     } catch (error) {
-      console.warn('[RABBITMQ] Connection failed:', (error as Error).message);
-      return false;
+      logger.error({ err: error }, 'RabbitMQ connection failed');
+      throw new ExternalServiceError('RabbitMQ', error as Error);
     }
   }
 
@@ -70,7 +78,7 @@ export class RabbitMQClient {
    */
   async publishOrderAndWait(order: OrderMessage, timeoutMs: number = 5000): Promise<ExecutionResponse> {
     if (!this.channel) {
-      throw new Error('No channel available');
+      throw new ExternalServiceError('RabbitMQ', new Error('No channel available'));
     }
 
     return new Promise((resolve, reject) => {
@@ -78,7 +86,7 @@ export class RabbitMQClient {
 
       const timeout = setTimeout(() => {
         this.pendingResponses.delete(correlationId);
-        reject(new Error(`Order execution timeout after ${timeoutMs}ms`));
+        reject(new TimeoutError('Order execution', timeoutMs));
       }, timeoutMs);
 
       this.pendingResponses.set(correlationId, (response: ExecutionResponse) => {
@@ -117,8 +125,11 @@ export class RabbitMQClient {
           const parentHeaders: Record<string, string> = {};
           propagation.inject(parentContext, parentHeaders);
 
-          console.log(`[RABBITMQ] Injecting headers - publish: ${publishHeaders.traceparent?.slice(0, 40)}...`);
-          console.log(`[RABBITMQ] Injecting headers - parent for response: ${parentHeaders.traceparent?.slice(0, 40)}...`);
+          logger.debug({
+            orderId: order.orderId,
+            correlationId,
+            publishTraceparent: publishHeaders.traceparent?.slice(0, 40),
+          }, 'Injecting trace headers for order');
 
           // Send to legacy queue with both contexts
           const sent = this.channel!.sendToQueue(
@@ -137,17 +148,24 @@ export class RabbitMQClient {
           );
 
           if (sent) {
-            console.log(`[RABBITMQ] Published order ${order.orderId} (${order.side} ${order.quantity} BTC)`);
+            logger.info({
+              orderId: order.orderId,
+              side: order.side,
+              quantity: order.quantity,
+              correlationId,
+            }, `Published order to ${this.LEGACY_QUEUE}`);
             span.setStatus({ code: SpanStatusCode.OK });
           } else {
             clearTimeout(timeout);
             this.pendingResponses.delete(correlationId);
             span.setStatus({ code: SpanStatusCode.ERROR, message: 'Failed to send' });
-            reject(new Error('Failed to send order to queue'));
+            reject(new ExternalServiceError('RabbitMQ', new Error('Failed to send order to queue')));
           }
         } catch (error: any) {
           clearTimeout(timeout);
           this.pendingResponses.delete(correlationId);
+          logger.error({ err: error, orderId: order.orderId }, 'Failed to publish order');
+          span.recordException(error);
           span.setStatus({ code: SpanStatusCode.ERROR, message: error.message });
           reject(error);
         } finally {
@@ -187,11 +205,11 @@ export class RabbitMQClient {
 
   async startConsumer(): Promise<void> {
     if (!this.channel) {
-      console.warn('[RABBITMQ] No channel available for consumer');
+      logger.warn('No channel available for consumer');
       return;
     }
 
-    console.log('[RABBITMQ] Starting order response consumer...');
+    logger.info('Starting order response consumer...');
 
     // Listen on legacy response queue
     await this.channel.consume(this.LEGACY_RESPONSE, (msg) => {
@@ -200,7 +218,10 @@ export class RabbitMQClient {
           const response = JSON.parse(msg.content.toString());
           const correlationId = response.correlationId || msg.properties.correlationId;
 
-          console.log(`[RABBITMQ] Received execution for order (correlation: ${correlationId?.slice(0, 8)}...)`);
+          logger.debug({
+            correlationId: correlationId?.slice(0, 8),
+            status: response.status,
+          }, 'Received execution response');
 
           // Convert legacy response format
           const executionResponse: ExecutionResponse = {
@@ -217,18 +238,20 @@ export class RabbitMQClient {
           const callback = this.pendingResponses.get(correlationId);
           if (callback) {
             callback(executionResponse);
-            console.log(`[RABBITMQ] Execution delivered to waiting caller`);
+            logger.debug({ correlationId }, 'Execution delivered to waiting caller');
+          } else {
+            logger.warn({ correlationId }, 'No pending callback found for execution response');
           }
 
           this.channel!.ack(msg);
         } catch (error: any) {
-          console.error('[RABBITMQ] Response consumer error:', error.message);
+          logger.error({ err: error }, 'Response consumer error');
           this.channel!.nack(msg, false, false);
         }
       }
     });
 
-    console.log('[RABBITMQ] Consumer started - listening for order executions');
+    logger.info(`Consumer started - listening on ${this.LEGACY_RESPONSE}`);
   }
 
   async disconnect(): Promise<void> {
@@ -241,9 +264,9 @@ export class RabbitMQClient {
         await this.connection.close();
         this.connection = null;
       }
-      console.log('[RABBITMQ] Disconnected');
+      logger.info('RabbitMQ disconnected');
     } catch (error: any) {
-      console.error('[RABBITMQ] Disconnect error:', error.message);
+      logger.error({ err: error }, 'Error disconnecting from RabbitMQ');
     }
   }
 

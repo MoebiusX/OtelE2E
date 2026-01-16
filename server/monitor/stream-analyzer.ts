@@ -8,6 +8,9 @@
 import type { Anomaly } from './types';
 import { wsServer } from './ws-server';
 import { metricsCorrelator } from './metrics-correlator';
+import { createLogger } from '../lib/logger';
+
+const logger = createLogger('stream-analyzer');
 
 const OLLAMA_URL = process.env.OLLAMA_URL || 'http://localhost:11434';
 const MODEL = process.env.OLLAMA_MODEL || 'llama3.2:1b';
@@ -130,7 +133,7 @@ class StreamAnalyzer {
         }
 
         this.buffer.push(anomaly);
-        console.log(`[STREAM] Buffered anomaly: ${anomaly.service} (${this.buffer.length}/${BATCH_SIZE})`);
+        logger.debug({ service: anomaly.service, bufferSize: this.buffer.length, batchSize: BATCH_SIZE }, 'Buffered anomaly for batch processing');
 
         // Process immediately if batch full
         if (this.buffer.length >= BATCH_SIZE) {
@@ -157,13 +160,13 @@ class StreamAnalyzer {
         const batch = this.buffer.splice(0, BATCH_SIZE);
         const anomalyIds = batch.map(a => a.id);
 
-        console.log(`[STREAM] Processing batch of ${batch.length} anomalies`);
+        logger.info({ batchSize: batch.length }, 'Processing anomaly batch');
         wsServer.analysisStart(anomalyIds);
 
         try {
             await this.streamAnalysis(batch);
         } catch (error: any) {
-            console.error('[STREAM] Analysis failed:', error.message);
+            logger.error({ err: error }, 'Analysis batch processing failed');
             wsServer.analysisComplete(anomalyIds, `Analysis failed: ${error.message}`);
         }
 

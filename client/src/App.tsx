@@ -10,16 +10,27 @@ import Login from "@/pages/login";
 import MyWallet from "@/pages/my-wallet";
 import Convert from "@/pages/convert";
 import NotFound from "@/pages/not-found";
+import { TransparencyDashboard } from "@/components/transparency-dashboard";
 
 function Router() {
   return (
     <Switch>
-      <Route path="/" component={Dashboard} />
-      <Route path="/monitor" component={Monitor} />
+      {/* Public transparency landing page */}
+      <Route path="/" component={TransparencyDashboard} />
+      
+      {/* User Journey: Registration → Login → Trading */}
       <Route path="/register" component={Register} />
       <Route path="/login" component={Login} />
+      <Route path="/trading" component={Dashboard} />
       <Route path="/my-wallet" component={MyWallet} />
       <Route path="/convert" component={Convert} />
+      
+      {/* Monitoring & Analytics */}
+      <Route path="/monitor" component={Monitor} />
+      
+      {/* Demo (legacy trading UI - will be removed later) */}
+      <Route path="/demo" component={Dashboard} />
+      
       <Route component={NotFound} />
     </Switch>
   );

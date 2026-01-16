@@ -10,12 +10,14 @@ import { anomalyDetector } from './anomaly-detector';
 import { historyStore } from './history-store';
 import { metricsCorrelator } from './metrics-correlator';
 import { trainingStore } from './training-store';
+import { createLogger } from '../lib/logger';
 import type {
     HealthResponse,
     AnomaliesResponse,
     BaselinesResponse
 } from './types';
 
+const logger = createLogger('monitor-routes');
 const router = Router();
 
 /**
@@ -183,7 +185,7 @@ router.get('/trace/:traceId', async (req, res) => {
 router.post('/recalculate', async (req, res) => {
     const { baselineCalculator } = await import('./baseline-calculator');
 
-    console.log('[MONITOR] Manual recalculation triggered...');
+    logger.info('Manual baseline recalculation triggered');
 
     const result = await baselineCalculator.recalculate();
 
@@ -227,7 +229,7 @@ router.post('/correlate', async (req, res) => {
 
         res.json(correlatedMetrics);
     } catch (error: any) {
-        console.error('[MONITOR] Metrics correlation error:', error.message);
+        logger.error({ err: error }, 'Metrics correlation failed');
         res.status(500).json({ error: 'Failed to correlate metrics', details: error.message });
     }
 });
@@ -241,7 +243,7 @@ router.get('/metrics/summary', async (req, res) => {
         const summary = await metricsCorrelator.getMetricsSummary();
         res.json(summary);
     } catch (error: any) {
-        console.error('[MONITOR] Metrics summary error:', error.message);
+        logger.error({ err: error }, 'Failed to get metrics summary');
         res.status(500).json({ error: 'Failed to get metrics summary' });
     }
 });

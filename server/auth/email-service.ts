@@ -6,12 +6,22 @@
  */
 
 import nodemailer from 'nodemailer';
+import { config } from '../config';
+import { createLogger } from '../lib/logger';
+
+const logger = createLogger('email');
 
 const transporter = nodemailer.createTransport({
-    host: process.env.SMTP_HOST || 'localhost',
-    port: parseInt(process.env.SMTP_PORT || '1025'),
-    secure: false,
-    // No auth needed for MailDev
+    host: config.smtp?.host || 'localhost',
+    port: config.smtp?.port || 1025,
+    secure: config.smtp?.secure || false,
+    // No auth needed for MailDev in dev
+    ...(config.smtp?.user && config.smtp?.password && {
+        auth: {
+            user: config.smtp.user,
+            pass: config.smtp.password,
+        },
+    }),
 });
 
 interface EmailOptions {
@@ -79,11 +89,19 @@ export const emailService = {
                 html: options.html,
             });
 
-            console.log(`[EMAIL] Sent to ${options.to}: ${options.subject}`);
-            console.log(`[EMAIL] Preview: http://localhost:1080`);
+            logger.info({
+                to: options.to,
+                subject: options.subject,
+                messageId: info.messageId
+            }, 'Email sent successfully');
+            logger.debug('Email preview available at http://localhost:1080');
             return true;
         } catch (error: any) {
-            console.error('[EMAIL] Failed to send:', error.message);
+            logger.error({
+                err: error,
+                to: options.to,
+                subject: options.subject
+            }, 'Failed to send email');
             return false;
         }
     },

@@ -9,9 +9,13 @@ import jwt from 'jsonwebtoken';
 import { z } from 'zod';
 import db from '../db';
 import emailService from './email-service';
+import { config } from '../config';
+import { createLogger } from '../lib/logger';
+import { ValidationError, NotFoundError, AuthenticationError } from '../lib/errors';
 // walletService is imported dynamically to avoid circular dependency
 
-const JWT_SECRET = process.env.JWT_SECRET || 'dev-secret-change-in-production';
+const logger = createLogger('auth');
+const JWT_SECRET = config.server.jwtSecret;
 const JWT_EXPIRES_IN = '1h';
 const REFRESH_EXPIRES_IN = '7d';
 
@@ -93,7 +97,10 @@ export const authService = {
 
         await emailService.sendVerificationCode(user.email, code);
 
-        console.log(`[AUTH] New user registered: ${user.email}`);
+        logger.info({
+            userId: user.id,
+            email: user.email
+        }, 'New user registered');
         return { user, message: 'Verification code sent to your email' };
     },
 
@@ -149,7 +156,10 @@ export const authService = {
         // Generate tokens
         const tokens = await this.generateTokens(user.id);
 
-        console.log(`[AUTH] User verified: ${user.email}`);
+        logger.info({
+            userId: user.id,
+            email: user.email
+        }, 'User email verified');
         return {
             user: { ...user, status: 'verified' },
             tokens
@@ -196,7 +206,10 @@ export const authService = {
         // Generate tokens
         const tokens = await this.generateTokens(user.id);
 
-        console.log(`[AUTH] User logged in: ${user.email}`);
+        logger.info({
+            userId: user.id,
+            email: user.email
+        }, 'User logged in');
         return { user, tokens };
     },
 
@@ -284,24 +297,23 @@ export const authService = {
             'DELETE FROM sessions WHERE user_id = $1',
             [userId]
         );
-        console.log(`[AUTH] User logged out: ${userId}`);
+        logger.info({ userId }, 'User logged out');
     },
 
     /**
      * Get user by ID
      */
     async getUserById(userId: string): Promise<User | null> {
-        console.log(`[AUTH] getUserById called with: ${userId}`);
+        logger.debug({ userId }, 'Looking up user by ID');
         const result = await db.query(
             'SELECT id, email, phone, status, kyc_level, created_at FROM users WHERE id = $1',
             [userId]
         );
-        console.log(`[AUTH] getUserById result rows: ${result.rows.length}`);
+        
         if (result.rows.length === 0) {
-            // Debug: try to find any users
-            const allUsers = await db.query('SELECT id, email FROM users LIMIT 5');
-            console.log(`[AUTH] Sample users in DB:`, allUsers.rows);
+            logger.warn({ userId }, 'User not found by ID');
         }
+        
         return result.rows[0] || null;
     },
 
@@ -328,7 +340,7 @@ export const authService = {
         );
 
         await emailService.sendVerificationCode(email, code);
-        console.log(`[AUTH] Resent verification code to: ${email}`);
+        logger.info({ email }, 'Verification code resent');
     }
 };
 
