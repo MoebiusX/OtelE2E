@@ -140,7 +140,11 @@ export class AnalysisService {
             const data = await response.json();
             const llmResponse = data.response || '';
 
-            return this.parseResponse(anomaly.traceId, llmResponse);
+            // Parse and return with prompt + raw response for training data
+            const analysis = this.parseResponse(anomaly.traceId, llmResponse);
+            analysis.prompt = prompt;           // Exact prompt sent to LLM
+            analysis.rawResponse = llmResponse; // Raw LLM response
+            return analysis;
         } catch (error: any) {
             clearTimeout(timeoutId);
             if (error.name === 'AbortError') {

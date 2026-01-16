@@ -123,6 +123,8 @@ export interface AnalysisResponse {
     recommendations: string[];
     confidence: 'low' | 'medium' | 'high';
     analyzedAt: Date;
+    prompt?: string;        // Exact prompt sent to LLM (for training data)
+    rawResponse?: string;   // Raw LLM response (for training data)
 }
 
 // History Storage

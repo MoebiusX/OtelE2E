@@ -56,6 +56,12 @@ export default defineConfig({
         changeOrigin: true,
         secure: false,
       },
+      // WebSocket proxy for real-time monitoring
+      '/ws': {
+        target: 'ws://localhost:5000',
+        ws: true,
+        changeOrigin: true,
+      },
     },
   },
   optimizeDeps: {

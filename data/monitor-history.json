@@ -309,721 +309,654 @@
       ],
       "confidence": "medium",
       "analyzedAt": "2026-01-15T17:13:27.016Z"
+    },
+    {
+      "traceId": "17be274f731cd04413cc6aeea5dcdb8a",
+      "summary": "The given trace data and correlated metrics indicate a performance anomaly in the exchange-api service. A potential cause for this anomaly is an excessive number of concurrent requests, leading to elevated CPU usage, memory consumption, and potentially causing resource degradation.",
+      "possibleCauses": [
+        "High request rate: 0.0 req/s may be due to a temporary increase in incoming traffic or a misconfigured router/switch.",
+        "Elevated CPU usage (0.2%): This could be attributed to the exchange-api service being under heavy load, possibly caused by an unexpected spike in network activity or an unresponsive database.",
+        "Potential resource utilization: Insufficient RAM or disk space may lead to memory and storage contention, causing the 87MB memory consumption."
+      ],
+      "recommendations": [
+        "Monitor CPU usage and adjust resource allocation if necessary. Consider scaling up resources (e.g., adding more nodes) or optimizing query plans for faster execution times.",
+        "Review the Jaeger configuration and ensure that it's properly set up to handle a high request rate without impacting performance.",
+        "Investigate network activity and database queries to identify potential bottlenecks and optimize their configuration."
+      ],
+      "confidence": "low",
+      "analyzedAt": "2026-01-15T18:42:13.433Z"
+    },
+    {
+      "traceId": "1713f072f10844e93c31f9b466077d56",
+      "summary": "The given trace data and correlated system metrics indicate a significant performance anomaly. It appears that the service was under heavy load, resulting in increased CPU usage and memory consumption, while also experiencing high request rates and error rates.",
+      "possibleCauses": [
+        "1. **Insufficient Resource Utilization**: The active connections metric is extremely low at 0, indicating no concurrent requests were being handled by the server. This suggests that there might not be sufficient resources (e.g., CPU, memory) to handle the increased load.",
+        "2. **Resource Overcommitment**: The high request rate and error rates may indicate that the system was overcommitting resources, leading to excessive CPU usage and memory consumption. This could be due to a misconfigured resource allocation or an underlying issue with the server's capacity.",
+        "3. **Network Congestion**: Although not directly indicated by the metrics, network congestion might have played a role in this scenario. The high peer port number (36748) could indicate that there was significant network traffic coming from other sources, further exacerbating the load on the server."
+      ],
+      "recommendations": [
+        "Review and optimize resource allocation to ensure sufficient resources are available for handling incoming requests.",
+        "Investigate the cause of excessive CPU usage and memory consumption by analyzing system logs or running resource-intensive workloads under stress testing scenarios.",
+        "Consider implementing network traffic optimization techniques, such as rate limiting or traffic shaping, to mitigate congestion issues."
+      ],
+      "confidence": "low",
+      "analyzedAt": "2026-01-15T18:43:07.532Z"
+    },
+    {
+      "traceId": "874bfc41a0031daa795b08918f1804d8",
+      "summary": "The provided trace data and correlated metrics indicate that a significant deviation in the latency of the \"order-response\" process occurred during an operation on the order-matcher service. This likely resulted from increased resource utilization, as indicated by the high CPU usage and memory metrics.",
+      "possibleCauses": [
+        "Increased load due to a sudden spike in orders being matched.",
+        "Excessive use of RabbitMQ's replication and caching mechanisms, leading to increased CPU usage and memory allocation."
+      ],
+      "recommendations": [
+        "Implement rate limiting on the order-matcher service to prevent excessive traffic during peak periods.",
+        "Optimize RabbitMQ configuration to reduce overhead associated with message replication and caching.",
+        "Consider implementing a load balancing strategy to distribute incoming orders more evenly across available instances, reducing the likelihood of sudden spikes in resource utilization."
+      ],
+      "confidence": "low",
+      "analyzedAt": "2026-01-15T18:44:32.971Z"
+    },
+    {
+      "traceId": "500bd9f485740e889085038cec7530be",
+      "summary": "The anomalous performance of the \"order-matcher\" service is likely due to an increased request rate from external APIs, causing a surge in concurrent connections and resulting in higher CPU usage. This is exacerbated by the high request rate being published to RabbitMQ, leading to increased latency.",
+      "possibleCauses": [
+        "Increased request rate from external APIs, leading to high incoming requests",
+        "High request rate being published to RabbitMQ, causing congestion",
+        "Insufficient resources (CPU, memory) to handle the increased load"
+      ],
+      "recommendations": [
+        "1. Increase resource utilization by allocating more CPU and memory resources to the \"order-matcher\" service.",
+        "2. Implement a content delivery network (CDN) or load balancing to distribute incoming requests across multiple instances of the \"order-matcher\" service.",
+        "3. Optimize RabbitMQ configuration to handle increased request rates, such as increasing the number of queues or adjusting message buffering times."
+      ],
+      "confidence": "medium",
+      "analyzedAt": "2026-01-15T18:55:50.797Z"
+    },
+    {
+      "traceId": "4a2f3eb8246db389d1e4e37ff8d8441a",
+      "summary": "The GET request from exchange-api to http://localhost:16686/api/traces resulted in a latency anomaly, with a deviation of 4 standard deviations from the expected mean. This may be due to an increased CPU usage or memory pressure on the system resources.",
+      "possibleCauses": [
+        "Increased CPU usage and memory pressure due to the high volume of API requests",
+        "Potential resource contention between API calls, such as network packets or database queries"
+      ],
+      "recommendations": [
+        "Monitor CPU usage and memory utilization in real-time to identify potential bottlenecks",
+        "Optimize database queries and reduce the load on APIs during peak periods",
+        "Implement rate limiting on API endpoints to prevent excessive traffic"
+      ],
+      "confidence": "low",
+      "analyzedAt": "2026-01-15T20:05:57.028Z"
+    },
+    {
+      "traceId": "49acea82dfc1a467a118c481c479941a",
+      "summary": "The HTTP GET request to the crypto-wallet service experienced a deviation from its expected duration of 30.3ms, resulting in an anomaly that is considered minor (SEV4) and likely caused by insufficient network latency or buffer loading issues.",
+      "possibleCauses": [
+        "Insufficient network latency: The P99 Latency metric indicates that the API gateway has been experiencing high latency, which could be causing the crypto-wallet request to take longer than expected.",
+        "Buffer loading issues: The CPU Usage and Memory metrics suggest that there may not be sufficient resources available in the system to handle a large number of requests simultaneously. This could be contributing to the delay caused by the crypto-wallet request."
+      ],
+      "recommendations": [
+        "Increase network latency mitigation strategies: Implement techniques such as load shedding, queuing, or circuit breaking to mitigate the effects of high latency.",
+        "Optimize buffer loading: Review and optimize the buffer allocation strategy for the API gateway and other services that receive requests from the crypto-wallet service. Consider implementing workarounds like caching, buffering at the application layer, or using distributed systems with higher throughput.",
+        "Monitor and analyze system resources: Regularly monitor CPU usage, memory, and network latency to identify potential bottlenecks and optimize system resources accordingly."
+      ],
+      "confidence": "low",
+      "analyzedAt": "2026-01-15T20:06:35.469Z"
+    },
+    {
+      "traceId": "9d7b8e0136e51883b8e26c26cd93a687",
+      "summary": "The ananomaly is likely caused by an unusually high latency of the POST operation to the exchange-api service. This could be due to excessive network traffic or resource utilization issues, which may have been masked by normal variation in CPU usage and request rates.",
+      "possibleCauses": [
+        "High P99 Latency (235ms): Elevated latency could indicate a bottleneck in network communication between the client and server.",
+        "Elevated Active Connections: A sudden increase in active connections might be related to an overload of API requests or excessive HTTP traffic."
+      ],
+      "recommendations": [
+        "Monitor CPU usage and adjust resource allocation if necessary to prevent further spikes in P99 Latency.",
+        "Investigate the API's request rate limits and adjust them according to service requirements to avoid overload."
+      ],
+      "confidence": "medium",
+      "analyzedAt": "2026-01-15T21:35:01.568Z"
+    },
+    {
+      "traceId": "8b643a0ee6ac43abd4c3637270f51c85",
+      "summary": "The provided trace data and correlated metrics suggest that the exchange-api service experienced an anomaly in its GET request operation. The increased error rate (2.0%) could be due to a temporary network issue, such as a brief connection timeout or a misconfigured API endpoint.",
+      "possibleCauses": [
+        "Increased network latency (P99 Latency of 372ms) may have caused the HTTP request to time out and return an error response.",
+        "The high error rate (2.0%) in the GET operation could be related to a temporary issue with the API endpoint, such as a temporary server overload or a misconfigured API configuration."
+      ],
+      "recommendations": [
+        "Monitor network latency and response times for any patterns that may indicate a temporary issue.",
+        "Verify that the API endpoint is correctly configured and functioning within expected parameters.",
+        "Consider implementing error handling mechanisms to handle transient errors and reduce the overall error rate."
+      ],
+      "confidence": "low",
+      "analyzedAt": "2026-01-15T21:47:59.516Z"
+    },
+    {
+      "traceId": "1dc92834efd22a99b7af9c0ca9f08b40",
+      "summary": "The order-matcher service experienced a significant deviation in its response time from the expected 2.38ms, resulting in an SEV5 (Low) severity issue. Based on correlated system metrics and trace data analysis, it appears that the high error rate (>100.0%) likely caused by excessive errors led to this anomaly.",
+      "possibleCauses": [
+        "High Error Rate: The presence of a critical error rate exceeding 100.0% may have compromised the service's stability, leading to unexpected response times.",
+        "Resource Utilization: Excessive requests for resources (e.g., CPU Usage, Memory) could also contribute to the high error rate, further exacerbating the situation."
+      ],
+      "recommendations": [
+        "Implement Error Recovery Mechanisms: Develop and implement strategies to recover from errors, such as retry mechanisms or exponential backoff, to minimize the impact of errors on the service.",
+        "Optimize Resource Utilization: Analyze the system's resource utilization patterns and optimize resource allocation to reduce the likelihood of high error rates. This may involve implementing load balancing, caching, or other techniques to improve performance.",
+        "Monitor and Log Error Details: Regularly log detailed error information to better understand the root cause of errors and identify potential bottlenecks."
+      ],
+      "confidence": "low",
+      "analyzedAt": "2026-01-15T21:48:57.089Z"
+    },
+    {
+      "traceId": "03255dc16a60e7ca8b5be1c48df9eed9",
+      "summary": "The tcp.connect operation on the exchange-api service experienced a significant deviation from its expected duration, resulting in a SEV1 (Critical) anomaly. This is likely due to a resource-intensive issue that consumed excessive CPU and memory resources.",
+      "possibleCauses": [
+        "High CPU usage (> 0.3%) may indicate a resource-intensive task or a complex operation being performed by the exchange-api service.",
+        "Elevated memory usage (91MB) might be indicative of an inefficient data processing or storage mechanism.",
+        "The high request rate (0 req/s) and low active connections (< 1) suggest that there are no apparent user interactions, but rather a resource-hungry operation."
+      ],
+      "recommendations": [
+        "Increase the CPU budget for the exchange-api service to enable more complex operations without exceeding available resources.",
+        "Optimize memory usage by re-designing data storage or implementing efficient algorithms for processing large datasets.",
+        "Review and refine the request rate and active connections metrics to ensure they are representative of actual user activity, rather than a resource-intensive operation."
+      ],
+      "confidence": "low",
+      "analyzedAt": "2026-01-15T21:51:21.605Z"
+    },
+    {
+      "traceId": "9ee45505c08ce9f7da0f2897a3c303dd",
+      "summary": "The crypto-wallet service experienced an unexpected HTTP GET request that took 61ms, which is significantly longer than the expected 27.88ms. This deviation from the norm can be attributed to resource utilization issues in the API Gateway.",
+      "possibleCauses": [
+        "**Resource Overload**: Increased request rate and concurrent connections may have led to CPU usage exceeding acceptable limits, causing the latency increase.",
+        "**Memory Pressure**: High memory usage could result from inefficient data processing or large requests, leading to slowdowns and increased latency.",
+        "**Network Congestion**: Heavy network traffic from other services or external sources might have caused a bottleneck in the API Gateway's resources."
+      ],
+      "recommendations": [
+        "**Optimize Resource Utilization**:",
+        "- Review and optimize the API Gateway configuration to ensure it can handle increased requests without exceeding CPU limits.",
+        "- Implement load balancing strategies to distribute incoming requests more efficiently, reducing congestion on individual servers.",
+        "**Improve Request Handling**:",
+        "- Ensure that the crypto-wallet service is properly configured to handle large requests and concurrent connections, with sufficient resources allocated for data processing.",
+        "- Consider implementing request caching or buffering mechanisms to reduce the number of requests made to external services.",
+        "**Monitor and Analyze Network Traffic**:",
+        "- Regularly review network logs and metrics to identify potential bottlenecks or issues related to third-party services or external networks.",
+        "- Implement traffic shaping or queuing mechanisms to prevent excessive resource utilization from other services."
+      ],
+      "confidence": "low",
+      "analyzedAt": "2026-01-15T21:53:37.929Z"
+    },
+    {
+      "traceId": "e40cfa5de6af864d708532e4821bfc28",
+      "summary": "The GET request from the exchange-api service to the /api/traces endpoint on localhost took significantly longer than expected, indicating a potential delay in processing or transmitting data. This could be due to various factors such as network latency, server load, or cache misses.",
+      "possibleCauses": [
+        "High P99 Latency: A 4th percentile value of 3551ms indicates that the average response time was exceptionally high.",
+        "Elevated CPU Usage: The system's CPU usage is at a moderate level (0.2%), but this might not be directly related to the anomaly, as other processes are running concurrently."
+      ],
+      "recommendations": [
+        "Optimize Network Latency by configuring the Jaeger instrumentation to reduce latency, or by using a more efficient network protocol.",
+        "Review Server Load and Caching: Ensure that there are no bottlenecks in the server's processing capacity or caching mechanisms. Consider implementing rate limiting or optimizing database queries if necessary."
+      ],
+      "confidence": "medium",
+      "analyzedAt": "2026-01-15T21:54:56.536Z"
+    },
+    {
+      "traceId": "d11aab99187ed150022e2d960cf8122d",
+      "summary": "The anomaly is likely caused by a prolonged delay in the response from the exchange-api service, resulting in an excessive latency and CPU usage spike. This may be due to an issue with the API's performance or resource utilization.",
+      "possibleCauses": [
+        "**Resource Utilization**: The high request rate (0.0 req/s) combined with the slow response time (53.59ms) suggests that there is a significant delay in processing requests from clients, which could be caused by an overreliance on a single database query or an inefficient data retrieval mechanism.",
+        "**Network Latency**: The P99 latency of 3525ms indicates that the network is not responding within a reasonable time frame. This could be due to a high volume of traffic, congestion in the network, or a long-latency database connection.",
+        "**Server Load**: The CPU usage of 0.2% and memory utilization of 100MB suggest that the server is under heavy load, which may be causing it to slow down or even experience crashes."
+      ],
+      "recommendations": [
+        "**Optimize Database Queries**: Review and optimize the query structure to reduce latency and improve data retrieval performance.",
+        "**Implement Network Latency Mitigation Strategies**: Consider implementing network optimization techniques such as load balancing, caching, or QoS (Quality of Service) configurations to reduce latency.",
+        "**Monitor Server Load and Performance**: Continuously monitor server performance and CPU utilization to identify potential bottlenecks and take corrective action before they impact the system."
+      ],
+      "confidence": "low",
+      "analyzedAt": "2026-01-15T21:56:08.324Z"
+    },
+    {
+      "traceId": "81884bab334808b4d81f26d529dfa185",
+      "summary": "The anomaly likely resulted from a delayed response to the GET request by exchange-api, which caused a significant deviation in latency. This delay was exacerbated by high CPU usage and memory consumption of the node.",
+      "possibleCauses": [
+        "High CPU usage (0.4%) may have caused an idle thread or process to consume resources without releasing them back to the system, leading to increased latency.",
+        "Memory (97MB) consumption may have resulted from memory-intensive operations within exchange-api, contributing to a decrease in available resources for other tasks.",
+        "Increased request rate (0.0 req/s) might indicate that exchange-api is handling an unusually high volume of requests, putting additional pressure on system resources."
+      ],
+      "recommendations": [
+        "Implement throttling or rate limiting for the GET requests from exchange-api to prevent excessive resource consumption and latency increases.",
+        "Optimize memory allocation and deallocation mechanisms within exchange-api to reduce memory usage when not in use.",
+        "Consider upgrading the node's hardware or adding more resources (e.g., CPU, RAM) to improve overall system performance and stability."
+      ],
+      "confidence": "low",
+      "analyzedAt": "2026-01-15T22:09:10.033Z",
+      "prompt": "You are an expert in distributed systems and observability. Analyze this performance anomaly:\n\n## Anomaly Details\n- Service: exchange-api\n- Operation: GET\n- Duration: 94.58ms (expected: 16.06ms ± 27.09ms)\n- Deviation: 2.9σ (standard deviations from mean)\n- Severity: SEV2 (Major)\n- Timestamp: Thu Jan 15 2026 23:08:36 GMT+0100 (Central European Standard Time)\n\n## Span Attributes\n{\n  \"http.request.method\": \"GET\",\n  \"http.request.method_original\": \"GET\",\n  \"http.response.status_code\": 200,\n  \"network.peer.address\": \"::1\",\n  \"network.peer.port\": 16686,\n  \"otel.scope.name\": \"@opentelemetry/instrumentation-undici\",\n  \"otel.scope.version\": \"0.13.1\",\n  \"server.address\": \"localhost\",\n  \"server.port\": 16686,\n  \"span.kind\": \"client\",\n  \"url.full\": \"http://localhost:16686/api/traces?service=crypto-wallet&lookback=1h&limit=100\",\n  \"url.path\": \"/api/traces\",\n  \"url.query\": \"?service=crypto-wallet&lookback=1h&limit=100\",\n  \"url.scheme\": \"http\",\n  \"user_agent.original\": \"node\"\n}\n\n## Correlated System Metrics (at time of anomaly)\n- CPU Usage: 0.4%\n- Memory: 97MB\n- Request Rate: 0.0 req/s\n- Error Rate: 0.0%\n- P99 Latency: 243ms\n- Active Connections: 0\n\n## Trace Context\nThe full trace contains 2 spans:\n- exchange-api: GET (94.58ms)\n- jaeger-all-in-one: /api/traces (85.82ms)\n\n\nBased on the trace data AND correlated metrics, provide:\n1. A brief summary (1-2 sentences) of what likely caused this anomaly\n2. 2-3 possible root causes (consider resource utilization if metrics show issues)\n3. 2-3 actionable recommendations\n\nFormat your response as:\nSUMMARY: [your summary]\nCAUSES:\n- [cause 1]\n- [cause 2]\nRECOMMENDATIONS:\n- [recommendation 1]\n- [recommendation 2]\nCONFIDENCE: [low/medium/high]",
+      "rawResponse": "SUMMARY: The anomaly likely resulted from a delayed response to the GET request by exchange-api, which caused a significant deviation in latency. This delay was exacerbated by high CPU usage and memory consumption of the node.\n\nCAUSES:\n- High CPU usage (0.4%) may have caused an idle thread or process to consume resources without releasing them back to the system, leading to increased latency.\n- Memory (97MB) consumption may have resulted from memory-intensive operations within exchange-api, contributing to a decrease in available resources for other tasks.\n- Increased request rate (0.0 req/s) might indicate that exchange-api is handling an unusually high volume of requests, putting additional pressure on system resources.\n\nRECOMMENDATIONS:\n- Implement throttling or rate limiting for the GET requests from exchange-api to prevent excessive resource consumption and latency increases.\n- Optimize memory allocation and deallocation mechanisms within exchange-api to reduce memory usage when not in use.\n- Consider upgrading the node's hardware or adding more resources (e.g., CPU, RAM) to improve overall system performance and stability."
+    },
+    {
+      "traceId": "76e073b144c7955d39a68869e44afc9a",
+      "summary": "The order-matcher service experienced a minor latency anomaly, where the response time increased by approximately 10% (from 89.11ms to 99.57ms) during the operation of matching an order.",
+      "possibleCauses": [
+        "1. Increased CPU usage: The high CPU utilization might be due to the excessive processing required for the order.match operation, which could be caused by a surge in incoming orders or a complex algorithm implementation.",
+        "2. Resource contention: The increased resource utilization could also indicate that there is a bottleneck in the RabbitMQ messaging channel, leading to congestion and delays during the exchange-api's payment response process.",
+        "3. Connection issues with API Gateway: Although not directly related to the order-matcher service, an error rate of 0.0% in API Gateway indicates that there are no errors propagating through the entire system. However, a P99 latency of 10ms suggests that there might be some level of congestion or network latency, which could contribute to this anomaly."
+      ],
+      "recommendations": [
+        "1. Optimize algorithm complexity: Review and optimize the order.match operation to reduce its computational requirements.",
+        "2. Implement CPU-bound tasks in parallel: Consider utilizing multiple processing cores or parallelizing computationally intensive tasks within the order-matcher service to improve overall system performance.",
+        "3. Monitor RabbitMQ messaging channel: Keep an eye on the RabbitMQ metrics to identify any bottlenecks or resource contention issues that might be causing the increased latency and high CPU usage."
+      ],
+      "confidence": "low",
+      "analyzedAt": "2026-01-15T22:17:15.520Z",
+      "prompt": "You are an expert in distributed systems and observability. Analyze this performance anomaly:\n\n## Anomaly Details\n- Service: order-matcher\n- Operation: order.match\n- Duration: 99.57ms (expected: 89.11ms ± 5.36ms)\n- Deviation: 1.95σ (standard deviations from mean)\n- Severity: SEV4 (Minor)\n- Timestamp: Thu Jan 15 2026 23:15:06 GMT+0100 (Central European Standard Time)\n\n## Span Attributes\n{\n  \"messaging.destination\": \"payment_response\",\n  \"messaging.operation\": \"process\",\n  \"messaging.source\": \"payments\",\n  \"messaging.system\": \"rabbitmq\",\n  \"order.id\": \"ORD-1768515306796-1\",\n  \"order.pair\": \"BTC/USD\",\n  \"order.price\": 42755.21,\n  \"order.quantity\": 0.01,\n  \"order.side\": \"BUY\",\n  \"otel.scope.name\": \"order-matcher\",\n  \"otel.scope.version\": \"1.0.0\",\n  \"otel.status_code\": \"OK\",\n  \"processor.id\": \"matcher-1768515285069\",\n  \"span.kind\": \"consumer\"\n}\n\n## Correlated System Metrics (at time of anomaly)\n- CPU Usage: 0.1%\n- Memory: 88MB\n- Request Rate: N/A\n- Error Rate: 0.0%\n- P99 Latency: 10ms\n- Active Connections: 0\n\n## Trace Context\nThe full trace contains 17 spans:\n- exchange-api: payment_response process (0.64ms)\n- crypto-wallet: HTTP POST (285.00ms)\n- api-gateway: kong.balancer (275.90ms)\n- exchange-api: publish <default> (1.36ms)\n- crypto-wallet: order.submit.client (285.80ms)\n- api-gateway: kong (277.94ms)\n- api-gateway: kong.access.plugin.cors (0.27ms)\n- api-gateway: kong.access.plugin.opentelemetry (0.23ms)\n- order-matcher: order.response (2.85ms)\n- exchange-api: publish orders (3.55ms)\n... and 7 more spans\n\nBased on the trace data AND correlated metrics, provide:\n1. A brief summary (1-2 sentences) of what likely caused this anomaly\n2. 2-3 possible root causes (consider resource utilization if metrics show issues)\n3. 2-3 actionable recommendations\n\nFormat your response as:\nSUMMARY: [your summary]\nCAUSES:\n- [cause 1]\n- [cause 2]\nRECOMMENDATIONS:\n- [recommendation 1]\n- [recommendation 2]\nCONFIDENCE: [low/medium/high]",
+      "rawResponse": "SUMMARY: The order-matcher service experienced a minor latency anomaly, where the response time increased by approximately 10% (from 89.11ms to 99.57ms) during the operation of matching an order.\n\nCAUSES:\n1. Increased CPU usage: The high CPU utilization might be due to the excessive processing required for the order.match operation, which could be caused by a surge in incoming orders or a complex algorithm implementation.\n2. Resource contention: The increased resource utilization could also indicate that there is a bottleneck in the RabbitMQ messaging channel, leading to congestion and delays during the exchange-api's payment response process.\n3. Connection issues with API Gateway: Although not directly related to the order-matcher service, an error rate of 0.0% in API Gateway indicates that there are no errors propagating through the entire system. However, a P99 latency of 10ms suggests that there might be some level of congestion or network latency, which could contribute to this anomaly.\n\nRECOMMENDATIONS:\n1. Optimize algorithm complexity: Review and optimize the order.match operation to reduce its computational requirements.\n2. Implement CPU-bound tasks in parallel: Consider utilizing multiple processing cores or parallelizing computationally intensive tasks within the order-matcher service to improve overall system performance.\n3. Monitor RabbitMQ messaging channel: Keep an eye on the RabbitMQ metrics to identify any bottlenecks or resource contention issues that might be causing the increased latency and high CPU usage."
+    },
+    {
+      "traceId": "d979e89a06df62356ffbcdd709fffc77",
+      "summary": "The anomaly in the exchange-api service is likely caused by an excessive number of TCP connections being established, resulting in a high error rate and significant CPU usage. This indicates a resource-intensive issue that may be impacting system performance.",
+      "possibleCauses": [
+        "Increased request rate (0.0 req/s) coupled with a low active connections metric (< 1), suggesting the service is not handling requests efficiently.",
+        "The 100% critical error rate, although unusual for this operation, could indicate an underlying problem such as excessive resource utilization or a bug in the code that's causing the errors to propagate and overwhelm the system."
+      ],
+      "recommendations": [
+        "Implement a connection pooling mechanism to limit the number of new connections established per request.",
+        "Monitor CPU usage and adjust any resource-intensive operations within the service to prevent further degradation.",
+        "Consider implementing rate limiting on the TCP connections to prevent excessive activity, or implement error handling mechanisms that can be configured to log errors at different levels (e.g., INFO, ERROR)."
+      ],
+      "confidence": "low",
+      "analyzedAt": "2026-01-16T06:40:22.568Z",
+      "prompt": "You are an expert in distributed systems and observability. Analyze this performance anomaly:\n\n## Anomaly Details\n- Service: exchange-api\n- Operation: tcp.connect\n- Duration: 21.44ms (expected: 4.32ms ± 2.3ms)\n- Deviation: 7.44σ (standard deviations from mean)\n- Severity: SEV1 (Critical)\n- Timestamp: Fri Jan 16 2026 07:36:35 GMT+0100 (Central European Standard Time)\n\n## Span Attributes\n{\n  \"net.host.ip\": \"::1\",\n  \"net.host.port\": 31549,\n  \"net.peer.ip\": \"::1\",\n  \"net.peer.name\": \"localhost\",\n  \"net.peer.port\": \"16686\",\n  \"net.transport\": \"ip_tcp\",\n  \"otel.scope.name\": \"@opentelemetry/instrumentation-net\",\n  \"otel.scope.version\": \"0.46.1\",\n  \"span.kind\": \"internal\"\n}\n\n## Correlated System Metrics (at time of anomaly)\n- CPU Usage: 0.2%\n- Memory: 95MB\n- Request Rate: 0.0 req/s\n- Error Rate: 100.0% ⚠️ HIGH\n- P99 Latency: 980ms\n- Active Connections: 0\n\n## Auto-Detected Issues\n- 🔥 Critical error rate (100.0%) - service degradation\n\n## Trace Context\nThe full trace contains 1 spans:\n- exchange-api: tcp.connect (21.44ms)\n\n\nBased on the trace data AND correlated metrics, provide:\n1. A brief summary (1-2 sentences) of what likely caused this anomaly\n2. 2-3 possible root causes (consider resource utilization if metrics show issues)\n3. 2-3 actionable recommendations\n\nFormat your response as:\nSUMMARY: [your summary]\nCAUSES:\n- [cause 1]\n- [cause 2]\nRECOMMENDATIONS:\n- [recommendation 1]\n- [recommendation 2]\nCONFIDENCE: [low/medium/high]",
+      "rawResponse": "SUMMARY: The anomaly in the exchange-api service is likely caused by an excessive number of TCP connections being established, resulting in a high error rate and significant CPU usage. This indicates a resource-intensive issue that may be impacting system performance.\n\nCAUSES:\n- Increased request rate (0.0 req/s) coupled with a low active connections metric (< 1), suggesting the service is not handling requests efficiently.\n- The 100% critical error rate, although unusual for this operation, could indicate an underlying problem such as excessive resource utilization or a bug in the code that's causing the errors to propagate and overwhelm the system.\n\nRECOMMENDATIONS:\n- Implement a connection pooling mechanism to limit the number of new connections established per request.\n- Monitor CPU usage and adjust any resource-intensive operations within the service to prevent further degradation.\n- Consider implementing rate limiting on the TCP connections to prevent excessive activity, or implement error handling mechanisms that can be configured to log errors at different levels (e.g., INFO, ERROR)."
+    },
+    {
+      "traceId": "3e0bc386bae09f531c1968c94aa22d7a",
+      "summary": "The observed HTTP GET request to the crypto-wallet service experienced a latency deviation of 3.74 standard deviations from its expected value, suggesting an unexpected delay in the response time. This anomaly may be caused by an issue with the exchange API, which is responsible for routing requests to other services.",
+      "possibleCauses": [
+        "**Exchange API Delay**: The latency deviation could be attributed to an excessive delay in processing requests through the exchange API, potentially due to a bottleneck or incorrect configuration.",
+        "**Request Burden on crypto-wallet Service**: If the crypto-wallet service is under heavy load, it may be experiencing increased CPU usage and memory allocation, causing delays in its response time."
+      ],
+      "recommendations": [
+        "**Optimize Exchange API Configuration**: Review the exchange API's configuration to ensure it is optimized for performance. This may involve adjusting parameters such as request handling rates or caching mechanisms.",
+        "**Monitor and Optimize Request Burden on crypto-wallet Service**: Regularly monitor CPU usage, memory allocation, and request rates on the crypto-wallet service to identify potential bottlenecks. Implement measures to optimize resource utilization and reduce latency when necessary.",
+        "**Analyze and Resolve Resource Utilization Issues**: Investigate any issues related to resource utilization within the system, such as high CPU or memory usage patterns. Take corrective action to resolve these issues, ensuring that resources are allocated efficiently to support the expected workload of the crypto-wallet service."
+      ],
+      "confidence": "low",
+      "analyzedAt": "2026-01-16T06:41:52.832Z",
+      "prompt": "You are an expert in distributed systems and observability. Analyze this performance anomaly:\n\n## Anomaly Details\n- Service: crypto-wallet\n- Operation: HTTP GET\n- Duration: 110ms (expected: 35.33ms ± 19.95ms)\n- Deviation: 3.74σ (standard deviations from mean)\n- Severity: SEV1 (Critical)\n- Timestamp: Fri Jan 16 2026 07:40:58 GMT+0100 (Central European Standard Time)\n\n## Span Attributes\n{\n  \"component\": \"fetch\",\n  \"http.host\": \"localhost:8000\",\n  \"http.method\": \"GET\",\n  \"http.response_content_length\": 95283,\n  \"http.scheme\": \"http\",\n  \"http.status_code\": 200,\n  \"http.status_text\": \"OK\",\n  \"http.url\": \"\",\n  \"http.user_agent\": \"Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:147.0) Gecko/20100101 Firefox/147.0\",\n  \"otel.scope.name\": \"@opentelemetry/instrumentation-fetch\",\n  \"otel.scope.version\": \"0.209.0\",\n  \"span.kind\": \"client\"\n}\n\n## Correlated System Metrics (at time of anomaly)\n- CPU Usage: 0.4%\n- Memory: 103MB\n- Request Rate: 0.2 req/s\n- Error Rate: 4.0%\n- P99 Latency: 17ms\n- Active Connections: 0\n\n## Auto-Detected Issues\n- 📊 Notable error rate (4.0%)\n\n## Trace Context\nThe full trace contains 10 spans:\n- api-gateway: kong.router (0.07ms)\n- api-gateway: kong.access.plugin.opentelemetry (0.27ms)\n- api-gateway: kong.dns (0.06ms)\n- api-gateway: kong.header_filter.plugin.opentelemetry (0.54ms)\n- api-gateway: kong.balancer (11.31ms)\n- exchange-api: GET (9.37ms)\n- api-gateway: kong.access.plugin.cors (0.06ms)\n- api-gateway: kong.header_filter.plugin.cors (0.56ms)\n- crypto-wallet: HTTP GET (110.00ms)\n- api-gateway: kong (13.07ms)\n\n\nBased on the trace data AND correlated metrics, provide:\n1. A brief summary (1-2 sentences) of what likely caused this anomaly\n2. 2-3 possible root causes (consider resource utilization if metrics show issues)\n3. 2-3 actionable recommendations\n\nFormat your response as:\nSUMMARY: [your summary]\nCAUSES:\n- [cause 1]\n- [cause 2]\nRECOMMENDATIONS:\n- [recommendation 1]\n- [recommendation 2]\nCONFIDENCE: [low/medium/high]",
+      "rawResponse": "SUMMARY: The observed HTTP GET request to the crypto-wallet service experienced a latency deviation of 3.74 standard deviations from its expected value, suggesting an unexpected delay in the response time. This anomaly may be caused by an issue with the exchange API, which is responsible for routing requests to other services.\n\nCAUSES:\n- **Exchange API Delay**: The latency deviation could be attributed to an excessive delay in processing requests through the exchange API, potentially due to a bottleneck or incorrect configuration.\n- **Request Burden on crypto-wallet Service**: If the crypto-wallet service is under heavy load, it may be experiencing increased CPU usage and memory allocation, causing delays in its response time.\nRECOMMENDATIONS:\n- **Optimize Exchange API Configuration**: Review the exchange API's configuration to ensure it is optimized for performance. This may involve adjusting parameters such as request handling rates or caching mechanisms.\n- **Monitor and Optimize Request Burden on crypto-wallet Service**: Regularly monitor CPU usage, memory allocation, and request rates on the crypto-wallet service to identify potential bottlenecks. Implement measures to optimize resource utilization and reduce latency when necessary.\n- **Analyze and Resolve Resource Utilization Issues**: Investigate any issues related to resource utilization within the system, such as high CPU or memory usage patterns. Take corrective action to resolve these issues, ensuring that resources are allocated efficiently to support the expected workload of the crypto-wallet service."
     }
   ],
   "lastUpdated": "2026-01-15T09:09:39.700Z",
   "timeBaselines": [
     {
+      "spanKey": "api-gateway:kong.access.plugin.opentelemetry",
+      "service": "api-gateway",
+      "operation": "kong.access.plugin.opentelemetry",
+      "dayOfWeek": 4,
+      "hourOfDay": 19,
+      "mean": 0.61,
+      "stdDev": 1.11,
+      "sampleCount": 699,
+      "thresholds": {
+        "sev5": 1.5255448420510063,
+        "sev4": 2.823129120782312,
+        "sev3": 5.5529356013166264,
+        "sev2": 7.803828664213341,
+        "sev1": 7.803828664213341
+      },
+      "lastUpdated": "2026-01-15T18:44:56.174Z"
+    },
+    {
       "spanKey": "api-gateway:kong.header_filter.plugin.cors",
       "service": "api-gateway",
       "operation": "kong.header_filter.plugin.cors",
       "dayOfWeek": 4,
-      "hourOfDay": 17,
-      "mean": 0.29,
-      "stdDev": 0.41,
-      "sampleCount": 989,
+      "hourOfDay": 19,
+      "mean": 0.27,
+      "stdDev": 0.44,
+      "sampleCount": 908,
       "thresholds": {
-        "sev5": 1.9244893944984058,
-        "sev4": 2.518501399358357,
-        "sev3": 2.7958706412970944,
-        "sev2": 6.578401630921824,
-        "sev1": 6.8533162777991565
+        "sev5": 2.0456831178882666,
+        "sev4": 2.6625707032338837,
+        "sev3": 3.30894188640852,
+        "sev2": 8.033121446242786,
+        "sev1": 8.033121446242786
       },
-      "lastUpdated": "2026-01-15T17:04:12.419Z"
+      "lastUpdated": "2026-01-15T18:44:56.174Z"
     },
     {
       "spanKey": "api-gateway:kong.header_filter.plugin.opentelemetry",
       "service": "api-gateway",
       "operation": "kong.header_filter.plugin.opentelemetry",
       "dayOfWeek": 4,
-      "hourOfDay": 17,
+      "hourOfDay": 19,
       "mean": 0.08,
-      "stdDev": 0.17,
-      "sampleCount": 989,
+      "stdDev": 0.19,
+      "sampleCount": 908,
       "thresholds": {
-        "sev5": 1.4115946345074482,
-        "sev4": 2.3624669301315584,
-        "sev3": 2.9703030178406418,
-        "sev2": 10.47497233836764,
-        "sev1": 10.47497233836764
+        "sev5": 1.8595711874783536,
+        "sev4": 2.9502435364990474,
+        "sev3": 3.3865124761073244,
+        "sev2": 10.481076422594311,
+        "sev1": 10.481076422594311
       },
-      "lastUpdated": "2026-01-15T17:04:12.419Z"
+      "lastUpdated": "2026-01-15T18:44:56.175Z"
     },
     {
       "spanKey": "api-gateway:kong.balancer",
       "service": "api-gateway",
       "operation": "kong.balancer",
       "dayOfWeek": 4,
-      "hourOfDay": 17,
-      "mean": 30.04,
-      "stdDev": 131.29,
-      "sampleCount": 756,
+      "hourOfDay": 19,
+      "mean": 22.98,
+      "stdDev": 44.3,
+      "sampleCount": 699,
       "thresholds": {
-        "sev5": 0.9065794940613687,
-        "sev4": 8.778562199090914,
-        "sev3": 8.78348276907639,
-        "sev2": 8.841905016427155,
-        "sev1": 8.841905016427155
+        "sev5": 2.497790213376178,
+        "sev4": 2.6975828695293855,
+        "sev3": 2.90985833427515,
+        "sev2": 8.542516912427029,
+        "sev1": 8.542516912427029
       },
-      "lastUpdated": "2026-01-15T17:04:12.420Z"
-    },
-    {
-      "spanKey": "exchange-api:GET",
-      "service": "exchange-api",
-      "operation": "GET",
-      "dayOfWeek": 4,
-      "hourOfDay": 17,
-      "mean": 16.95,
-      "stdDev": 31.05,
-      "sampleCount": 1040,
-      "thresholds": {
-        "sev5": 2.3307242646067508,
-        "sev4": 2.816054194315971,
-        "sev3": 3.263320294357863,
-        "sev2": 5.782005835619043,
-        "sev1": 13.62547335600233
-      },
-      "lastUpdated": "2026-01-15T17:04:12.420Z"
+      "lastUpdated": "2026-01-15T18:44:56.175Z"
     },
     {
       "spanKey": "crypto-wallet:HTTP GET",
       "service": "crypto-wallet",
       "operation": "HTTP GET",
       "dayOfWeek": 4,
-      "hourOfDay": 17,
-      "mean": 42.06,
-      "stdDev": 134.02,
-      "sampleCount": 708,
+      "hourOfDay": 19,
+      "mean": 34.78,
+      "stdDev": 27,
+      "sampleCount": 621,
       "thresholds": {
-        "sev5": 0.5,
-        "sev4": 1,
-        "sev3": 8.789268193408118,
-        "sev2": 8.789268193408118,
-        "sev1": 8.789268193408118
+        "sev5": 1.7856680204635496,
+        "sev4": 2.1930386328867035,
+        "sev3": 2.5633755532713893,
+        "sev2": 3.3781167781176977,
+        "sev1": 3.3781167781176977
       },
-      "lastUpdated": "2026-01-15T17:04:12.420Z"
-    },
-    {
-      "spanKey": "api-gateway:kong.access.plugin.opentelemetry",
-      "service": "api-gateway",
-      "operation": "kong.access.plugin.opentelemetry",
-      "dayOfWeek": 4,
-      "hourOfDay": 17,
-      "mean": 0.6,
-      "stdDev": 1.38,
-      "sampleCount": 756,
-      "thresholds": {
-        "sev5": 0.8528132168380884,
-        "sev4": 1.5114074382482001,
-        "sev3": 2.012054970695271,
-        "sev2": 14.1819198079072,
-        "sev1": 14.1819198079072
-      },
-      "lastUpdated": "2026-01-15T17:04:12.420Z"
-    },
-    {
-      "spanKey": "api-gateway:kong",
-      "service": "api-gateway",
-      "operation": "kong",
-      "dayOfWeek": 4,
-      "hourOfDay": 17,
-      "mean": 25.33,
-      "stdDev": 115.85,
-      "sampleCount": 995,
-      "thresholds": {
-        "sev5": 0.969762063893444,
-        "sev4": 2.7237227933838857,
-        "sev3": 10.08347145588356,
-        "sev2": 10.110842700196839,
-        "sev1": 10.110842700196839
-      },
-      "lastUpdated": "2026-01-15T17:04:12.420Z"
-    },
-    {
-      "spanKey": "api-gateway:kong.router",
-      "service": "api-gateway",
-      "operation": "kong.router",
-      "dayOfWeek": 4,
-      "hourOfDay": 17,
-      "mean": 0.15,
-      "stdDev": 0.2,
-      "sampleCount": 995,
-      "thresholds": {
-        "sev5": 1.6740687850376488,
-        "sev4": 3.1977340165335817,
-        "sev3": 3.6527883977521656,
-        "sev2": 5.099759070615753,
-        "sev1": 8.443641826986022
-      },
-      "lastUpdated": "2026-01-15T17:04:12.420Z"
-    },
-    {
-      "spanKey": "api-gateway:kong.access.plugin.cors",
-      "service": "api-gateway",
-      "operation": "kong.access.plugin.cors",
-      "dayOfWeek": 4,
-      "hourOfDay": 17,
-      "mean": 0.14,
-      "stdDev": 0.29,
-      "sampleCount": 995,
-      "thresholds": {
-        "sev5": 2.269772222411973,
-        "sev4": 3.1517645346570133,
-        "sev3": 5.090096476683905,
-        "sev2": 6.942964047369223,
-        "sev1": 7.910420730955837
-      },
-      "lastUpdated": "2026-01-15T17:04:12.420Z"
-    },
-    {
-      "spanKey": "api-gateway:kong.dns",
-      "service": "api-gateway",
-      "operation": "kong.dns",
-      "dayOfWeek": 4,
-      "hourOfDay": 17,
-      "mean": 0.38,
-      "stdDev": 1.18,
-      "sampleCount": 756,
-      "thresholds": {
-        "sev5": 3.7848063661598976,
-        "sev4": 5.210168607424083,
-        "sev3": 6.072999162966793,
-        "sev2": 6.906222787682059,
-        "sev1": 6.906222787682059
-      },
-      "lastUpdated": "2026-01-15T17:04:12.420Z"
+      "lastUpdated": "2026-01-15T18:44:56.175Z"
     },
     {
       "spanKey": "exchange-api:GET",
       "service": "exchange-api",
       "operation": "GET",
       "dayOfWeek": 4,
-      "hourOfDay": 18,
-      "mean": 20.96,
-      "stdDev": 45.23,
-      "sampleCount": 497,
+      "hourOfDay": 19,
+      "mean": 14.99,
+      "stdDev": 36.1,
+      "sampleCount": 887,
       "thresholds": {
-        "sev5": 2.3207149498531985,
-        "sev4": 3.569593107931999,
-        "sev3": 5.062095485583971,
-        "sev2": 7.153221796481941,
-        "sev1": 7.153221796481941
+        "sev5": 1.4288578275065902,
+        "sev4": 1.8560053592589028,
+        "sev3": 3.8316873475623026,
+        "sev2": 12.257961886386711,
+        "sev1": 13.225636641685254
       },
-      "lastUpdated": "2026-01-15T17:04:12.420Z"
-    },
-    {
-      "spanKey": "api-gateway:kong",
-      "service": "api-gateway",
-      "operation": "kong",
-      "dayOfWeek": 4,
-      "hourOfDay": 18,
-      "mean": 25.1,
-      "stdDev": 37.31,
-      "sampleCount": 526,
-      "thresholds": {
-        "sev5": 3.0879395769928726,
-        "sev4": 3.222360303538598,
-        "sev3": 3.275083248526721,
-        "sev2": 4.091176540877205,
-        "sev1": 4.091176540877205
-      },
-      "lastUpdated": "2026-01-15T17:04:12.421Z"
+      "lastUpdated": "2026-01-15T18:44:56.175Z"
     },
     {
       "spanKey": "api-gateway:kong.router",
       "service": "api-gateway",
       "operation": "kong.router",
       "dayOfWeek": 4,
-      "hourOfDay": 18,
-      "mean": 0.4,
-      "stdDev": 0.74,
-      "sampleCount": 526,
+      "hourOfDay": 19,
+      "mean": 0.18,
+      "stdDev": 0.47,
+      "sampleCount": 914,
       "thresholds": {
-        "sev5": 1.349350376897324,
-        "sev4": 2.898347449456802,
-        "sev3": 5.552998627909519,
-        "sev2": 6.459959392034658,
-        "sev1": 7.395304919269526
+        "sev5": 1.793352562523792,
+        "sev4": 2.756679569061882,
+        "sev3": 4.0064584387775986,
+        "sev2": 12.171397472166525,
+        "sev1": 12.171397472166525
       },
-      "lastUpdated": "2026-01-15T17:04:12.421Z"
+      "lastUpdated": "2026-01-15T18:44:56.175Z"
     },
     {
       "spanKey": "api-gateway:kong.access.plugin.cors",
       "service": "api-gateway",
       "operation": "kong.access.plugin.cors",
       "dayOfWeek": 4,
-      "hourOfDay": 18,
-      "mean": 0.37,
-      "stdDev": 0.69,
-      "sampleCount": 526,
-      "thresholds": {
-        "sev5": 2.359478440838669,
-        "sev4": 3.5166941348235485,
-        "sev3": 4.532327883726634,
-        "sev2": 5.6808752953595665,
-        "sev1": 5.808010103188117
-      },
-      "lastUpdated": "2026-01-15T17:04:12.421Z"
-    },
-    {
-      "spanKey": "api-gateway:kong.header_filter.plugin.cors",
-      "service": "api-gateway",
-      "operation": "kong.header_filter.plugin.cors",
-      "dayOfWeek": 4,
-      "hourOfDay": 18,
-      "mean": 0.68,
-      "stdDev": 0.82,
-      "sampleCount": 526,
-      "thresholds": {
-        "sev5": 1.5293054360151677,
-        "sev4": 2.151370658158516,
-        "sev3": 3.457829837866256,
-        "sev2": 6.009641593927773,
-        "sev1": 6.009641593927773
-      },
-      "lastUpdated": "2026-01-15T17:04:12.421Z"
-    },
-    {
-      "spanKey": "api-gateway:kong.header_filter.plugin.opentelemetry",
-      "service": "api-gateway",
-      "operation": "kong.header_filter.plugin.opentelemetry",
-      "dayOfWeek": 4,
-      "hourOfDay": 18,
-      "mean": 0.19,
+      "hourOfDay": 19,
+      "mean": 0.16,
       "stdDev": 0.33,
-      "sampleCount": 526,
+      "sampleCount": 914,
       "thresholds": {
-        "sev5": 1.5711481625875918,
-        "sev4": 1.9176963180802318,
-        "sev3": 4.391748802075512,
-        "sev2": 5.410299033001706,
-        "sev1": 9.18616719676064
+        "sev5": 2.073829274936076,
+        "sev4": 3.4719173959063916,
+        "sev3": 4.254361506991731,
+        "sev2": 7.823883672679501,
+        "sev1": 8.1999420826585
       },
-      "lastUpdated": "2026-01-15T17:04:12.421Z"
-    },
-    {
-      "spanKey": "api-gateway:kong.balancer",
-      "service": "api-gateway",
-      "operation": "kong.balancer",
-      "dayOfWeek": 4,
-      "hourOfDay": 18,
-      "mean": 25.31,
-      "stdDev": 39.45,
-      "sampleCount": 411,
-      "thresholds": {
-        "sev5": 2.8408911751617216,
-        "sev4": 3.0232118666625096,
-        "sev3": 3.7218712462178103,
-        "sev2": 3.7218712462178103,
-        "sev1": 3.7218712462178103
-      },
-      "lastUpdated": "2026-01-15T17:04:12.421Z"
-    },
-    {
-      "spanKey": "crypto-wallet:HTTP GET",
-      "service": "crypto-wallet",
-      "operation": "HTTP GET",
-      "dayOfWeek": 4,
-      "hourOfDay": 18,
-      "mean": 41.31,
-      "stdDev": 22.5,
-      "sampleCount": 363,
-      "thresholds": {
-        "sev5": 1.5419880011485387,
-        "sev4": 1.764213522991051,
-        "sev3": 2.208664566676075,
-        "sev2": 4.075358950153177,
-        "sev1": 4.075358950153177
-      },
-      "lastUpdated": "2026-01-15T17:04:12.421Z"
-    },
-    {
-      "spanKey": "api-gateway:kong.access.plugin.opentelemetry",
-      "service": "api-gateway",
-      "operation": "kong.access.plugin.opentelemetry",
-      "dayOfWeek": 4,
-      "hourOfDay": 18,
-      "mean": 1.85,
-      "stdDev": 3.6,
-      "sampleCount": 411,
-      "thresholds": {
-        "sev5": 1.2909807078871745,
-        "sev4": 2.1177627443070373,
-        "sev3": 5.016225929146813,
-        "sev2": 7.794869659481895,
-        "sev1": 7.794869659481895
-      },
-      "lastUpdated": "2026-01-15T17:04:12.421Z"
+      "lastUpdated": "2026-01-15T18:44:56.176Z"
     },
     {
       "spanKey": "api-gateway:kong.dns",
       "service": "api-gateway",
       "operation": "kong.dns",
       "dayOfWeek": 4,
-      "hourOfDay": 18,
-      "mean": 0.5,
-      "stdDev": 1.33,
-      "sampleCount": 411,
+      "hourOfDay": 19,
+      "mean": 0.62,
+      "stdDev": 2.21,
+      "sampleCount": 699,
       "thresholds": {
-        "sev5": 1.7610117504877543,
-        "sev4": 5.77120726925874,
-        "sev3": 6.323089788480468,
-        "sev2": 6.379635128564661,
-        "sev1": 6.379635128564661
+        "sev5": 2.5921357728543515,
+        "sev4": 4.381341684361136,
+        "sev3": 8.246062580543635,
+        "sev2": 8.269093752044604,
+        "sev1": 8.269093752044604
       },
-      "lastUpdated": "2026-01-15T17:04:12.421Z"
+      "lastUpdated": "2026-01-15T18:44:56.176Z"
     },
     {
-      "spanKey": "exchange-api:POST",
-      "service": "exchange-api",
-      "operation": "POST",
+      "spanKey": "api-gateway:kong",
+      "service": "api-gateway",
+      "operation": "kong",
       "dayOfWeek": 4,
-      "hourOfDay": 17,
-      "mean": 7371.8,
-      "stdDev": 12447.57,
-      "sampleCount": 72,
+      "hourOfDay": 19,
+      "mean": 20.42,
+      "stdDev": 40.82,
+      "sampleCount": 914,
       "thresholds": {
-        "sev5": 1.825678211264922,
-        "sev4": 1.8269877041668923,
-        "sev3": 1.8330123355598098,
-        "sev2": 2,
-        "sev1": 2.5
+        "sev5": 2.7521906111238006,
+        "sev4": 3.0333470384157657,
+        "sev3": 3.263201482547275,
+        "sev2": 9.462950599381998,
+        "sev1": 9.462950599381998
       },
-      "lastUpdated": "2026-01-15T17:04:12.421Z"
-    },
-    {
-      "spanKey": "exchange-api:payment_response process",
-      "service": "exchange-api",
-      "operation": "payment_response process",
-      "dayOfWeek": 4,
-      "hourOfDay": 17,
-      "mean": 0.59,
-      "stdDev": 0.49,
-      "sampleCount": 40,
-      "thresholds": {
-        "sev5": 1.3,
-        "sev4": 1.65,
-        "sev3": 2,
-        "sev2": 2.6,
-        "sev1": 3.3
-      },
-      "lastUpdated": "2026-01-15T17:04:12.421Z"
+      "lastUpdated": "2026-01-15T18:44:56.176Z"
     },
     {
       "spanKey": "order-matcher:order.response",
       "service": "order-matcher",
       "operation": "order.response",
       "dayOfWeek": 4,
-      "hourOfDay": 17,
-      "mean": 0.73,
-      "stdDev": 0.59,
-      "sampleCount": 40,
+      "hourOfDay": 19,
+      "mean": 1.22,
+      "stdDev": 1.24,
+      "sampleCount": 56,
       "thresholds": {
-        "sev5": 2.138522267710067,
-        "sev4": 2.138522267710067,
-        "sev3": 2.138522267710067,
-        "sev2": 2.138522267710067,
-        "sev1": 2.5
+        "sev5": 3.383607188047105,
+        "sev4": 3.383607188047105,
+        "sev3": 3.383607188047105,
+        "sev2": 3.383607188047105,
+        "sev1": 3.383607188047105
       },
-      "lastUpdated": "2026-01-15T17:04:12.421Z"
+      "lastUpdated": "2026-01-15T18:44:56.176Z"
     },
     {
       "spanKey": "order-matcher:order.match",
       "service": "order-matcher",
       "operation": "order.match",
       "dayOfWeek": 4,
-      "hourOfDay": 17,
-      "mean": 91.2,
-      "stdDev": 5.04,
-      "sampleCount": 40,
+      "hourOfDay": 19,
+      "mean": 91.81,
+      "stdDev": 4.65,
+      "sampleCount": 56,
       "thresholds": {
-        "sev5": 1.113707033509781,
-        "sev4": 1.7429133226349065,
-        "sev3": 1.7429133226349065,
-        "sev2": 2,
-        "sev1": 2.5
+        "sev5": 0.924573329718413,
+        "sev4": 2.610597027469844,
+        "sev3": 2.610597027469844,
+        "sev2": 2.610597027469844,
+        "sev1": 2.610597027469844
       },
-      "lastUpdated": "2026-01-15T17:04:12.421Z"
-    },
-    {
-      "spanKey": "crypto-wallet:order.submit.client",
-      "service": "crypto-wallet",
-      "operation": "order.submit.client",
-      "dayOfWeek": 4,
-      "hourOfDay": 17,
-      "mean": 154.41,
-      "stdDev": 73.9,
-      "sampleCount": 40,
-      "thresholds": {
-        "sev5": 2.8372984159847943,
-        "sev4": 2.8372984159847943,
-        "sev3": 2.8372984159847943,
-        "sev2": 2.8372984159847943,
-        "sev1": 2.8372984159847943
-      },
-      "lastUpdated": "2026-01-15T17:04:12.421Z"
-    },
-    {
-      "spanKey": "crypto-wallet:HTTP POST",
-      "service": "crypto-wallet",
-      "operation": "HTTP POST",
-      "dayOfWeek": 4,
-      "hourOfDay": 17,
-      "mean": 4509.83,
-      "stdDev": 10312.67,
-      "sampleCount": 60,
-      "thresholds": {
-        "sev5": 2.4838541715514535,
-        "sev4": 2.491708588058432,
-        "sev3": 2.491708588058432,
-        "sev2": 2.491708588058432,
-        "sev1": 2.5
-      },
-      "lastUpdated": "2026-01-15T17:04:12.421Z"
+      "lastUpdated": "2026-01-15T18:44:56.176Z"
     },
     {
       "spanKey": "exchange-api:publish <default>",
       "service": "exchange-api",
       "operation": "publish <default>",
       "dayOfWeek": 4,
-      "hourOfDay": 17,
-      "mean": 0.59,
-      "stdDev": 0.44,
-      "sampleCount": 40,
+      "hourOfDay": 19,
+      "mean": 1.12,
+      "stdDev": 0.92,
+      "sampleCount": 56,
       "thresholds": {
-        "sev5": 1.8591638126648629,
-        "sev4": 1.8591638126648629,
-        "sev3": 1.8591638126648629,
-        "sev2": 2,
-        "sev1": 2.5
+        "sev5": 0.732700429506667,
+        "sev4": 3.0099225153324647,
+        "sev3": 3.0099225153324647,
+        "sev2": 3.0099225153324647,
+        "sev1": 3.0099225153324647
       },
-      "lastUpdated": "2026-01-15T17:04:12.421Z"
+      "lastUpdated": "2026-01-15T18:44:56.176Z"
     },
     {
-      "spanKey": "exchange-api:publish orders",
-      "service": "exchange-api",
-      "operation": "publish orders",
+      "spanKey": "crypto-wallet:order.submit.client",
+      "service": "crypto-wallet",
+      "operation": "order.submit.client",
       "dayOfWeek": 4,
-      "hourOfDay": 17,
-      "mean": 3.79,
-      "stdDev": 2.42,
-      "sampleCount": 40,
+      "hourOfDay": 19,
+      "mean": 175.19,
+      "stdDev": 75,
+      "sampleCount": 56,
       "thresholds": {
-        "sev5": 2.0133769240778396,
-        "sev4": 2.0133769240778396,
-        "sev3": 2.0133769240778396,
-        "sev2": 2.0133769240778396,
-        "sev1": 2.5
+        "sev5": 3.445455493729443,
+        "sev4": 3.445455493729443,
+        "sev3": 3.445455493729443,
+        "sev2": 3.445455493729443,
+        "sev1": 3.445455493729443
       },
-      "lastUpdated": "2026-01-15T17:04:12.421Z"
+      "lastUpdated": "2026-01-15T18:44:56.176Z"
     },
     {
       "spanKey": "crypto-wallet:order.response.received",
       "service": "crypto-wallet",
       "operation": "order.response.received",
       "dayOfWeek": 4,
-      "hourOfDay": 17,
+      "hourOfDay": 19,
       "mean": 0.04,
-      "stdDev": 0.05,
-      "sampleCount": 40,
+      "stdDev": 0.06,
+      "sampleCount": 56,
       "thresholds": {
-        "sev5": 1.209338662244782,
-        "sev4": 1.209338662244782,
-        "sev3": 1.5,
-        "sev2": 2,
-        "sev1": 2.5
+        "sev5": 0.9094326083734474,
+        "sev4": 2.5009396730269806,
+        "sev3": 2.5009396730269806,
+        "sev2": 2.5009396730269806,
+        "sev1": 2.5009396730269806
       },
-      "lastUpdated": "2026-01-15T17:04:12.421Z"
-    },
-    {
-      "spanKey": "exchange-api:publish <default>",
-      "service": "exchange-api",
-      "operation": "publish <default>",
-      "dayOfWeek": 4,
-      "hourOfDay": 18,
-      "mean": 0.66,
-      "stdDev": 0.64,
-      "sampleCount": 48,
-      "thresholds": {
-        "sev5": 1.3,
-        "sev4": 1.65,
-        "sev3": 2,
-        "sev2": 2.6,
-        "sev1": 3.3
-      },
-      "lastUpdated": "2026-01-15T17:04:12.421Z"
-    },
-    {
-      "spanKey": "exchange-api:payment_response process",
-      "service": "exchange-api",
-      "operation": "payment_response process",
-      "dayOfWeek": 4,
-      "hourOfDay": 18,
-      "mean": 0.53,
-      "stdDev": 0.4,
-      "sampleCount": 48,
-      "thresholds": {
-        "sev5": 2.608978429986643,
-        "sev4": 2.608978429986643,
-        "sev3": 2.608978429986643,
-        "sev2": 2.608978429986643,
-        "sev1": 2.608978429986643
-      },
-      "lastUpdated": "2026-01-15T17:04:12.421Z"
-    },
-    {
-      "spanKey": "crypto-wallet:order.response.received",
-      "service": "crypto-wallet",
-      "operation": "order.response.received",
-      "dayOfWeek": 4,
-      "hourOfDay": 18,
-      "mean": 0.17,
-      "stdDev": 0.44,
-      "sampleCount": 48,
-      "thresholds": {
-        "sev5": 1.3,
-        "sev4": 1.65,
-        "sev3": 2,
-        "sev2": 2.6,
-        "sev1": 3.3
-      },
-      "lastUpdated": "2026-01-15T17:04:12.421Z"
-    },
-    {
-      "spanKey": "order-matcher:order.response",
-      "service": "order-matcher",
-      "operation": "order.response",
-      "dayOfWeek": 4,
-      "hourOfDay": 18,
-      "mean": 0.65,
-      "stdDev": 0.23,
-      "sampleCount": 48,
-      "thresholds": {
-        "sev5": 1.3894530919174892,
-        "sev4": 1.6255599509971863,
-        "sev3": 1.6255599509971863,
-        "sev2": 2,
-        "sev1": 2.5
-      },
-      "lastUpdated": "2026-01-15T17:04:12.421Z"
-    },
-    {
-      "spanKey": "exchange-api:publish orders",
-      "service": "exchange-api",
-      "operation": "publish orders",
-      "dayOfWeek": 4,
-      "hourOfDay": 18,
-      "mean": 5.9,
-      "stdDev": 2.43,
-      "sampleCount": 48,
-      "thresholds": {
-        "sev5": 0.8023643429975907,
-        "sev4": 2.0054484490145543,
-        "sev3": 2.0054484490145543,
-        "sev2": 2.0054484490145543,
-        "sev1": 2.5
-      },
-      "lastUpdated": "2026-01-15T17:04:12.421Z"
-    },
-    {
-      "spanKey": "exchange-api:POST",
-      "service": "exchange-api",
-      "operation": "POST",
-      "dayOfWeek": 4,
-      "hourOfDay": 18,
-      "mean": 124.29,
-      "stdDev": 15.62,
-      "sampleCount": 48,
-      "thresholds": {
-        "sev5": 0.9642568089812312,
-        "sev4": 2.22275154975643,
-        "sev3": 2.22275154975643,
-        "sev2": 2.22275154975643,
-        "sev1": 2.5
-      },
-      "lastUpdated": "2026-01-15T17:04:12.421Z"
-    },
-    {
-      "spanKey": "crypto-wallet:order.submit.client",
-      "service": "crypto-wallet",
-      "operation": "order.submit.client",
-      "dayOfWeek": 4,
-      "hourOfDay": 18,
-      "mean": 159.56,
-      "stdDev": 28.37,
-      "sampleCount": 48,
-      "thresholds": {
-        "sev5": 1.2247069285192118,
-        "sev4": 1.8169374797052829,
-        "sev3": 1.8169374797052829,
-        "sev2": 2,
-        "sev1": 2.5
-      },
-      "lastUpdated": "2026-01-15T17:04:12.421Z"
+      "lastUpdated": "2026-01-15T18:44:56.176Z"
     },
     {
       "spanKey": "crypto-wallet:HTTP POST",
       "service": "crypto-wallet",
       "operation": "HTTP POST",
       "dayOfWeek": 4,
-      "hourOfDay": 18,
-      "mean": 157.17,
-      "stdDev": 27.04,
-      "sampleCount": 48,
+      "hourOfDay": 19,
+      "mean": 1190.67,
+      "stdDev": 4287.17,
+      "sampleCount": 76,
       "thresholds": {
-        "sev5": 1.2880262586380704,
-        "sev4": 1.7317482233363528,
-        "sev3": 1.7317482233363528,
-        "sev2": 2,
-        "sev1": 2.5
+        "sev5": 1.3,
+        "sev4": 1.65,
+        "sev3": 2,
+        "sev2": 2.6,
+        "sev1": 3.3
       },
-      "lastUpdated": "2026-01-15T17:04:12.421Z"
+      "lastUpdated": "2026-01-15T18:44:56.176Z"
     },
     {
-      "spanKey": "order-matcher:order.match",
-      "service": "order-matcher",
-      "operation": "order.match",
+      "spanKey": "exchange-api:publish orders",
+      "service": "exchange-api",
+      "operation": "publish orders",
       "dayOfWeek": 4,
-      "hourOfDay": 18,
-      "mean": 90.13,
-      "stdDev": 4.33,
-      "sampleCount": 48,
+      "hourOfDay": 19,
+      "mean": 7.46,
+      "stdDev": 3.66,
+      "sampleCount": 56,
       "thresholds": {
-        "sev5": 1.134708135166806,
-        "sev4": 1.6238253908854372,
-        "sev3": 1.6238253908854372,
+        "sev5": 1.365257325587824,
+        "sev4": 1.538059405389002,
+        "sev3": 1.538059405389002,
         "sev2": 2,
         "sev1": 2.5
       },
-      "lastUpdated": "2026-01-15T17:04:12.421Z"
+      "lastUpdated": "2026-01-15T18:44:56.176Z"
+    },
+    {
+      "spanKey": "exchange-api:payment_response process",
+      "service": "exchange-api",
+      "operation": "payment_response process",
+      "dayOfWeek": 4,
+      "hourOfDay": 19,
+      "mean": 0.8,
+      "stdDev": 0.6,
+      "sampleCount": 56,
+      "thresholds": {
+        "sev5": 1.3140606057269573,
+        "sev4": 2.8078719604921143,
+        "sev3": 2.8078719604921143,
+        "sev2": 2.8078719604921143,
+        "sev1": 2.8078719604921143
+      },
+      "lastUpdated": "2026-01-15T18:44:56.176Z"
+    },
+    {
+      "spanKey": "exchange-api:POST",
+      "service": "exchange-api",
+      "operation": "POST",
+      "dayOfWeek": 4,
+      "hourOfDay": 19,
+      "mean": 3376.9,
+      "stdDev": 11688.7,
+      "sampleCount": 99,
+      "thresholds": {
+        "sev5": 1.7876549910447654,
+        "sev4": 1.7927030273327074,
+        "sev3": 1.7927030273327074,
+        "sev2": 8.782471414099179,
+        "sev1": 8.782471414099179
+      },
+      "lastUpdated": "2026-01-15T18:44:56.176Z"
     },
     {
       "spanKey": "exchange-api:tcp.connect",
       "service": "exchange-api",
       "operation": "tcp.connect",
       "dayOfWeek": 4,
-      "hourOfDay": 17,
-      "mean": 11.33,
-      "stdDev": 27.08,
-      "sampleCount": 281,
+      "hourOfDay": 19,
+      "mean": 8.32,
+      "stdDev": 31.35,
+      "sampleCount": 204,
       "thresholds": {
-        "sev5": 1.3477330822712228,
-        "sev4": 1.5988170631376266,
-        "sev3": 1.9695721001787385,
-        "sev2": 14.094122143298721,
-        "sev1": 14.094122143298721
+        "sev5": 0.5,
+        "sev4": 1,
+        "sev3": 1.5,
+        "sev2": 13.651172088775983,
+        "sev1": 13.651172088775983
       },
-      "lastUpdated": "2026-01-15T17:04:12.421Z"
+      "lastUpdated": "2026-01-15T18:44:56.176Z"
     },
     {
       "spanKey": "jaeger-all-in-one:/api/traces/{traceID}",
       "service": "jaeger-all-in-one",
       "operation": "/api/traces/{traceID}",
       "dayOfWeek": 4,
-      "hourOfDay": 17,
-      "mean": 3.73,
-      "stdDev": 1.46,
-      "sampleCount": 10,
+      "hourOfDay": 19,
+      "mean": 4.73,
+      "stdDev": 6.42,
+      "sampleCount": 6,
       "thresholds": {
         "sev5": 1.3,
         "sev4": 1.65,
@@ -1031,69 +964,105 @@
         "sev2": 2.6,
         "sev1": 3.3
       },
-      "lastUpdated": "2026-01-15T17:04:12.421Z"
+      "lastUpdated": "2026-01-15T18:44:56.176Z"
     },
     {
-      "spanKey": "jaeger-all-in-one:/api/traces",
-      "service": "jaeger-all-in-one",
-      "operation": "/api/traces",
+      "spanKey": "crypto-wallet:CORS Preflight",
+      "service": "crypto-wallet",
+      "operation": "CORS Preflight",
       "dayOfWeek": 4,
-      "hourOfDay": 17,
-      "mean": 40.57,
-      "stdDev": 36.11,
-      "sampleCount": 177,
+      "hourOfDay": 19,
+      "mean": 30.2,
+      "stdDev": 0,
+      "sampleCount": 3,
       "thresholds": {
-        "sev5": 1.471059475936684,
-        "sev4": 2.1402019564889847,
-        "sev3": 2.858825427389169,
-        "sev2": 4.947382864412217,
-        "sev1": 4.947382864412217
+        "sev5": 1.3,
+        "sev4": 1.65,
+        "sev3": 2,
+        "sev2": 2.6,
+        "sev1": 3.3
       },
-      "lastUpdated": "2026-01-15T17:04:12.421Z"
+      "lastUpdated": "2026-01-15T18:44:56.176Z"
     },
     {
-      "spanKey": "exchange-api:tcp.connect",
+      "spanKey": "crypto-wallet:transfer.submit.client",
+      "service": "crypto-wallet",
+      "operation": "transfer.submit.client",
+      "dayOfWeek": 4,
+      "hourOfDay": 19,
+      "mean": 32.75,
+      "stdDev": 6.3,
+      "sampleCount": 6,
+      "thresholds": {
+        "sev5": 1.3,
+        "sev4": 1.65,
+        "sev3": 2,
+        "sev2": 2.6,
+        "sev1": 3.3
+      },
+      "lastUpdated": "2026-01-15T18:44:56.176Z"
+    },
+    {
+      "spanKey": "crypto-wallet:transfer.response.received",
+      "service": "crypto-wallet",
+      "operation": "transfer.response.received",
+      "dayOfWeek": 4,
+      "hourOfDay": 19,
+      "mean": 0,
+      "stdDev": 0,
+      "sampleCount": 6,
+      "thresholds": {
+        "sev5": 1.3,
+        "sev4": 1.65,
+        "sev3": 2,
+        "sev2": 2.6,
+        "sev1": 3.3
+      },
+      "lastUpdated": "2026-01-15T18:44:56.176Z"
+    },
+    {
+      "spanKey": "exchange-api:btc.transfer",
       "service": "exchange-api",
-      "operation": "tcp.connect",
+      "operation": "btc.transfer",
       "dayOfWeek": 4,
-      "hourOfDay": 18,
-      "mean": 3.65,
-      "stdDev": 2.38,
-      "sampleCount": 109,
+      "hourOfDay": 19,
+      "mean": 0.98,
+      "stdDev": 0.07,
+      "sampleCount": 6,
       "thresholds": {
-        "sev5": 1.5035858064918055,
-        "sev4": 2.5237991191718385,
-        "sev3": 2.7160619991284474,
-        "sev2": 3.3538530844987275,
-        "sev1": 3.3538530844987275
+        "sev5": 1.3,
+        "sev4": 1.65,
+        "sev3": 2,
+        "sev2": 2.6,
+        "sev1": 3.3
       },
-      "lastUpdated": "2026-01-15T17:04:12.421Z"
+      "lastUpdated": "2026-01-15T18:44:56.176Z"
     },
     {
       "spanKey": "jaeger-all-in-one:/api/traces",
       "service": "jaeger-all-in-one",
       "operation": "/api/traces",
       "dayOfWeek": 4,
-      "hourOfDay": 18,
-      "mean": 66.05,
-      "stdDev": 56.84,
-      "sampleCount": 107,
+      "hourOfDay": 19,
+      "mean": 43.1,
+      "stdDev": 51.21,
+      "sampleCount": 125,
       "thresholds": {
-        "sev5": 1.651382360727379,
-        "sev4": 2.6597441533508754,
-        "sev3": 2.875712354168191,
-        "sev2": 3.451750705370646,
-        "sev1": 3.451750705370646
+        "sev5": 1.6189225631742594,
+        "sev4": 2.444971772124514,
+        "sev3": 3.4062157487712845,
+        "sev2": 6.932879548836164,
+        "sev1": 6.932879548836164
       },
-      "lastUpdated": "2026-01-15T17:04:12.421Z"
+      "lastUpdated": "2026-01-15T18:44:56.177Z"
     },
     {
       "spanKey": "order-matcher:tcp.connect",
       "service": "order-matcher",
       "operation": "tcp.connect",
       "dayOfWeek": 4,
-      "hourOfDay": 17,
-      "mean": 21.67,
+      "hourOfDay": 19,
+      "mean": 159.7,
       "stdDev": 0,
       "sampleCount": 1,
       "thresholds": {
@@ -1103,7 +1072,7 @@
         "sev2": 2.6,
         "sev1": 3.3
       },
-      "lastUpdated": "2026-01-15T17:04:12.421Z"
+      "lastUpdated": "2026-01-15T18:44:56.177Z"
     }
   ]
 }

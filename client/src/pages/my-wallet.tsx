@@ -1,0 +1,168 @@
+import { useEffect, useState } from "react";
+import { useLocation } from "wouter";
+import { useQuery } from "@tanstack/react-query";
+import { Card, CardContent } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import Layout from "@/components/Layout";
+
+interface Wallet {
+    asset: string;
+    balance: string;
+    available: string;
+    locked: string;
+}
+
+interface User {
+    id: string;
+    email: string;
+    status: string;
+    kyc_level: number;
+}
+
+// Asset icons and colors
+const ASSET_CONFIG: Record<string, { icon: string; color: string; name: string }> = {
+    BTC: { icon: "₿", color: "text-orange-400", name: "Bitcoin" },
+    ETH: { icon: "Ξ", color: "text-purple-400", name: "Ethereum" },
+    USDT: { icon: "₮", color: "text-emerald-400", name: "Tether" },
+    USD: { icon: "$", color: "text-green-400", name: "US Dollar" },
+    EUR: { icon: "€", color: "text-blue-400", name: "Euro" },
+};
+
+export default function MyWallet() {
+    const [, setLocation] = useLocation();
+    const [user, setUser] = useState<User | null>(null);
+
+    useEffect(() => {
+        const storedUser = localStorage.getItem("user");
+        if (!storedUser) {
+            setLocation("/login");
+            return;
+        }
+        setUser(JSON.parse(storedUser));
+    }, [setLocation]);
+
+    const { data: walletsData, isLoading } = useQuery<{ wallets: Wallet[] }>({
+        queryKey: ["/api/wallet/balances"],
+        queryFn: async () => {
+            const token = localStorage.getItem("accessToken");
+            const res = await fetch("/api/wallet/balances", {
+                headers: { Authorization: `Bearer ${token}` },
+            });
+            if (!res.ok) {
+                if (res.status === 401) {
+                    localStorage.clear();
+                    setLocation("/login");
+                }
+                throw new Error("Failed to fetch wallets");
+            }
+            return res.json();
+        },
+        enabled: !!user,
+    });
+
+    // Calculate total balance in USD (simplified)
+    const calculateTotalUSD = () => {
+        if (!walletsData?.wallets) return 0;
+        const rates: Record<string, number> = {
+            BTC: 42000,
+            ETH: 2500,
+            USDT: 1,
+            USD: 1,
+            EUR: 1.1,
+        };
+        return walletsData.wallets.reduce((total, w) => {
+            const rate = rates[w.asset] || 0;
+            return total + parseFloat(w.balance) * rate;
+        }, 0);
+    };
+
+    if (!user) return null;
+
+    return (
+        <Layout>
+            <div className="container mx-auto px-4 py-8">
+                {/* Total Balance Card */}
+                <Card className="bg-gradient-to-r from-purple-900/50 to-pink-900/50 border-purple-700 mb-8">
+                    <CardContent className="py-8">
+                        <div className="text-center">
+                            <p className="text-slate-400 mb-2">Total Balance (Est.)</p>
+                            <p className="text-5xl font-bold text-white">
+                                ${calculateTotalUSD().toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                            </p>
+                            <p className="text-slate-400 mt-2 text-sm">
+                                Welcome bonus credited! Start trading now.
+                            </p>
+                        </div>
+                    </CardContent>
+                </Card>
+
+                {/* Quick Actions */}
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
+                    <Button className="h-16 bg-emerald-600 hover:bg-emerald-700 text-lg">
+                        💰 Deposit
+                    </Button>
+                    <Button className="h-16 bg-blue-600 hover:bg-blue-700 text-lg">
+                        📤 Withdraw
+                    </Button>
+                    <Button className="h-16 bg-purple-600 hover:bg-purple-700 text-lg">
+                        🔄 Convert
+                    </Button>
+                    <Button className="h-16 bg-pink-600 hover:bg-pink-700 text-lg">
+                        📈 Trade
+                    </Button>
+                </div>
+
+                {/* Wallets Grid */}
+                <h2 className="text-2xl font-semibold text-white mb-4">Your Assets</h2>
+
+                {isLoading ? (
+                    <div className="text-center py-8 text-slate-400">Loading wallets...</div>
+                ) : (
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                        {walletsData?.wallets.map((wallet) => {
+                            const config = ASSET_CONFIG[wallet.asset] || { icon: "?", color: "text-slate-400", name: wallet.asset };
+                            const balance = parseFloat(wallet.balance);
+                            const usdValue = balance * (
+                                wallet.asset === 'BTC' ? 42000 :
+                                    wallet.asset === 'ETH' ? 2500 :
+                                        wallet.asset === 'EUR' ? 1.1 : 1
+                            );
+
+                            return (
+                                <Card key={wallet.asset} className="bg-slate-800/50 border-slate-700 hover:border-purple-600 transition-colors">
+                                    <CardContent className="p-6">
+                                        <div className="flex items-center gap-4">
+                                            <div className={`text-4xl ${config.color}`}>
+                                                {config.icon}
+                                            </div>
+                                            <div className="flex-1">
+                                                <div className="flex items-center gap-2">
+                                                    <span className="font-semibold text-white text-lg">{wallet.asset}</span>
+                                                    <span className="text-slate-400 text-sm">{config.name}</span>
+                                                </div>
+                                                <div className="text-2xl font-bold text-white">
+                                                    {parseFloat(wallet.balance).toLocaleString(undefined, {
+                                                        minimumFractionDigits: wallet.asset === 'BTC' ? 8 : 2,
+                                                        maximumFractionDigits: wallet.asset === 'BTC' ? 8 : 2,
+                                                    })}
+                                                </div>
+                                                <div className="text-sm text-slate-400">
+                                                    ≈ ${usdValue.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                                </div>
+                                            </div>
+                                        </div>
+                                        {parseFloat(wallet.locked) > 0 && (
+                                            <div className="mt-4 text-sm text-amber-400">
+                                                🔒 {wallet.locked} locked in orders
+                                            </div>
+                                        )}
+                                    </CardContent>
+                                </Card>
+                            );
+                        })}
+                    </div>
+                )}
+            </div>
+        </Layout>
+    );
+}

@@ -7,6 +7,7 @@ import type {
 } from './types';
 import { SEVERITY_CONFIG } from './types';
 import { traceProfiler } from './trace-profiler';
+import { streamAnalyzer } from './stream-analyzer';
 
 const JAEGER_API_URL = process.env.JAEGER_URL || 'http://localhost:16686';
 const DETECTION_INTERVAL = 10000; // 10 seconds
@@ -166,6 +167,13 @@ export class AnomalyDetector {
                     if (anomaly) {
                         this.anomalies.set(anomaly.id, anomaly);
                         newAnomalies++;
+
+                        // Stream SEV1-3 anomalies for real-time LLM analysis
+                        if (anomaly.severity <= 3) {
+                            streamAnalyzer.enqueue(anomaly).catch(err =>
+                                console.error('[DETECTOR] Stream enqueue failed:', err.message)
+                            );
+                        }
 
                         console.log(
                             `[DETECTOR] 🚨 SEV${anomaly.severity} ${anomaly.severityName}: ` +

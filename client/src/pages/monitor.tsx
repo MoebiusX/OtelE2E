@@ -1,6 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useLocation } from "wouter";
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -23,6 +23,20 @@ const SEVERITY_CONFIG = {
 } as const;
 
 type SeverityLevel = 1 | 2 | 3 | 4 | 5;
+
+// WebSocket message types
+interface WSMessage {
+    type: 'analysis-start' | 'analysis-chunk' | 'analysis-complete' | 'alert' | 'heartbeat';
+    data?: any;
+    anomalyIds?: string[];
+    timestamp?: string;
+}
+
+interface LiveAlert {
+    severity: 'critical' | 'high' | 'medium';
+    message: string;
+    timestamp: string;
+}
 
 // Types
 interface ServiceHealth {
@@ -69,6 +83,8 @@ interface AnalysisResponse {
     possibleCauses: string[];
     recommendations: string[];
     confidence: 'low' | 'medium' | 'high';
+    prompt?: string;        // Exact prompt sent to LLM (for training)
+    rawResponse?: string;   // Raw LLM response (for training)
 }
 
 interface RecalculateResponse {
@@ -99,6 +115,76 @@ export default function Monitor() {
     const queryClient = useQueryClient();
     const [selectedAnomaly, setSelectedAnomaly] = useState<Anomaly | null>(null);
     const [minSeverity, setMinSeverity] = useState<SeverityLevel>(5); // Show all by default (SEV 5 = lowest)
+
+    // Live streaming state
+    const [streamingText, setStreamingText] = useState<string>('');
+    const [isStreaming, setIsStreaming] = useState<boolean>(false);
+    const [streamingAnomalyIds, setStreamingAnomalyIds] = useState<string[]>([]);
+    const [liveAlerts, setLiveAlerts] = useState<LiveAlert[]>([]);
+    const [wsConnected, setWsConnected] = useState<boolean>(false);
+    const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
+    const wsRef = useRef<WebSocket | null>(null);
+
+    // WebSocket connection
+    useEffect(() => {
+        const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+        const wsUrl = `${protocol}//${window.location.host}/ws/monitor`;
+
+        const connect = () => {
+            const ws = new WebSocket(wsUrl);
+            wsRef.current = ws;
+
+            ws.onopen = () => {
+                console.log('[WS] Connected to monitor');
+                setWsConnected(true);
+            };
+
+            ws.onclose = () => {
+                console.log('[WS] Disconnected, reconnecting...');
+                setWsConnected(false);
+                setTimeout(connect, 3000);
+            };
+
+            ws.onmessage = (event) => {
+                const msg: WSMessage = JSON.parse(event.data);
+
+                switch (msg.type) {
+                    case 'analysis-start':
+                        setIsStreaming(true);
+                        setStreamingText('');
+                        setStreamingAnomalyIds(msg.anomalyIds || []);
+                        break;
+
+                    case 'analysis-chunk':
+                        setStreamingText(prev => prev + (msg.data || ''));
+                        break;
+
+                    case 'analysis-complete':
+                        setIsStreaming(false);
+                        setLastUpdated(new Date());
+                        break;
+
+                    case 'alert':
+                        setLiveAlerts(prev => [{
+                            severity: msg.data.severity,
+                            message: msg.data.message,
+                            timestamp: msg.timestamp || new Date().toISOString()
+                        }, ...prev].slice(0, 5)); // Keep last 5 alerts
+                        break;
+                }
+            };
+
+            ws.onerror = (err) => {
+                console.error('[WS] Error:', err);
+            };
+        };
+
+        connect();
+
+        return () => {
+            wsRef.current?.close();
+        };
+    }, []);
 
     // Fetch health data
     const { data: healthData } = useQuery<{ status: string; services: ServiceHealth[] }>({
@@ -159,6 +245,55 @@ export default function Monitor() {
             // Refresh all data after recalculation
             queryClient.invalidateQueries({ queryKey: ["/api/monitor"] });
         },
+    });
+
+    // Training data rating mutation
+    const [showCorrectionModal, setShowCorrectionModal] = useState(false);
+    const [correctionText, setCorrectionText] = useState('');
+    const [ratingSuccess, setRatingSuccess] = useState<'good' | 'bad' | null>(null);
+
+    const ratingMutation = useMutation({
+        mutationFn: async ({ rating, correction }: { rating: 'good' | 'bad'; correction?: string }) => {
+            if (!selectedAnomaly || !analyzeMutation.data) return;
+
+            // Use the EXACT prompt and response from the LLM call
+            const res = await fetch("/api/monitor/training/rate", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    anomaly: {
+                        id: selectedAnomaly.id,
+                        traceId: selectedAnomaly.traceId,
+                        service: selectedAnomaly.service,
+                        operation: selectedAnomaly.operation,
+                        duration: selectedAnomaly.duration,
+                        expectedMean: selectedAnomaly.expectedMean,
+                        deviation: selectedAnomaly.deviation,
+                        severity: selectedAnomaly.severity,
+                        severityName: selectedAnomaly.severityName,
+                        timestamp: selectedAnomaly.timestamp,
+                    },
+                    // Use exact prompt and response from the analysis (for training)
+                    prompt: analyzeMutation.data.prompt || `Analyze anomaly: ${selectedAnomaly.service}:${selectedAnomaly.operation}`,
+                    completion: analyzeMutation.data.rawResponse || `${analyzeMutation.data.summary}\n\nCauses: ${analyzeMutation.data.possibleCauses.join(', ')}\n\nRecommendations: ${analyzeMutation.data.recommendations.join(', ')}`,
+                    rating,
+                    correction,
+                }),
+            });
+            return res.json();
+        },
+        onSuccess: (_, variables) => {
+            setRatingSuccess(variables.rating);
+            setShowCorrectionModal(false);
+            setCorrectionText('');
+            setTimeout(() => setRatingSuccess(null), 3000);
+        },
+    });
+
+    // Training stats query
+    const { data: trainingStats } = useQuery<{ totalExamples: number; goodExamples: number; badExamples: number }>({
+        queryKey: ["/api/monitor/training/stats"],
+        refetchInterval: 30000,
     });
 
     // Handler to select anomaly and reset previous analysis
@@ -270,6 +405,76 @@ export default function Monitor() {
                     </span>
                 </div>
             )}
+
+            {/* Live Analysis Panel */}
+            <Card className="mb-6 bg-slate-900 border-slate-700">
+                <CardHeader className="pb-3">
+                    <div className="flex items-center justify-between">
+                        <CardTitle className="text-white text-xl font-semibold flex items-center gap-3">
+                            <span className={`h-3 w-3 rounded-full ${wsConnected ? 'bg-green-500 animate-pulse' : 'bg-red-500'}`}></span>
+                            🔴 Live Analysis
+                            {isStreaming && <span className="text-sm text-slate-400 font-normal">(streaming...)</span>}
+                        </CardTitle>
+                        <div className="flex items-center gap-3">
+                            {lastUpdated && (
+                                <span className="text-sm text-slate-400">
+                                    Last updated: {lastUpdated.toLocaleTimeString()}
+                                </span>
+                            )}
+                            <Badge className={`${wsConnected ? 'bg-green-900 text-green-400' : 'bg-red-900 text-red-400'}`}>
+                                {wsConnected ? 'Connected' : 'Disconnected'}
+                            </Badge>
+                        </div>
+                    </div>
+                </CardHeader>
+                <CardContent>
+                    {/* Live Alerts */}
+                    {liveAlerts.length > 0 && (
+                        <div className="mb-4 space-y-2">
+                            {liveAlerts.map((alert, i) => (
+                                <div
+                                    key={i}
+                                    className={`p-3 rounded-lg border ${alert.severity === 'critical'
+                                        ? 'bg-red-900/30 border-red-700'
+                                        : alert.severity === 'high'
+                                            ? 'bg-orange-900/30 border-orange-700'
+                                            : 'bg-amber-900/30 border-amber-700'
+                                        }`}
+                                >
+                                    <span className="font-medium">
+                                        {alert.severity === 'critical' ? '🔴' : alert.severity === 'high' ? '🟠' : '🟡'}
+                                        {' '}{alert.message}
+                                    </span>
+                                    <span className="text-xs text-slate-400 ml-2">
+                                        {new Date(alert.timestamp).toLocaleTimeString()}
+                                    </span>
+                                </div>
+                            ))}
+                        </div>
+                    )}
+
+                    {/* Streaming Output */}
+                    {(streamingText || isStreaming) ? (
+                        <div className="bg-slate-800 rounded-lg p-4 border border-slate-700">
+                            <div className="font-mono text-sm text-green-400 whitespace-pre-wrap min-h-[100px] max-h-[300px] overflow-y-auto">
+                                {streamingText || 'Waiting for LLM analysis...'}
+                                {isStreaming && <span className="animate-pulse">▊</span>}
+                            </div>
+                            {streamingAnomalyIds.length > 0 && (
+                                <div className="mt-2 text-xs text-slate-500">
+                                    Analyzing anomalies: {streamingAnomalyIds.slice(0, 3).map(id => id.slice(0, 8)).join(', ')}
+                                    {streamingAnomalyIds.length > 3 && ` +${streamingAnomalyIds.length - 3} more`}
+                                </div>
+                            )}
+                        </div>
+                    ) : (
+                        <div className="bg-slate-800 rounded-lg p-4 border border-slate-700 text-slate-400 text-center">
+                            <p className="text-base">Waiting for SEV1-3 anomalies...</p>
+                            <p className="text-sm mt-1">Analysis will stream automatically when critical alerts are detected</p>
+                        </div>
+                    )}
+                </CardContent>
+            </Card>
 
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
                 {/* Service Health Panel */}
@@ -474,6 +679,66 @@ export default function Monitor() {
                                             {analyzeMutation.data.confidence}
                                         </Badge>
                                     </div>
+
+                                    {/* Rating Buttons */}
+                                    <div className="flex items-center gap-3 pt-3 border-t border-slate-700">
+                                        <span className="text-slate-400 text-base">Rate this analysis:</span>
+                                        <button
+                                            onClick={() => ratingMutation.mutate({ rating: 'good' })}
+                                            disabled={ratingMutation.isPending || ratingSuccess !== null}
+                                            className="px-4 py-2 rounded-md bg-emerald-900/50 border border-emerald-700 text-emerald-400 hover:bg-emerald-800/50 disabled:opacity-50 transition-colors"
+                                        >
+                                            {ratingSuccess === 'good' ? '✓ Saved!' : '👍 Good'}
+                                        </button>
+                                        <button
+                                            onClick={() => setShowCorrectionModal(true)}
+                                            disabled={ratingMutation.isPending || ratingSuccess !== null}
+                                            className="px-4 py-2 rounded-md bg-red-900/50 border border-red-700 text-red-400 hover:bg-red-800/50 disabled:opacity-50 transition-colors"
+                                        >
+                                            {ratingSuccess === 'bad' ? '✓ Saved!' : '👎 Bad'}
+                                        </button>
+                                        {trainingStats && (
+                                            <span className="ml-auto text-sm text-slate-500">
+                                                {trainingStats.totalExamples} examples collected
+                                            </span>
+                                        )}
+                                    </div>
+                                </div>
+                            )}
+
+                            {/* Correction Modal */}
+                            {showCorrectionModal && (
+                                <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+                                    <div className="bg-slate-900 border border-slate-700 rounded-lg p-6 w-full max-w-2xl mx-4">
+                                        <h3 className="text-xl font-semibold text-white mb-4">Provide Correction</h3>
+                                        <p className="text-slate-400 mb-4">
+                                            How should the AI have responded? Your correction will be used to improve future analysis.
+                                        </p>
+                                        <textarea
+                                            value={correctionText}
+                                            onChange={(e) => setCorrectionText(e.target.value)}
+                                            placeholder="Enter the correct analysis..."
+                                            className="w-full h-40 bg-slate-800 border border-slate-700 rounded-lg p-3 text-white resize-none focus:outline-none focus:border-purple-500"
+                                        />
+                                        <div className="flex gap-3 mt-4 justify-end">
+                                            <button
+                                                onClick={() => {
+                                                    setShowCorrectionModal(false);
+                                                    setCorrectionText('');
+                                                }}
+                                                className="px-4 py-2 rounded-md border border-slate-600 text-slate-300 hover:bg-slate-800"
+                                            >
+                                                Cancel
+                                            </button>
+                                            <button
+                                                onClick={() => ratingMutation.mutate({ rating: 'bad', correction: correctionText })}
+                                                disabled={!correctionText.trim() || ratingMutation.isPending}
+                                                className="px-4 py-2 rounded-md bg-purple-600 text-white hover:bg-purple-700 disabled:opacity-50"
+                                            >
+                                                {ratingMutation.isPending ? 'Saving...' : 'Submit Correction'}
+                                            </button>
+                                        </div>
+                                    </div>
                                 </div>
                             )}
                         </div>
@@ -505,10 +770,10 @@ export default function Monitor() {
                                     <div className="bg-slate-800 rounded-lg p-4 border border-slate-700">
                                         <div className="text-slate-400 text-sm mb-1">CPU Usage</div>
                                         <div className={`text-2xl font-bold ${(correlationMutation.data.metrics.cpuPercent ?? 0) >= 80
-                                                ? 'text-red-400'
-                                                : (correlationMutation.data.metrics.cpuPercent ?? 0) >= 60
-                                                    ? 'text-amber-400'
-                                                    : 'text-emerald-400'
+                                            ? 'text-red-400'
+                                            : (correlationMutation.data.metrics.cpuPercent ?? 0) >= 60
+                                                ? 'text-amber-400'
+                                                : 'text-emerald-400'
                                             }`}>
                                             {correlationMutation.data.metrics.cpuPercent !== null
                                                 ? `${correlationMutation.data.metrics.cpuPercent.toFixed(1)}%`
@@ -520,8 +785,8 @@ export default function Monitor() {
                                     <div className="bg-slate-800 rounded-lg p-4 border border-slate-700">
                                         <div className="text-slate-400 text-sm mb-1">Memory</div>
                                         <div className={`text-2xl font-bold ${(correlationMutation.data.metrics.memoryMB ?? 0) >= 512
-                                                ? 'text-amber-400'
-                                                : 'text-emerald-400'
+                                            ? 'text-amber-400'
+                                            : 'text-emerald-400'
                                             }`}>
                                             {correlationMutation.data.metrics.memoryMB !== null
                                                 ? `${correlationMutation.data.metrics.memoryMB.toFixed(0)}MB`
@@ -543,10 +808,10 @@ export default function Monitor() {
                                     <div className="bg-slate-800 rounded-lg p-4 border border-slate-700">
                                         <div className="text-slate-400 text-sm mb-1">Error Rate</div>
                                         <div className={`text-2xl font-bold ${(correlationMutation.data.metrics.errorRate ?? 0) >= 5
-                                                ? 'text-red-400'
-                                                : (correlationMutation.data.metrics.errorRate ?? 0) >= 1
-                                                    ? 'text-amber-400'
-                                                    : 'text-emerald-400'
+                                            ? 'text-red-400'
+                                            : (correlationMutation.data.metrics.errorRate ?? 0) >= 1
+                                                ? 'text-amber-400'
+                                                : 'text-emerald-400'
                                             }`}>
                                             {correlationMutation.data.metrics.errorRate !== null
                                                 ? `${correlationMutation.data.metrics.errorRate.toFixed(1)}%`
@@ -568,8 +833,8 @@ export default function Monitor() {
                                     <div className="bg-slate-800 rounded-lg p-4 border border-slate-700">
                                         <div className="text-slate-400 text-sm mb-1">Connections</div>
                                         <div className={`text-2xl font-bold ${(correlationMutation.data.metrics.activeConnections ?? 0) >= 100
-                                                ? 'text-amber-400'
-                                                : 'text-white'
+                                            ? 'text-amber-400'
+                                            : 'text-white'
                                             }`}>
                                             {correlationMutation.data.metrics.activeConnections !== null
                                                 ? correlationMutation.data.metrics.activeConnections

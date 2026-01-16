@@ -9,6 +9,7 @@ import { traceProfiler } from './trace-profiler';
 import { anomalyDetector } from './anomaly-detector';
 import { historyStore } from './history-store';
 import { metricsCorrelator } from './metrics-correlator';
+import { trainingStore } from './training-store';
 import type {
     HealthResponse,
     AnomaliesResponse,
@@ -255,6 +256,76 @@ router.get('/metrics/health', async (req, res) => {
         prometheus: healthy ? 'healthy' : 'unreachable',
         url: process.env.PROMETHEUS_URL || 'http://localhost:9090'
     });
+});
+
+// ============================================
+// Training Data Collection Routes
+// ============================================
+
+/**
+ * POST /api/monitor/training/rate
+ * Rate an AI analysis as good or bad
+ */
+router.post('/training/rate', (req, res) => {
+    const { anomaly, prompt, completion, rating, correction, notes } = req.body;
+
+    if (!anomaly || !prompt || !completion || !rating) {
+        return res.status(400).json({ error: 'Missing required fields' });
+    }
+
+    if (!['good', 'bad'].includes(rating)) {
+        return res.status(400).json({ error: 'Rating must be good or bad' });
+    }
+
+    const example = trainingStore.addExample({
+        anomaly,
+        prompt,
+        completion,
+        rating,
+        correction,
+        notes
+    });
+
+    res.json({ success: true, example });
+});
+
+/**
+ * GET /api/monitor/training/stats
+ * Get training data statistics
+ */
+router.get('/training/stats', (req, res) => {
+    const stats = trainingStore.getStats();
+    res.json(stats);
+});
+
+/**
+ * GET /api/monitor/training/examples
+ * Get all training examples
+ */
+router.get('/training/examples', (req, res) => {
+    const examples = trainingStore.getAll();
+    res.json({ examples });
+});
+
+/**
+ * GET /api/monitor/training/export
+ * Export training data as JSONL
+ */
+router.get('/training/export', (req, res) => {
+    const jsonl = trainingStore.exportToJsonl();
+
+    res.setHeader('Content-Type', 'application/jsonl');
+    res.setHeader('Content-Disposition', 'attachment; filename=training-data.jsonl');
+    res.send(jsonl);
+});
+
+/**
+ * DELETE /api/monitor/training/:id
+ * Delete a training example
+ */
+router.delete('/training/:id', (req, res) => {
+    const deleted = trainingStore.delete(req.params.id);
+    res.json({ success: deleted });
 });
 
 export default router;

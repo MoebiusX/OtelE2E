@@ -8,6 +8,9 @@ import { kongClient } from "./services/kong-client";
 import { rabbitMQClient } from "./services/rabbitmq-client";
 import { monitorRoutes, startMonitor } from "./monitor";
 import { metricsMiddleware, registerMetricsEndpoint } from "./metrics/prometheus";
+import authRoutes from "./auth/routes";
+import walletRoutes from "./wallet/routes";
+import tradeRoutes from "./trade/routes";
 
 const app = express();
 
@@ -97,6 +100,15 @@ app.use((req, res, next) => {
   // Register API routes
   registerRoutes(app);
 
+  // Register auth routes
+  app.use('/api/auth', authRoutes);
+
+  // Register wallet routes
+  app.use('/api/wallet', walletRoutes);
+
+  // Register trade routes
+  app.use('/api/trade', tradeRoutes);
+
   // Register monitor routes
   app.use('/api/monitor', monitorRoutes);
 
@@ -115,6 +127,10 @@ app.use((req, res, next) => {
   const { createServer } = await import("http");
   const server = createServer(app);
 
+  // Setup WebSocket server for real-time monitoring
+  const { wsServer } = await import("./monitor/ws-server");
+  wsServer.setup(server);
+
   // Setup Vite in development or serve static in production
   if (app.get("env") === "development") {
     await setupVite(app, server);
@@ -128,5 +144,6 @@ app.use((req, res, next) => {
   const port = 5000;
   server.listen(port, "0.0.0.0", () => {
     log(`serving on port ${port}`);
+    log(`WebSocket available at ws://localhost:${port}/ws/monitor`);
   });
 })();

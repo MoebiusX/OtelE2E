@@ -138,11 +138,43 @@ services:
       - "host.docker.internal:host-gateway"
     restart: unless-stopped
 
+  # App Database (PostgreSQL) - User management, wallets, orders
+  app-database:
+    image: postgres:15
+    environment:
+      POSTGRES_USER: exchange
+      POSTGRES_PASSWORD: exchange123
+      POSTGRES_DB: crypto_exchange
+    ports:
+      - "5433:5432"  # Different port to avoid conflict with kong-database
+    volumes:
+      - app_data:/var/lib/postgresql/data
+      - ./db/init.sql:/docker-entrypoint-initdb.d/init.sql
+    networks:
+      - kong-net
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U exchange -d crypto_exchange"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # MailDev - Dev SMTP server with web UI
+  maildev:
+    image: maildev/maildev
+    ports:
+      - "1080:1080"  # Web UI
+      - "1025:1025"  # SMTP
+    networks:
+      - kong-net
+    restart: unless-stopped
+
 volumes:
   kong_data:
   rabbitmq_data:
   ollama_data:
   prometheus_data:
+  app_data:
 
 networks:
   kong-net:
