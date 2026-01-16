@@ -12,8 +12,11 @@ import type {
     JaegerSpan
 } from './types';
 import { historyStore } from './history-store';
+import { config } from '../config';
+import { createLogger } from '../lib/logger';
 
-const JAEGER_URL = process.env.JAEGER_URL || 'http://localhost:16686';
+const logger = createLogger('baseline-calculator');
+const JAEGER_URL = config.observability.jaegerUrl;
 const MONITORED_SERVICES = ['crypto-wallet', 'api-gateway', 'exchange-api', 'order-matcher'];
 const LOOKBACK_DAYS = 30;
 const MIN_SAMPLES_FOR_THRESHOLD = 10;
@@ -66,14 +69,14 @@ export class BaselineCalculator {
             const response = await fetch(url);
 
             if (!response.ok) {
-                console.warn(`[CALCULATOR] Failed to fetch traces for ${service}: ${response.status}`);
+                logger.warn({ service, status: response.status }, 'Failed to fetch traces from Jaeger');
                 return [];
             }
 
             const data = await response.json();
             return data.data || [];
         } catch (error: any) {
-            console.error(`[CALCULATOR] Error fetching traces for ${service}:`, error.message);
+            logger.error({ service, err: error }, 'Error fetching traces from Jaeger');
             return [];
         }
     }
@@ -229,18 +232,18 @@ export class BaselineCalculator {
 
         this.isCalculating = true;
         const startTime = Date.now();
-        console.log(`[CALCULATOR] Starting baseline recalculation (${LOOKBACK_DAYS} days)...`);
+        logger.info({ lookbackDays: LOOKBACK_DAYS }, 'Starting baseline recalculation');
 
         try {
             // Collect all spans from all services
             const allSpans: SpanData[] = [];
 
             for (const service of MONITORED_SERVICES) {
-                console.log(`[CALCULATOR] Fetching traces for ${service}...`);
+                logger.info({ service }, 'Fetching traces for service');
                 const traces = await this.fetchHistoricalTraces(service, LOOKBACK_DAYS);
                 const spans = this.extractSpanData(traces);
                 allSpans.push(...spans);
-                console.log(`[CALCULATOR] ${service}: ${traces.length} traces, ${spans.length} spans`);
+                logger.info({ service, tracesCount: traces.length, spansCount: spans.length }, 'Collected traces for service');
             }
 
             if (allSpans.length === 0) {
@@ -253,7 +256,7 @@ export class BaselineCalculator {
             }
 
             // Group into buckets
-            console.log(`[CALCULATOR] Processing ${allSpans.length} total spans...`);
+            logger.info({ totalSpans: allSpans.length }, 'Processing spans into time buckets');
             const buckets = this.groupIntoBuckets(allSpans);
 
             // Calculate baselines for each bucket
@@ -306,7 +309,7 @@ export class BaselineCalculator {
             historyStore.setTimeBaselines(Array.from(newBaselines.values()));
 
             const duration = Date.now() - startTime;
-            console.log(`[CALCULATOR] ✅ Calculated ${newBaselines.size} time-aware baselines in ${duration}ms`);
+            logger.info({ baselinesCount: newBaselines.size, durationMs: duration }, 'Calculated time-aware baselines');
 
             return {
                 success: true,
@@ -316,7 +319,7 @@ export class BaselineCalculator {
             };
 
         } catch (error: any) {
-            console.error('[CALCULATOR] Recalculation failed:', error.message);
+            logger.error({ err: error }, 'Baseline recalculation failed');
             return {
                 success: false,
                 baselinesCount: 0,
@@ -409,7 +412,7 @@ export class BaselineCalculator {
                 const key = this.getBucketKey(b.spanKey, b.dayOfWeek, b.hourOfDay);
                 this.timeBaselines.set(key, b);
             }
-            console.log(`[CALCULATOR] Loaded ${this.timeBaselines.size} time baselines from storage`);
+            logger.info({ baselinesCount: this.timeBaselines.size }, 'Loaded time baselines from storage');
         }
     }
 }

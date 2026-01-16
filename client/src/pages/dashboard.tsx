@@ -11,6 +11,7 @@ import { TraceViewer } from "@/components/trace-viewer";
 import { formatTimeAgo } from "@/lib/utils";
 import { Bitcoin, TrendingUp, Wallet, ArrowUpRight, ArrowDownRight, Send, ArrowRightLeft } from "lucide-react";
 import type { Order, Transfer } from "@shared/schema";
+import Layout from "@/components/Layout";
 
 type TabType = 'trade' | 'transfer';
 
@@ -39,15 +40,14 @@ export default function Dashboard() {
   };
 
   return (
-    <div className="min-h-screen bg-slate-950">
-      {/* Header */}
-      <header className="bg-slate-900 border-b border-slate-800">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center h-16">
+    <Layout>
+      <div className="min-h-screen bg-slate-950">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+          <div className="flex justify-between items-center mb-6">
             <div className="flex items-center space-x-4">
               <div className="flex items-center space-x-2">
                 <Bitcoin className="w-6 h-6 text-orange-500" />
-                <h1 className="text-xl font-bold text-white">Crypto Exchange</h1>
+                <h1 className="text-xl font-bold text-white">Trading Dashboard</h1>
               </div>
               <Badge className="px-2 py-1 bg-orange-500/20 text-orange-400 text-xs font-medium border-none">
                 OpenTelemetry Demo
@@ -96,10 +96,9 @@ export default function Dashboard() {
             </div>
           </div>
         </div>
-      </header>
 
-      {/* Main Content */}
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        {/* Main Content */}
+        <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
 
           {/* Left Column - Trade/Transfer */}
@@ -229,5 +228,6 @@ export default function Dashboard() {
         </div>
       </main>
     </div>
+    </Layout>
   );
 }

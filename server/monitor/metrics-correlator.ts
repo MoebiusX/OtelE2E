@@ -6,8 +6,11 @@
  */
 
 import fetch from 'node-fetch';
+import { config } from '../config';
+import { createLogger } from '../lib/logger';
 
-const PROMETHEUS_URL = process.env.PROMETHEUS_URL || 'http://localhost:9090';
+const logger = createLogger('metrics-correlator');
+const PROMETHEUS_URL = config.observability.prometheusUrl;
 
 export interface CorrelatedMetrics {
     anomalyId: string;
@@ -61,7 +64,7 @@ class MetricsCorrelator {
         const start = new Date(timestamp.getTime() - windowMs);
         const end = new Date(timestamp.getTime() + windowMs);
 
-        console.log(`[CORRELATOR] Fetching metrics for ${service} at ${timestamp.toISOString()}`);
+        logger.info({ service, timestamp: timestamp.toISOString() }, 'Fetching metrics for anomaly correlation');
 
         // Query all metrics in parallel
         const [cpu, memory, requestRate, errorRate, p99Latency, activeConns] = await Promise.all([
@@ -119,7 +122,7 @@ class MetricsCorrelator {
 
             const response = await fetch(url);
             if (!response.ok) {
-                console.warn(`[CORRELATOR] Prometheus query failed: ${response.status}`);
+                logger.warn({ status: response.status, metricQuery }, 'Prometheus query failed');
                 return null;
             }
 
@@ -137,7 +140,7 @@ class MetricsCorrelator {
 
             return null;
         } catch (error: any) {
-            console.warn(`[CORRELATOR] Error querying ${metricQuery}:`, error.message);
+            logger.warn({ metricQuery, err: error }, 'Error querying metric from Prometheus');
             return null;
         }
     }
@@ -172,7 +175,7 @@ class MetricsCorrelator {
 
             return 0;
         } catch (error: any) {
-            console.warn(`[CORRELATOR] Error querying error rate:`, error.message);
+            logger.warn({ err: error }, 'Error querying error rate from Prometheus');
             return null;
         }
     }
@@ -206,7 +209,7 @@ class MetricsCorrelator {
 
             return null;
         } catch (error: any) {
-            console.warn(`[CORRELATOR] Error querying P99 latency:`, error.message);
+            logger.warn({ err: error }, 'Error querying P99 latency from Prometheus');
             return null;
         }
     }
@@ -288,7 +291,7 @@ class MetricsCorrelator {
                 prometheusHealthy: true,
             };
         } catch (error: any) {
-            console.error('[CORRELATOR] Error getting metrics summary:', error.message);
+            logger.error({ err: error }, 'Error getting metrics summary from Prometheus');
             return {
                 timestamp: new Date(),
                 prometheusHealthy: false,

@@ -13,6 +13,9 @@ import type {
 } from './types';
 import { historyStore } from './history-store';
 import { metricsCorrelator, type CorrelatedMetrics } from './metrics-correlator';
+import { createLogger } from '../lib/logger';
+
+const logger = createLogger('analysis-service');
 
 const OLLAMA_URL = process.env.OLLAMA_URL || 'http://localhost:11434';
 const MODEL = process.env.OLLAMA_MODEL || 'llama3.2:1b';  // 1b for faster inference
@@ -33,7 +36,7 @@ export class AnalysisService {
             this.isOllamaAvailable = response.ok;
 
             if (this.isOllamaAvailable) {
-                console.log('[ANALYSIS] Ollama is available');
+                logger.info('Ollama service is available');
 
                 // Check if model is installed
                 const data = await response.json();
@@ -41,14 +44,14 @@ export class AnalysisService {
                 const hasModel = models.some((m: any) => m.name.startsWith(MODEL.split(':')[0]));
 
                 if (!hasModel) {
-                    console.log(`[ANALYSIS] Model ${MODEL} not found. Run: docker exec -it otele2e-ollama-1 ollama pull ${MODEL}`);
+                    logger.warn({ model: MODEL }, 'Ollama model not found - pull model to enable AI analysis');
                 }
             }
 
             return this.isOllamaAvailable;
         } catch (error) {
             this.isOllamaAvailable = false;
-            console.log('[ANALYSIS] Ollama not available - AI analysis disabled');
+            logger.warn('Ollama service not available - AI analysis disabled');
             return false;
         }
     }
@@ -84,9 +87,9 @@ export class AnalysisService {
                     anomaly.service,
                     new Date(anomaly.timestamp)
                 );
-                console.log('[ANALYSIS] Including metrics in prompt:', !!correlatedMetrics);
+                logger.debug({ hasMetrics: !!correlatedMetrics }, 'Metrics correlation result');
             } catch (metricsError: any) {
-                console.warn('[ANALYSIS] Metrics unavailable:', metricsError.message);
+                logger.warn({ err: metricsError }, 'Metrics unavailable for analysis');
             }
 
             const analysis = await this.callOllama(anomaly, fullTrace, correlatedMetrics);
@@ -96,7 +99,7 @@ export class AnalysisService {
 
             return analysis;
         } catch (error: any) {
-            console.error('[ANALYSIS] Error calling Ollama:', error.message);
+            logger.error({ err: error }, 'Ollama analysis request failed');
             return this.createPlaceholderAnalysis(anomaly, error.message);
         }
     }

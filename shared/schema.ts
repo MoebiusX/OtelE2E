@@ -158,3 +158,120 @@ export type Span = z.infer<typeof spanSchema>;
 // Legacy type alias for backwards compatibility during migration
 export type Payment = Order;
 export type InsertPayment = InsertOrder;
+
+// ============================================
+// TRANSPARENCY API SCHEMAS
+// ============================================
+
+// System Status - for public transparency dashboard
+export const systemStatusSchema = z.object({
+  status: z.enum(['operational', 'degraded', 'maintenance']),
+  timestamp: z.string(),
+  uptime: z.number().min(0).max(100),
+  metrics: z.object({
+    tradesLast24h: z.number().int().nonnegative(),
+    tradesTotal: z.number().int().nonnegative(),
+    avgExecutionMs: z.number().nonnegative(),
+    anomaliesDetected: z.number().int().nonnegative(),
+    anomaliesResolved: z.number().int().nonnegative(),
+    activeUsers: z.number().int().nonnegative(),
+  }),
+  services: z.object({
+    api: z.enum(['operational', 'degraded', 'down']),
+    exchange: z.enum(['operational', 'degraded', 'down']),
+    wallets: z.enum(['operational', 'degraded', 'down']),
+    monitoring: z.enum(['operational', 'degraded', 'down']),
+  }),
+  performance: z.object({
+    p50ResponseMs: z.number().nonnegative(),
+    p95ResponseMs: z.number().nonnegative(),
+    p99ResponseMs: z.number().nonnegative(),
+  }),
+});
+
+// Public Trade - anonymized trade for transparency feed
+export const publicTradeSchema = z.object({
+  tradeId: z.string(),
+  timestamp: z.string(),
+  type: z.enum(['BUY', 'SELL']),
+  asset: z.string(),
+  amount: z.number().positive(),
+  price: z.number().positive(),
+  executionTimeMs: z.number().nonnegative(),
+  status: z.enum(['completed', 'pending', 'failed']),
+  aiVerified: z.boolean(),
+});
+
+// Transparency Metrics - trust and monitoring stats
+export const transparencyMetricsSchema = z.object({
+  timestamp: z.string(),
+  trust: z.object({
+    uptimePercentage: z.number().min(0).max(100),
+    totalTradesProcessed: z.number().int().nonnegative(),
+    anomalyDetectionRate: z.number().nonnegative(),
+    avgResolutionTimeMs: z.number().nonnegative(),
+  }),
+  realtime: z.object({
+    tradesPerMinute: z.number().nonnegative(),
+    activeTraders: z.number().int().nonnegative(),
+    currentPrice: z.number().nonnegative(),
+    volume24h: z.number().nonnegative(),
+  }),
+  monitoring: z.object({
+    tracesCollected: z.number().int().nonnegative(),
+    spansAnalyzed: z.number().int().nonnegative(),
+    baselinesCount: z.number().int().nonnegative(),
+    lastAnomalyDetected: z.string().nullable(),
+  }),
+});
+
+// Trade Trace Detail - for trace viewer
+export const tradeTraceSchema = z.object({
+  traceId: z.string(),
+  orderId: z.string().optional(),
+  timestamp: z.string(),
+  duration: z.number().nonnegative(),
+  status: z.string(),
+  spans: z.array(z.object({
+    spanId: z.string(),
+    operation: z.string(),
+    service: z.string(),
+    duration: z.number().nonnegative(),
+    status: z.string(),
+  })),
+});
+
+// Database row schemas for validation
+export const dbOrderRowSchema = z.object({
+  id: z.string(),
+  user_id: z.string(),
+  pair: z.string(),
+  side: z.string(),
+  type: z.string(),
+  price: z.string().nullable(),
+  quantity: z.string(),
+  filled: z.string(),
+  status: z.string(),
+  created_at: z.union([z.date(), z.string()]),
+  updated_at: z.union([z.date(), z.string()]),
+});
+
+export const dbTradeRowSchema = z.object({
+  id: z.string(),
+  buyer_order_id: z.string().nullable(),
+  seller_order_id: z.string().nullable(),
+  pair: z.string(),
+  price: z.string(),
+  quantity: z.string(),
+  buyer_fee: z.string(),
+  seller_fee: z.string(),
+  created_at: z.union([z.date(), z.string()]),
+});
+
+// Export transparency types
+export type SystemStatus = z.infer<typeof systemStatusSchema>;
+export type PublicTrade = z.infer<typeof publicTradeSchema>;
+export type TransparencyMetrics = z.infer<typeof transparencyMetricsSchema>;
+export type TradeTrace = z.infer<typeof tradeTraceSchema>;
+export type DbOrderRow = z.infer<typeof dbOrderRowSchema>;
+export type DbTradeRow = z.infer<typeof dbTradeRowSchema>;

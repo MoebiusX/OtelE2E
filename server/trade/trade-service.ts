@@ -7,6 +7,10 @@
 
 import db from '../db';
 import { walletService } from '../wallet/wallet-service';
+import { createLogger } from '../lib/logger';
+import { ValidationError, NotFoundError, InsufficientFundsError } from '../lib/errors';
+
+const logger = createLogger('trade');
 
 // Simulated market prices (in USD)
 const MARKET_PRICES: Record<string, number> = {
@@ -151,7 +155,15 @@ export const tradeService = {
                 [userId, toWalletResult.rows[0].id, quote.toAmount, orderId, `Convert from ${fromAsset}`]
             );
 
-            console.log(`[TRADE] Convert: ${fromAmount} ${fromAsset} → ${quote.toAmount.toFixed(8)} ${toAsset}`);
+            logger.info({
+                userId,
+                orderId,
+                fromAmount,
+                fromAsset: fromAsset.toUpperCase(),
+                toAmount: quote.toAmount,
+                toAsset: toAsset.toUpperCase(),
+                rate: quote.rate
+            }, 'Asset conversion executed');
 
             return {
                 success: true,
@@ -193,7 +205,14 @@ export const tradeService = {
             [userId, pair, side, price, quantity]
         );
 
-        console.log(`[TRADE] Limit ${side}: ${quantity} ${baseAsset} @ ${price} ${quoteAsset}`);
+        logger.info({
+            userId,
+            orderId: result.rows[0].id,
+            side,
+            quantity,
+            price,
+            pair
+        }, 'Limit order placed');
         return result.rows[0];
     },
 
@@ -227,7 +246,11 @@ export const tradeService = {
             [orderId]
         );
 
-        console.log(`[TRADE] Cancelled order ${orderId}`);
+        logger.info({
+            userId,
+            orderId,
+            pair: order.pair
+        }, 'Order cancelled');
         return true;
     },
 

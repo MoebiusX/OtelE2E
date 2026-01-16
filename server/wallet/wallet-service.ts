@@ -5,6 +5,10 @@
  */
 
 import db from '../db';
+import { createLogger } from '../lib/logger';
+import { WalletError, ValidationError, NotFoundError, InsufficientFundsError } from '../lib/errors';
+
+const logger = createLogger('wallet');
 
 // Supported assets
 export const SUPPORTED_ASSETS = ['BTC', 'ETH', 'USDT', 'USD', 'EUR'];
@@ -71,7 +75,11 @@ export const walletService = {
             }
         });
 
-        console.log(`[WALLET] Created ${wallets.length} wallets for user ${userId}`);
+        logger.info({
+            userId,
+            walletsCreated: wallets.length,
+            assets: SUPPORTED_ASSETS
+        }, 'Created default wallets for user');
         return wallets;
     },
 
@@ -141,7 +149,12 @@ export const walletService = {
                 [userId, walletResult.rows[0].id, type, amount, description, referenceId]
             );
 
-            console.log(`[WALLET] Credited ${amount} ${asset} to user ${userId}`);
+            logger.info({
+                userId,
+                asset: asset.toUpperCase(),
+                amount,
+                type
+            }, 'Wallet credited');
             return txResult.rows[0];
         });
     },
@@ -189,7 +202,12 @@ export const walletService = {
                 [userId, wallet.id, type, -amount, description, referenceId]
             );
 
-            console.log(`[WALLET] Debited ${amount} ${asset} from user ${userId}`);
+            logger.info({
+                userId,
+                asset: asset.toUpperCase(),
+                amount,
+                type
+            }, 'Wallet debited');
             return txResult.rows[0];
         });
     },

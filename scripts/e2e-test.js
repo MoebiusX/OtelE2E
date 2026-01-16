@@ -13,6 +13,49 @@ async function delay(ms) {
     return new Promise(resolve => setTimeout(resolve, ms));
 }
 
+/**
+ * Retry a function with exponential backoff
+ */
+async function retryWithBackoff(fn, options = {}) {
+    const {
+        maxRetries = 10,
+        initialDelay = 1000,
+        maxDelay = 10000,
+        backoffMultiplier = 1.5,
+        timeoutMs = 30000
+    } = options;
+
+    const startTime = Date.now();
+    let lastError;
+
+    for (let attempt = 1; attempt <= maxRetries; attempt++) {
+        // Check timeout
+        if (Date.now() - startTime > timeoutMs) {
+            throw new Error(`Timeout after ${timeoutMs}ms`);
+        }
+
+        try {
+            const result = await fn(attempt);
+            if (result) {
+                return result;
+            }
+        } catch (error) {
+            lastError = error;
+        }
+
+        // Don't delay after last attempt
+        if (attempt < maxRetries) {
+            const delayMs = Math.min(
+                initialDelay * Math.pow(backoffMultiplier, attempt - 1),
+                maxDelay
+            );
+            await delay(delayMs);
+        }
+    }
+
+    throw lastError || new Error('Retry failed');
+}
+
 async function submitPayment(url, payload, headers = {}) {
     const response = await fetch(url, {
         method: 'POST',
@@ -82,62 +125,120 @@ async function testCase1_EmptyHeaders() {
     // Use Case 1: Send request through Kong WITHOUT trace headers
     // Expected: API Gateway creates and injects trace context
 
+    // Generate unique test ID to validate we find the right trace
+    const testId = `test1-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
     console.log('📤 Sending payment through Kong (no trace headers)...');
+    console.log(`   Test ID: ${testId}`);
 
     const payment = await submitPayment(KONG_API, {
         amount: 1001,
         currency: 'USD',
         recipient: 'e2e-test1@example.com',
-        description: 'E2E Test - Empty Headers'
+        description: `E2E Test - Empty Headers - ${testId}`
     });
 
     if (!payment.payment?.id) {
         return { success: false, reason: 'Payment was not created' };
     }
 
+    const paymentTime = Date.now();
     console.log(`   Payment ID: ${payment.payment?.id}`);
+    console.log('   ⏳ Waiting for traces to propagate to Jaeger...');
 
-    // Wait for traces to be collected (5 seconds for reliable batch flushing)
-    await delay(5000);
+    // Initial delay to allow OTEL Collector batching
+    await delay(2000);
 
-    // Try both service names (old and new)
-    let traces = await queryJaegerTraces('api-gateway');
-    if (!traces.data || traces.data.length === 0) {
-        traces = await queryJaegerTraces('kong-gateway');
+    // Retry fetching traces with exponential backoff
+    try {
+        const result = await retryWithBackoff(async (attempt) => {
+            process.stdout.write(`\r   Attempt ${attempt}/10... `);
+
+            // Try both service names (old and new)
+            let traces = await queryJaegerTraces('api-gateway');
+            if (!traces.data || traces.data.length === 0) {
+                traces = await queryJaegerTraces('kong-gateway');
+            }
+            if (!traces.data || traces.data.length === 0) {
+                traces = await queryJaegerTraces('exchange-api');
+            }
+
+            if (!traces.data || traces.data.length === 0) {
+                return null; // Retry
+            }
+
+            // Filter traces to only recent ones (within last 10 seconds)
+            const recentTraces = traces.data.filter(t => {
+                const traceStartTime = t.spans[0]?.startTime || 0;
+                const traceAge = (Date.now() * 1000) - traceStartTime; // Jaeger uses microseconds
+                return traceAge < 10000000; // 10 seconds in microseconds
+            });
+
+            if (recentTraces.length === 0) {
+                return null; // Retry
+            }
+
+            // Get the most recent trace
+            const latestTrace = recentTraces[0];
+            const fullTrace = await findTraceById(latestTrace.traceID);
+
+            if (!fullTrace) {
+                return null; // Retry
+            }
+
+            const spans = fullTrace.data[0]?.spans || [];
+            
+            // Verify this trace contains our test ID
+            const hasTestId = spans.some(span => {
+                const logs = span.logs || [];
+                const tags = span.tags || [];
+                const allText = JSON.stringify(logs) + JSON.stringify(tags);
+                return allText.includes(testId) || allText.includes(payment.payment?.id);
+            });
+
+            if (!hasTestId && spans.length > 0) {
+                // Check span operation names too
+                const operations = spans.map(s => s.operationName).join(' ');
+                if (!operations.includes(payment.payment?.id)) {
+                    return null; // Not our trace, keep looking
+                }
+            }
+            
+            // Success if we have at least 3 spans
+            if (spans.length >= 3) {
+                const services = new Set(spans.map(s => s.processID).map(pid =>
+                    fullTrace.data[0]?.processes[pid]?.serviceName
+                ));
+                
+                console.log(); // New line after attempts
+                console.log(`   ✓ Found correct trace with ${spans.length} spans (took ${Date.now() - paymentTime}ms)`);
+                console.log(`   Services: ${Array.from(services).join(', ')}`);
+                console.log(`   Trace ID: ${latestTrace.traceID}`);
+                
+                return { traceId: latestTrace.traceID, spanCount: spans.length };
+            }
+
+            return null; // Retry
+        }, {
+            maxRetries: 10,
+            initialDelay: 1000,
+            maxDelay: 3000,
+            timeoutMs: 25000
+        });
+
+        return { success: true, ...result };
+    } catch (error) {
+        if (error.message.includes('Timeout')) {
+            return { success: false, reason: 'Traces did not appear within 30 seconds' };
+        }
+        return { success: false, reason: 'No traces found for any service' };
     }
-
-    if (!traces.data || traces.data.length === 0) {
-        return { success: false, reason: 'No traces found for api-gateway or kong-gateway' };
-    }
-
-    // Get the most recent trace
-    const latestTrace = traces.data[0];
-    const fullTrace = await findTraceById(latestTrace.traceID);
-
-    if (!fullTrace) {
-        return { success: false, reason: 'Could not fetch trace details' };
-    }
-
-    const spans = fullTrace.data[0]?.spans || [];
-    const services = new Set(spans.map(s => s.processID).map(pid =>
-        fullTrace.data[0]?.processes[pid]?.serviceName
-    ));
-
-    console.log(`   Found services: ${Array.from(services).join(', ')}`);
-    console.log(`   Total spans: ${spans.length}`);
-
-    // Success if we have at least 3 spans (Kong creates multiple spans)
-    if (spans.length >= 3) {
-        return { success: true, traceId: latestTrace.traceID, spanCount: spans.length };
-    }
-
-    return { success: false, reason: `Only ${spans.length} spans found, expected >= 3` };
 }
 
 async function testCase2_ClientHeaders() {
     // Use Case 2: Send request through Kong WITH client trace headers
     // Expected: Kong preserves client's trace context and propagates it
 
+    // Generate random trace ID - this proves we're tracking the right trace
     const clientTraceId = Array.from({ length: 32 }, () =>
         Math.floor(Math.random() * 16).toString(16)
     ).join('');
@@ -145,52 +246,71 @@ async function testCase2_ClientHeaders() {
         Math.floor(Math.random() * 16).toString(16)
     ).join('');
 
-    console.log(`📤 Sending payment through Kong with client trace ID: ${clientTraceId.slice(0, 8)}...`);
+    // Generate unique test ID
+    const testId = `test2-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+    console.log(`📤 Sending payment through Kong with random trace ID`);
+    console.log(`   Test ID: ${testId}`);
+    console.log(`   Client Trace ID: ${clientTraceId}`);
 
     const payment = await submitPayment(KONG_API, {
         amount: 2002,
         currency: 'USD',
         recipient: 'e2e-test2@example.com',
-        description: 'E2E Test - Client Headers via Kong'
+        description: `E2E Test - Client Headers - ${testId}`
     }, {
         'traceparent': `00-${clientTraceId}-${clientSpanId}-01`
     });
 
+    const paymentTime = Date.now();
     console.log(`   Payment ID: ${payment.payment?.id}`);
+    console.log('   ⏳ Waiting for traces to propagate to Jaeger...');
 
-    // Wait for traces to be collected (5 seconds for reliable batch flushing)
-    await delay(5000);
+    // Initial delay to allow OTEL Collector batching
+    await delay(2000);
 
-    // Query for the specific trace
-    const trace = await findTraceById(clientTraceId);
+    // Retry fetching traces with exponential backoff
+    try {
+        const result = await retryWithBackoff(async (attempt) => {
+            process.stdout.write(`\r   Attempt ${attempt}/10... `);
 
-    if (!trace || !trace.data || trace.data.length === 0) {
-        // Fallback: query by service
-        const traces = await queryJaegerTraces('payment-api');
-        if (!traces.data || traces.data.length === 0) {
-            return { success: false, reason: 'No traces found for payment-api' };
+            // Query for the specific trace by ID
+            const trace = await findTraceById(clientTraceId);
+
+            if (!trace || !trace.data || trace.data.length === 0) {
+                return null; // Retry
+            }
+
+            // Trace found - verify it's complete
+            const spans = trace.data[0]?.spans || [];
+            if (spans.length < 3) {
+                return null; // Retry - not enough spans yet
+            }
+
+            const services = new Set(spans.map(s => s.processID).map(pid =>
+                trace.data[0]?.processes[pid]?.serviceName
+            ));
+
+            console.log(); // New line after attempts
+            console.log(`   ✓ Found correct trace with ${spans.length} spans (took ${Date.now() - paymentTime}ms)`);
+            console.log(`   Services: ${Array.from(services).join(', ')}`);
+            console.log(`   Client trace ID ${clientTraceId} preserved ✓`);
+            console.log(`   Payment ID ${payment.payment?.id} processed`);
+
+            return { traceId: clientTraceId, spanCount: spans.length };
+        }, {
+            maxRetries: 10,
+            initialDelay: 1000,
+            maxDelay: 3000,
+            timeoutMs: 25000
+        });
+
+        return { success: true, ...result };
+    } catch (error) {
+        if (error.message.includes('Timeout')) {
+            return { success: false, reason: 'Traces did not appear within 25 seconds' };
         }
-
-        console.log('   (Trace found via service query)');
-        return { success: true, note: 'Found via service query' };
+        return { success: false, reason: 'Trace with client ID not found' };
     }
-
-    const validation = validateSpans(trace,
-        ['api-gateway'],  // Now goes through Kong, so expect api-gateway
-        ['kong']          // Just need Kong spans to verify propagation
-    );
-
-    console.log(`   Found services: ${validation.foundServices.join(', ')}`);
-    console.log(`   Total spans: ${validation.foundSpans.length}`);
-
-    if (!validation.success) {
-        return {
-            success: false,
-            reason: `Missing: ${validation.missingServices.concat(validation.missingSpans).join(', ')}`
-        };
-    }
-
-    return { success: true, traceId: clientTraceId, spanCount: validation.foundSpans.length };
 }
 
 async function main() {

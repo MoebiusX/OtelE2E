@@ -83,15 +83,21 @@ export default function Register() {
     };
 
     return (
-        <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900 flex items-center justify-center p-4">
-            <Card className="w-full max-w-md bg-slate-900/80 border-slate-700 backdrop-blur">
+        <div className="min-h-screen bg-gradient-to-br from-slate-950 via-blue-950 to-slate-900 flex items-center justify-center p-4">
+            {/* Back to Home */}
+            <a href="/" className="absolute top-6 left-6 flex items-center gap-2 text-cyan-100/70 hover:text-cyan-100 transition-colors group">
+                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="group-hover:-translate-x-1 transition-transform"><path d="m15 18-6-6 6-6"/></svg>
+                <span className="text-sm font-medium">Back to Home</span>
+            </a>
+            
+            <Card className="w-full max-w-md bg-slate-900/80 border-cyan-500/20 backdrop-blur-xl shadow-2xl">
                 <CardHeader className="text-center">
-                    <CardTitle className="text-3xl font-bold bg-gradient-to-r from-purple-400 to-pink-400 bg-clip-text text-transparent">
+                    <CardTitle className="text-3xl font-bold bg-gradient-to-r from-cyan-400 via-blue-400 to-indigo-400 bg-clip-text text-transparent">
                         {step === "register" ? "Create Account" : "Verify Email"}
                     </CardTitle>
-                    <CardDescription className="text-slate-400">
+                    <CardDescription className="text-cyan-100/60">
                         {step === "register"
-                            ? "Start trading crypto in minutes"
+                            ? "Join Krystaline and start trading"
                             : `We sent a code to ${email}`}
                     </CardDescription>
                 </CardHeader>
@@ -106,7 +112,7 @@ export default function Register() {
                     {step === "register" ? (
                         <form onSubmit={handleRegister} className="space-y-4">
                             <div className="space-y-2">
-                                <Label htmlFor="email" className="text-slate-200">Email</Label>
+                                <Label htmlFor="email" className="text-cyan-100">Email</Label>
                                 <Input
                                     id="email"
                                     type="email"
@@ -114,12 +120,12 @@ export default function Register() {
                                     value={email}
                                     onChange={(e) => setEmail(e.target.value)}
                                     required
-                                    className="bg-slate-800 border-slate-700 text-white"
+                                    className="bg-slate-800/50 border-cyan-500/30 text-cyan-100 placeholder:text-cyan-100/30"
                                 />
                             </div>
 
                             <div className="space-y-2">
-                                <Label htmlFor="password" className="text-slate-200">Password</Label>
+                                <Label htmlFor="password" className="text-cyan-100">Password</Label>
                                 <Input
                                     id="password"
                                     type="password"
@@ -127,12 +133,12 @@ export default function Register() {
                                     value={password}
                                     onChange={(e) => setPassword(e.target.value)}
                                     required
-                                    className="bg-slate-800 border-slate-700 text-white"
+                                    className="bg-slate-800/50 border-cyan-500/30 text-cyan-100 placeholder:text-cyan-100/30"
                                 />
                             </div>
 
                             <div className="space-y-2">
-                                <Label htmlFor="confirmPassword" className="text-slate-200">Confirm Password</Label>
+                                <Label htmlFor="confirmPassword" className="text-cyan-100">Confirm Password</Label>
                                 <Input
                                     id="confirmPassword"
                                     type="password"
@@ -140,13 +146,13 @@ export default function Register() {
                                     value={confirmPassword}
                                     onChange={(e) => setConfirmPassword(e.target.value)}
                                     required
-                                    className="bg-slate-800 border-slate-700 text-white"
+                                    className="bg-slate-800/50 border-cyan-500/30 text-cyan-100 placeholder:text-cyan-100/30"
                                 />
                             </div>
 
                             <Button
                                 type="submit"
-                                className="w-full bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700"
+                                className="w-full bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-cyan-500 hover:to-blue-500 shadow-lg shadow-cyan-500/25"
                                 disabled={registerMutation.isPending}
                             >
                                 {registerMutation.isPending ? "Creating Account..." : "Create Account"}
@@ -155,7 +161,7 @@ export default function Register() {
                     ) : (
                         <form onSubmit={handleVerify} className="space-y-4">
                             <div className="space-y-2">
-                                <Label htmlFor="code" className="text-slate-200">Verification Code</Label>
+                                <Label htmlFor="code" className="text-cyan-100">Verification Code</Label>
                                 <Input
                                     id="code"
                                     type="text"
@@ -164,16 +170,16 @@ export default function Register() {
                                     onChange={(e) => setVerificationCode(e.target.value)}
                                     maxLength={6}
                                     required
-                                    className="bg-slate-800 border-slate-700 text-white text-center text-2xl tracking-widest"
+                                    className="bg-slate-800/50 border-cyan-500/30 text-cyan-100 text-center text-2xl tracking-widest placeholder:text-cyan-100/30"
                                 />
-                                <p className="text-sm text-slate-400 text-center">
-                                    Check your email or view at <a href="http://localhost:1080" target="_blank" className="text-purple-400 hover:underline">localhost:1080</a>
+                                <p className="text-sm text-cyan-100/60 text-center">
+                                    Check your email or view at <a href="http://localhost:1080" target="_blank" className="text-cyan-400 hover:text-cyan-300 underline">localhost:1080</a>
                                 </p>
                             </div>
 
                             <Button
                                 type="submit"
-                                className="w-full bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700"
+                                className="w-full bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-cyan-500 hover:to-blue-500 shadow-lg shadow-cyan-500/25"
                                 disabled={verifyMutation.isPending}
                             >
                                 {verifyMutation.isPending ? "Verifying..." : "Verify & Continue"}
@@ -183,9 +189,9 @@ export default function Register() {
                 </CardContent>
 
                 <CardFooter className="flex flex-col gap-2">
-                    <div className="text-sm text-slate-400">
+                    <div className="text-sm text-cyan-100/60">
                         Already have an account?{" "}
-                        <a href="/login" className="text-purple-400 hover:underline">
+                        <a href="/login" className="text-cyan-400 hover:text-cyan-300 font-medium">
                             Sign in
                         </a>
                     </div>

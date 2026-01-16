@@ -46,14 +46,20 @@ export default function Login() {
     };
 
     return (
-        <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900 flex items-center justify-center p-4">
-            <Card className="w-full max-w-md bg-slate-900/80 border-slate-700 backdrop-blur">
+        <div className="min-h-screen bg-gradient-to-br from-slate-950 via-blue-950 to-slate-900 flex items-center justify-center p-4">
+            {/* Back to Home */}
+            <a href="/" className="absolute top-6 left-6 flex items-center gap-2 text-cyan-100/70 hover:text-cyan-100 transition-colors group">
+                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="group-hover:-translate-x-1 transition-transform"><path d="m15 18-6-6 6-6"/></svg>
+                <span className="text-sm font-medium">Back to Home</span>
+            </a>
+            
+            <Card className="w-full max-w-md bg-slate-900/80 border-cyan-500/20 backdrop-blur-xl shadow-2xl">
                 <CardHeader className="text-center">
-                    <CardTitle className="text-3xl font-bold bg-gradient-to-r from-purple-400 to-pink-400 bg-clip-text text-transparent">
+                    <CardTitle className="text-3xl font-bold bg-gradient-to-r from-cyan-400 via-blue-400 to-indigo-400 bg-clip-text text-transparent">
                         Welcome Back
                     </CardTitle>
-                    <CardDescription className="text-slate-400">
-                        Sign in to your crypto exchange account
+                    <CardDescription className="text-cyan-100/60">
+                        Sign in to your Krystaline account
                     </CardDescription>
                 </CardHeader>
 
@@ -66,7 +72,7 @@ export default function Login() {
 
                     <form onSubmit={handleLogin} className="space-y-4">
                         <div className="space-y-2">
-                            <Label htmlFor="email" className="text-slate-200">Email</Label>
+                            <Label htmlFor="email" className="text-cyan-100">Email</Label>
                             <Input
                                 id="email"
                                 type="email"
@@ -74,12 +80,12 @@ export default function Login() {
                                 value={email}
                                 onChange={(e) => setEmail(e.target.value)}
                                 required
-                                className="bg-slate-800 border-slate-700 text-white"
+                                className="bg-slate-800/50 border-cyan-500/30 text-cyan-100 placeholder:text-cyan-100/30"
                             />
                         </div>
 
                         <div className="space-y-2">
-                            <Label htmlFor="password" className="text-slate-200">Password</Label>
+                            <Label htmlFor="password" className="text-cyan-100">Password</Label>
                             <Input
                                 id="password"
                                 type="password"
@@ -87,13 +93,13 @@ export default function Login() {
                                 value={password}
                                 onChange={(e) => setPassword(e.target.value)}
                                 required
-                                className="bg-slate-800 border-slate-700 text-white"
+                                className="bg-slate-800/50 border-cyan-500/30 text-cyan-100 placeholder:text-cyan-100/30"
                             />
                         </div>
 
                         <Button
                             type="submit"
-                            className="w-full bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700"
+                            className="w-full bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-cyan-500 hover:to-blue-500 shadow-lg shadow-cyan-500/25"
                             disabled={loginMutation.isPending}
                         >
                             {loginMutation.isPending ? "Signing in..." : "Sign In"}

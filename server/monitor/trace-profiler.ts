@@ -10,8 +10,11 @@ import type {
     JaegerSpan,
     SpanBaseline
 } from './types';
+import { config } from '../config';
+import { createLogger } from '../lib/logger';
 
-const JAEGER_API_URL = process.env.JAEGER_URL || 'http://localhost:16686';
+const logger = createLogger('trace-profiler');
+const JAEGER_API_URL = config.observability.jaegerUrl;
 const POLL_INTERVAL = 30000; // 30 seconds
 const LOOKBACK_WINDOW = '1h'; // 1 hour of historical data
 
@@ -34,7 +37,7 @@ export class TraceProfiler {
     start(): void {
         if (this.isRunning) return;
 
-        console.log('[PROFILER] Starting trace profiler...');
+        logger.info('Starting trace profiler...');
         this.isRunning = true;
 
         // Initial collection
@@ -55,7 +58,7 @@ export class TraceProfiler {
             this.pollInterval = null;
         }
         this.isRunning = false;
-        console.log('[PROFILER] Stopped');
+        logger.info('Stopped');
     }
 
     /**
@@ -99,9 +102,12 @@ export class TraceProfiler {
             // Update baselines
             this.updateBaselines(allSpans);
 
-            console.log(`[PROFILER] Updated ${this.baselines.size} baselines from ${allSpans.length} spans`);
+            logger.info({
+                baselinesCount: this.baselines.size,
+                spansCount: allSpans.length
+            }, 'Updated baselines from spans');
         } catch (error: any) {
-            console.error('[PROFILER] Error collecting traces:', error.message);
+            logger.error({ err: error }, 'Error collecting traces');
         }
     }
 
@@ -122,7 +128,7 @@ export class TraceProfiler {
         } catch (error: any) {
             // Jaeger might not be ready on startup
             if (error.cause?.code === 'ECONNREFUSED') {
-                console.log(`[PROFILER] Jaeger not ready for ${service}`);
+                logger.debug({ service, err: error }, 'Jaeger not ready for service');
                 return [];
             }
             throw error;

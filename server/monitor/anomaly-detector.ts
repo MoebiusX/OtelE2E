@@ -8,8 +8,11 @@ import type {
 import { SEVERITY_CONFIG } from './types';
 import { traceProfiler } from './trace-profiler';
 import { streamAnalyzer } from './stream-analyzer';
+import { config } from '../config';
+import { createLogger } from '../lib/logger';
 
-const JAEGER_API_URL = process.env.JAEGER_URL || 'http://localhost:16686';
+const logger = createLogger('anomaly-detector');
+const JAEGER_API_URL = config.observability.jaegerUrl;
 const DETECTION_INTERVAL = 10000; // 10 seconds
 const ANOMALY_WINDOW = 5 * 60 * 1000; // 5 minutes - keep anomalies for this long
 
@@ -35,7 +38,7 @@ export class AnomalyDetector {
     start(): void {
         if (this.isRunning) return;
 
-        console.log('[DETECTOR] Starting anomaly detector...');
+        logger.info('Starting anomaly detector...');
         this.isRunning = true;
 
         // Schedule periodic detection
@@ -53,7 +56,7 @@ export class AnomalyDetector {
             this.detectionInterval = null;
         }
         this.isRunning = false;
-        console.log('[DETECTOR] Stopped');
+        logger.info('Stopped');
     }
 
     /**
@@ -171,15 +174,18 @@ export class AnomalyDetector {
                         // Stream SEV1-3 anomalies for real-time LLM analysis
                         if (anomaly.severity <= 3) {
                             streamAnalyzer.enqueue(anomaly).catch(err =>
-                                console.error('[DETECTOR] Stream enqueue failed:', err.message)
+                                logger.error({ err }, 'Failed to enqueue anomaly for streaming analysis')
                             );
                         }
 
-                        console.log(
-                            `[DETECTOR] 🚨 SEV${anomaly.severity} ${anomaly.severityName}: ` +
-                            `${anomaly.service}:${anomaly.operation} ` +
-                            `${anomaly.duration.toFixed(0)}ms (${anomaly.deviation.toFixed(1)}σ)`
-                        );
+                        logger.warn({
+                            severity: anomaly.severity,
+                            severityName: anomaly.severityName,
+                            service: anomaly.service,
+                            operation: anomaly.operation,
+                            durationMs: Math.round(anomaly.duration),
+                            deviation: Math.round(anomaly.deviation * 10) / 10
+                        }, `Anomaly detected: ${anomaly.severityName}`);
                     }
                 }
             }
@@ -191,10 +197,10 @@ export class AnomalyDetector {
             }
 
             if (newAnomalies > 0) {
-                console.log(`[DETECTOR] Found ${newAnomalies} new anomalies`);
+                logger.info({ newAnomaliesCount: newAnomalies }, 'Detection cycle completed');
             }
         } catch (error: any) {
-            console.error('[DETECTOR] Error:', error.message);
+            logger.error({ err: error }, 'Anomaly detection cycle failed');
         }
     }
 

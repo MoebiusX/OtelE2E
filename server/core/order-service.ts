@@ -4,6 +4,10 @@
 import { storage } from '../storage';
 import { rabbitMQClient } from '../services/rabbitmq-client';
 import { trace, SpanStatusCode } from '@opentelemetry/api';
+import { createLogger } from '../lib/logger';
+import { OrderError, ValidationError, InsufficientFundsError } from '../lib/errors';
+
+const logger = createLogger('order');
 
 // ============================================
 // PRICE SIMULATION
@@ -88,7 +92,12 @@ export class OrderService {
         const orderId = `ORD-${Date.now()}-${++this.orderCounter}`;
         const userId = request.userId || 'alice';
 
-        console.log(`[ORDER] User ${userId}: ${request.side} ${request.quantity} BTC @ market`);
+        logger.info({
+            userId,
+            side: request.side,
+            quantity: request.quantity,
+            orderId
+        }, 'Submitting trade order');
 
         const wallet = await storage.getWallet(userId);
         if (!wallet) {
@@ -112,7 +121,11 @@ export class OrderService {
 
         // Validation
         if (request.side === 'BUY' && totalValue > wallet.usd) {
-            console.log(`[ORDER] Rejected: Insufficient USD for ${userId}`);
+            logger.warn({
+                userId,
+                required: totalValue,
+                available: wallet.usd
+            }, 'Order rejected - insufficient USD');
             return {
                 orderId, traceId, spanId,
                 order: null,
@@ -121,7 +134,11 @@ export class OrderService {
         }
 
         if (request.side === 'SELL' && request.quantity > wallet.btc) {
-            console.log(`[ORDER] Rejected: Insufficient BTC for ${userId}`);
+            logger.warn({
+                userId,
+                required: request.quantity,
+                available: wallet.btc
+            }, 'Order rejected - insufficient BTC');
             return {
                 orderId, traceId, spanId,
                 order: null,
@@ -158,7 +175,12 @@ export class OrderService {
                     timestamp: new Date().toISOString()
                 }, 5000);
 
-                console.log(`[ORDER] Execution: ${executionResponse.status} @ $${executionResponse.fillPrice}`);
+                logger.info({
+                    orderId,
+                    status: executionResponse.status,
+                    fillPrice: executionResponse.fillPrice,
+                    processorId: executionResponse.processorId
+                }, 'Order execution response received');
 
                 if (executionResponse.status === 'FILLED') {
                     await this.updateUserWallet(userId, request.side, request.quantity, executionResponse.fillPrice);
@@ -182,7 +204,10 @@ export class OrderService {
                     }
                 };
             } catch (error: any) {
-                console.warn(`[ORDER] Matcher timeout: ${error.message}`);
+                logger.warn({
+                    err: error,
+                    orderId
+                }, 'Order matcher timeout');
                 return { orderId, traceId, spanId, order };
             }
         } else {
@@ -219,7 +244,12 @@ export class OrderService {
             span.setAttribute('transfer.to', request.toUserId);
             span.setAttribute('transfer.amount', request.amount);
 
-            console.log(`[TRANSFER] ${request.fromUserId} → ${request.toUserId}: ${request.amount} BTC`);
+            logger.info({
+                transferId,
+                from: request.fromUserId,
+                to: request.toUserId,
+                amount: request.amount
+            }, 'Processing BTC transfer');
 
             try {
                 // Get both wallets
@@ -266,8 +296,13 @@ export class OrderService {
                 // Update transfer status
                 await storage.updateTransfer(transferId, 'COMPLETED');
 
-                console.log(`[TRANSFER] Complete: ${request.fromUserId} now has ${fromWallet.btc - request.amount} BTC`);
-                console.log(`[TRANSFER] Complete: ${request.toUserId} now has ${toWallet.btc + request.amount} BTC`);
+                logger.info({
+                    transferId,
+                    fromUserId: request.fromUserId,
+                    fromBalance: fromWallet.btc - request.amount,
+                    toUserId: request.toUserId,
+                    toBalance: toWallet.btc + request.amount
+                }, 'Transfer completed successfully');
 
                 span.setAttribute('transfer.status', 'COMPLETED');
                 span.setStatus({ code: SpanStatusCode.OK });
@@ -310,7 +345,11 @@ export class OrderService {
             });
         }
 
-        console.log(`[WALLET] ${userId}: ${wallet.btc.toFixed(6)} BTC, $${wallet.usd.toFixed(2)} USD`);
+        logger.debug({
+            userId,
+            btc: wallet.btc.toFixed(6),
+            usd: wallet.usd.toFixed(2)
+        }, 'Wallet updated after trade');
     }
 
     async getOrders(limit: number = 10) {

@@ -6,6 +6,9 @@
 
 import { WebSocketServer, WebSocket } from 'ws';
 import type { Server } from 'http';
+import { createLogger } from '../lib/logger';
+
+const logger = createLogger('ws-server');
 
 export interface WSMessage {
     type: 'analysis-start' | 'analysis-chunk' | 'analysis-complete' | 'alert' | 'heartbeat';
@@ -29,7 +32,7 @@ class MonitorWebSocketServer {
         });
 
         this.wss.on('connection', (ws: WebSocket) => {
-            console.log('[WS] Client connected');
+            logger.info({ clientsCount: this.clients.size + 1 }, 'WebSocket client connected');
             this.clients.add(ws);
 
             // Send welcome message
@@ -40,12 +43,12 @@ class MonitorWebSocketServer {
             });
 
             ws.on('close', () => {
-                console.log('[WS] Client disconnected');
+                logger.info({ clientsCount: this.clients.size - 1 }, 'WebSocket client disconnected');
                 this.clients.delete(ws);
             });
 
             ws.on('error', (err) => {
-                console.error('[WS] Client error:', err.message);
+                logger.error({ err }, 'WebSocket client error');
                 this.clients.delete(ws);
             });
         });
@@ -59,7 +62,7 @@ class MonitorWebSocketServer {
             });
         }, 30000);
 
-        console.log('[WS] WebSocket server ready on /ws/monitor');
+        logger.info('WebSocket server ready on /ws/monitor');
     }
 
     /**
