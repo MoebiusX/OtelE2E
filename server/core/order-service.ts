@@ -159,7 +159,13 @@ export class OrderService {
         });
 
         // Process via RabbitMQ - MUST preserve the current context for proper trace propagation
-        if (rabbitMQClient.isConnected()) {
+        const isRabbitConnected = rabbitMQClient.isConnected();
+        logger.info({
+            orderId,
+            rabbitMQConnected: isRabbitConnected
+        }, 'Order processing - checking RabbitMQ connection');
+        
+        if (isRabbitConnected) {
             // Capture the current context to ensure it's passed to RabbitMQ
             const currentContext = context.active();
             const activeSpanForRabbit = trace.getSpan(currentContext);
@@ -224,6 +230,10 @@ export class OrderService {
             }
         } else {
             // Fallback: local execution
+            logger.warn({
+                orderId,
+                reason: 'RabbitMQ not connected - using local fallback'
+            }, 'Order processed locally (kx-matcher bypassed)');
             await this.updateUserWallet(userId, request.side, request.quantity, price);
             return {
                 orderId, traceId, spanId,

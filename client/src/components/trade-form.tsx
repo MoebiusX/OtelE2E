@@ -9,7 +9,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
-import { ArrowUpRight, ArrowDownRight, Wallet, TrendingUp, Loader2, Bitcoin } from "lucide-react";
+import { ArrowUpRight, ArrowDownRight, Wallet, TrendingUp, Loader2, Bitcoin, CheckCircle2, Clock, ExternalLink } from "lucide-react";
 
 // Type-safe error message extraction
 const getErrorMessage = (error: unknown): string =>
@@ -54,6 +54,14 @@ function formatAddress(address: string): string {
 
 export function TradeForm({ currentUser: propUser, walletAddress: propAddress }: TradeFormProps) {
     const [side, setSide] = useState<"BUY" | "SELL">("BUY");
+    const [lastTrade, setLastTrade] = useState<{
+        traceId: string;
+        side: string;
+        quantity: number;
+        fillPrice: number;
+        executionTimeMs: number;
+        timestamp: Date;
+    } | null>(null);
     const { toast } = useToast();
     const queryClient = useQueryClient();
 
@@ -109,7 +117,7 @@ export function TradeForm({ currentUser: propUser, walletAddress: propAddress }:
 
     const orderMutation = useMutation({
         mutationFn: async (data: OrderFormData) => {
-            const tracer = trace.getTracer('crypto-wallet');
+            const tracer = trace.getTracer('kx-wallet');
             const token = localStorage.getItem('accessToken');
 
             // Create a parent span for the entire order flow on the client
@@ -162,27 +170,54 @@ export function TradeForm({ currentUser: propUser, walletAddress: propAddress }:
             const execution = data.execution;
             const traceId = data.traceId;
 
+            // Store last trade for visual feedback
+            setLastTrade({
+                traceId,
+                side: data.order.side,
+                quantity: data.order.quantity,
+                fillPrice: execution?.fillPrice || 0,
+                executionTimeMs: execution?.executionTimeMs || 0,
+                timestamp: new Date(),
+            });
+
+            // Clear success state after 10 seconds
+            setTimeout(() => setLastTrade(null), 10000);
+
             toast({
-                title: execution?.status === 'FILLED' ? "Order Filled! ✓" : "Order Submitted",
+                title: execution?.status === 'FILLED' ? "✓ Trade Verified & Traced" : "Order Submitted",
                 description: (
-                    <div className="space-y-1 text-sm">
-                        <p className="font-mono">
-                            {data.order.side} {data.order.quantity.toFixed(6)} BTC
-                        </p>
-                        {execution && (
-                            <>
-                                <p>@ ${execution.fillPrice?.toLocaleString()}</p>
-                                <p className="text-xs opacity-70">Total: ${execution.totalValue?.toFixed(2)}</p>
-                            </>
-                        )}
+                    <div className="space-y-3">
+                        <div className="p-3 bg-emerald-500/10 rounded-lg border border-emerald-500/20">
+                            <div className="flex items-center justify-between text-sm">
+                                <span className="font-mono font-medium">
+                                    {data.order.side} {data.order.quantity.toFixed(6)} BTC
+                                </span>
+                                {execution && (
+                                    <span className="font-bold text-emerald-400">@ ${execution.fillPrice?.toLocaleString()}</span>
+                                )}
+                            </div>
+                            {execution && (
+                                <div className="flex items-center justify-between text-xs mt-2 text-slate-400">
+                                    <span>Total: ${execution.totalValue?.toFixed(2)}</span>
+                                    <span className="flex items-center gap-1 text-amber-400">
+                                        <Clock className="w-3 h-3" />
+                                        {execution.executionTimeMs || '< 1'}ms
+                                    </span>
+                                </div>
+                            )}
+                        </div>
                         <a
                             href={`http://localhost:16686/trace/${traceId}`}
                             target="_blank"
                             rel="noopener noreferrer"
-                            className="text-blue-400 hover:underline text-xs block mt-2"
+                            className="flex items-center justify-center gap-2 w-full py-2.5 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white rounded-lg text-sm font-medium transition-all shadow-lg shadow-purple-500/25"
                         >
-                            View trace in Jaeger →
+                            <ExternalLink className="w-4 h-4" />
+                            View Full Trace in Jaeger
                         </a>
+                        <p className="text-xs text-center text-slate-500">
+                            Trace ID: {traceId.slice(0, 16)}...
+                        </p>
                     </div>
                 ),
             });
@@ -231,6 +266,38 @@ export function TradeForm({ currentUser: propUser, walletAddress: propAddress }:
             </CardHeader>
 
             <CardContent className="space-y-5">
+                {/* Success Banner - Shows after trade */}
+                {lastTrade && (
+                    <div className="animate-in slide-in-from-top-2 duration-300 p-4 bg-gradient-to-r from-emerald-900/40 to-cyan-900/40 rounded-xl border border-emerald-500/30">
+                        <div className="flex items-start gap-3">
+                            <div className="p-2 bg-emerald-500/20 rounded-full">
+                                <CheckCircle2 className="w-5 h-5 text-emerald-400" />
+                            </div>
+                            <div className="flex-1">
+                                <div className="flex items-center justify-between">
+                                    <h4 className="font-semibold text-emerald-400">Trade Executed & Verified</h4>
+                                    <span className="text-xs text-amber-400 flex items-center gap-1">
+                                        <Clock className="w-3 h-3" />
+                                        {lastTrade.executionTimeMs || '< 1'}ms
+                                    </span>
+                                </div>
+                                <p className="text-sm text-slate-300 mt-1">
+                                    {lastTrade.side} {lastTrade.quantity.toFixed(6)} BTC @ ${lastTrade.fillPrice.toLocaleString()}
+                                </p>
+                                <a
+                                    href={`http://localhost:16686/trace/${lastTrade.traceId}`}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="inline-flex items-center gap-1 mt-2 text-xs text-purple-400 hover:text-purple-300"
+                                >
+                                    <ExternalLink className="w-3 h-3" />
+                                    View trace: {lastTrade.traceId.slice(0, 12)}...
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                )}
+
                 {/* Wallet Balance */}
                 <div className="grid grid-cols-2 gap-3 p-3 bg-slate-800 rounded-lg">
                     <div className="flex items-center gap-2">

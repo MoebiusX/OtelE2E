@@ -179,18 +179,26 @@ export default function Activity() {
                         ))}
                     </div>
                 ) : activities.length === 0 ? (
-                    <Card className="bg-slate-800/50 border-cyan-500/20">
-                        <CardContent className="py-12 text-center">
-                            <Clock className="w-12 h-12 mx-auto mb-4 text-cyan-500/40" />
-                            <p className="text-cyan-100/60 text-lg">No activity yet</p>
-                            <p className="text-cyan-100/40 mt-2">
-                                Start trading to see your transaction history here
+                    <Card className="bg-gradient-to-br from-slate-800/50 to-slate-900/50 border-cyan-500/20">
+                        <CardContent className="py-16 text-center">
+                            <div className="relative inline-block mb-6">
+                                <Clock className="w-16 h-16 text-cyan-500/30" />
+                                <div className="absolute inset-0 animate-ping">
+                                    <Clock className="w-16 h-16 text-cyan-500/10" />
+                                </div>
+                            </div>
+                            <h3 className="text-xl font-semibold text-cyan-100 mb-2">Your Activity Awaits</h3>
+                            <p className="text-cyan-100/50 mb-1">
+                                Every trade you make is recorded with full transparency.
+                            </p>
+                            <p className="text-cyan-100/40 text-sm mb-6 max-w-md mx-auto">
+                                View execution times, trace IDs, and verification status for each transaction.
                             </p>
                             <Button
-                                className="mt-4 bg-cyan-600 hover:bg-cyan-700"
+                                className="bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-cyan-500 hover:to-blue-500 shadow-lg shadow-cyan-500/25"
                                 onClick={() => navigate('/trade')}
                             >
-                                Start Trading
+                                Make Your First Trade
                             </Button>
                         </CardContent>
                     </Card>

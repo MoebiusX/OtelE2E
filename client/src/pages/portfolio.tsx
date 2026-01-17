@@ -4,6 +4,7 @@ import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import Layout from "@/components/Layout";
+import { Sparkles, ArrowRight, TrendingUp, Eye, Zap } from "lucide-react";
 
 interface Wallet {
     asset: string;
@@ -34,9 +35,10 @@ const ASSET_CONFIG: Record<string, { icon: string; color: string; name: string }
     EUR: { icon: "€", color: "text-blue-400", name: "Euro" },
 };
 
-export default function MyWallet() {
+export default function Portfolio() {
     const [, navigate] = useLocation();
     const [user, setUser] = useState<User | null>(null);
+    const [isNewUser, setIsNewUser] = useState(false);
 
     useEffect(() => {
         const storedUser = localStorage.getItem("user");
@@ -45,6 +47,11 @@ export default function MyWallet() {
             return;
         }
         setUser(JSON.parse(storedUser));
+        
+        // Check if this is a new user who hasn't traded yet
+        const newUserFlag = localStorage.getItem("isNewUser");
+        const hasTraded = localStorage.getItem("hasCompletedFirstTrade");
+        setIsNewUser(newUserFlag === "true" && !hasTraded);
     }, [navigate]);
 
     // Fetch real prices from Binance API
@@ -112,6 +119,48 @@ export default function MyWallet() {
                         </div>
                     </CardContent>
                 </Card>
+
+                {/* First Trade CTA for New Users */}
+                {isNewUser && (
+                    <Card className="bg-gradient-to-r from-indigo-900/50 via-purple-900/50 to-pink-900/50 border-purple-500/30 mb-8 overflow-hidden relative">
+                        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_right,_var(--tw-gradient-stops))] from-purple-500/10 via-transparent to-transparent" />
+                        <CardContent className="py-6 relative">
+                            <div className="flex flex-col md:flex-row items-center gap-6">
+                                <div className="p-4 rounded-2xl bg-gradient-to-br from-purple-500 to-pink-600 shadow-xl shadow-purple-500/25">
+                                    <Sparkles className="w-8 h-8 text-white" />
+                                </div>
+                                <div className="flex-1 text-center md:text-left">
+                                    <h3 className="text-2xl font-bold text-white mb-2">
+                                        Ready for Your First Trade? 🚀
+                                    </h3>
+                                    <p className="text-purple-100/70 mb-4 max-w-lg">
+                                        Experience <span className="text-cyan-400 font-semibold">Proof of Observability</span> - 
+                                        every trade is traced end-to-end. See exactly what happens behind the scenes.
+                                    </p>
+                                    <div className="flex flex-wrap items-center justify-center md:justify-start gap-3 text-sm text-purple-200/60">
+                                        <span className="flex items-center gap-1">
+                                            <Zap className="w-4 h-4 text-yellow-400" /> Real-time execution
+                                        </span>
+                                        <span className="flex items-center gap-1">
+                                            <Eye className="w-4 h-4 text-cyan-400" /> Full trace visibility
+                                        </span>
+                                        <span className="flex items-center gap-1">
+                                            <TrendingUp className="w-4 h-4 text-green-400" /> Live market prices
+                                        </span>
+                                    </div>
+                                </div>
+                                <Button 
+                                    size="lg"
+                                    onClick={() => navigate("/trade?welcome=true")}
+                                    className="bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-500 hover:to-pink-500 text-lg px-8 py-6 shadow-xl shadow-purple-500/25 group"
+                                >
+                                    Make First Trade
+                                    <ArrowRight className="w-5 h-5 ml-2 group-hover:translate-x-1 transition-transform" />
+                                </Button>
+                            </div>
+                        </CardContent>
+                    </Card>
+                )}
 
                 {/* Quick Actions */}
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">

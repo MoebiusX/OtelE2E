@@ -59,7 +59,7 @@ export default function Layout({ children, showAuth = true }: LayoutProps) {
                                 <>
                                     <a
                                         href="/portfolio"
-                                        className={`px-3 py-2 rounded-lg text-sm font-medium transition-all ${location === '/portfolio' || location === '/my-wallet' ? 'bg-cyan-500/10 text-cyan-400' : 'text-cyan-100/70 hover:text-cyan-100 hover:bg-slate-800/50'}`}
+                                        className={`px-3 py-2 rounded-lg text-sm font-medium transition-all ${location === '/portfolio' ? 'bg-cyan-500/10 text-cyan-400' : 'text-cyan-100/70 hover:text-cyan-100 hover:bg-slate-800/50'}`}
                                     >
                                         Portfolio
                                     </a>

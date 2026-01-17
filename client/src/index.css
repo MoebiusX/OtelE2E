@@ -67,6 +67,21 @@
 
   body {
     @apply font-sans antialiased bg-background text-foreground;
+    font-size: 16px; /* Base font size - ensures readability */
+    line-height: 1.5;
+  }
+
+  /* Minimum font size floor for accessibility and investor demos */
+  /* Override text-xs to be 13px minimum on screens, keeping 12px for badges only */
+  .text-xs {
+    font-size: 0.8125rem; /* 13px instead of 12px */
+    line-height: 1.25rem;
+  }
+
+  /* Exception: Badges can stay smaller */
+  .badge .text-xs,
+  [class*="Badge"] .text-xs {
+    font-size: 0.75rem; /* Keep 12px for badges */
   }
 }
 

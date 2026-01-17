@@ -71,6 +71,24 @@ async function waitForServices() {
     }
 }
 
+async function configureKongPlugins() {
+    console.log('🔧 Configuring Kong plugins...');
+    try {
+        // Enable OTEL plugin
+        execSync('node scripts/enable-kong-otel.js', { cwd: rootDir, stdio: 'pipe' });
+        console.log('   ✅ Kong OpenTelemetry plugin enabled');
+    } catch (e) {
+        console.log('   ⚠️  Failed to enable Kong OTEL plugin (may already be configured)');
+    }
+    try {
+        // Enable CORS plugin
+        execSync('node scripts/enable-kong-cors.js', { cwd: rootDir, stdio: 'pipe' });
+        console.log('   ✅ Kong CORS plugin enabled');
+    } catch (e) {
+        console.log('   ⚠️  Failed to enable Kong CORS plugin (may already be configured)');
+    }
+}
+
 function startProcess(name, cmd, args, color) {
     const child = spawn(cmd, args, {
         cwd: rootDir,
@@ -101,6 +119,7 @@ async function main() {
     try {
         await startDockerServices();
         await waitForServices();
+        await configureKongPlugins();
     } catch (e) {
         console.error('❌ Failed to start Docker services:', e.message);
         process.exit(1);

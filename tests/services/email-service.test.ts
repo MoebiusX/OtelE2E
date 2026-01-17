@@ -199,13 +199,13 @@ describe('Email Service', () => {
       expect(callArgs.html).toContain('10 ETH');
     });
 
-    it('should include wallet link', async () => {
+    it('should include portfolio link', async () => {
       mockSendMail.mockResolvedValue({ messageId: 'welcome-123' });
 
       await emailService.sendWelcome('newuser@example.com');
 
       const callArgs = mockSendMail.mock.calls[0][0];
-      expect(callArgs.html).toContain('my-wallet');
+      expect(callArgs.html).toContain('portfolio');
     });
   });
 });

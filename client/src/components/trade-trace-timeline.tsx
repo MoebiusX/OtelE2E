@@ -48,18 +48,24 @@ interface TradeTraceTimelineProps {
 const SERVICE_ICONS: Record<string, any> = {
   'api-gateway': Server,
   'kong': Shield,
-  'exchange-api': Activity,
-  'order-matcher': Zap,
-  'wallet-service': Database,
+  'kx-exchange': Activity,
+  'exchange-api': Activity,  // Legacy fallback
+  'kx-matcher': Zap,
+  'order-matcher': Zap,  // Legacy fallback
+  'kx-wallet': Database,
+  'wallet-service': Database,  // Legacy fallback
   default: Activity,
 };
 
 const SERVICE_COLORS: Record<string, string> = {
   'api-gateway': 'bg-blue-500',
   'kong': 'bg-purple-500',
-  'exchange-api': 'bg-emerald-500',
-  'order-matcher': 'bg-orange-500',
-  'wallet-service': 'bg-cyan-500',
+  'kx-exchange': 'bg-emerald-500',
+  'exchange-api': 'bg-emerald-500',  // Legacy fallback
+  'kx-matcher': 'bg-orange-500',
+  'order-matcher': 'bg-orange-500',  // Legacy fallback
+  'kx-wallet': 'bg-cyan-500',
+  'wallet-service': 'bg-cyan-500',  // Legacy fallback
   default: 'bg-slate-500',
 };
 

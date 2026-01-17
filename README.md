@@ -115,7 +115,7 @@ Browser (order.response.received)
 2. Select Alice or Bob
 3. Enter BTC amount (e.g., 0.01)
 4. Click BUY or SELL
-5. Check Jaeger at http://localhost:16686 → service `crypto-wallet`
+5. Check Jaeger at http://localhost:16686 → service `kx-wallet` or `kx-exchange`
 
 ### Manual Test - Transfer
 1. Select Alice

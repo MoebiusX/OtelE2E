@@ -56,8 +56,10 @@ export default function Register() {
             localStorage.setItem("accessToken", data.tokens.accessToken);
             localStorage.setItem("refreshToken", data.tokens.refreshToken);
             localStorage.setItem("user", JSON.stringify(data.user));
-            // Redirect to portfolio page
-            setLocation("/portfolio");
+            // Mark as new user for welcome experience
+            localStorage.setItem("isNewUser", "true");
+            // Redirect to trade page with welcome experience
+            setLocation("/trade?welcome=true");
         },
         onError: (err: Error) => {
             setError(err.message);

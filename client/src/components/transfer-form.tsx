@@ -82,7 +82,7 @@ export function TransferForm() {
 
     const transferMutation = useMutation({
         mutationFn: async (data: TransferFormData) => {
-            const tracer = trace.getTracer('crypto-wallet');
+            const tracer = trace.getTracer('kx-wallet');
             const token = localStorage.getItem('accessToken');
 
             return tracer.startActiveSpan('transfer.submit.client', async (parentSpan) => {
@@ -234,13 +234,13 @@ export function TransferForm() {
 
                 {/* No other users message */}
                 {!usersLoading && availableRecipients.length === 0 && (
-                    <div className="p-4 bg-amber-900/30 border border-amber-500/30 rounded-lg text-center">
-                        <Users className="w-8 h-8 text-amber-400 mx-auto mb-2" />
-                        <p className="text-amber-200 text-sm">
-                            No other users registered yet.
-                        </p>
-                        <p className="text-amber-200/60 text-xs mt-1">
-                            Create another account to test P2P transfers.
+                    <div className="p-6 bg-gradient-to-br from-amber-900/20 to-orange-900/20 border border-amber-500/30 rounded-xl text-center">
+                        <div className="relative inline-block mb-3">
+                            <Users className="w-10 h-10 text-amber-400/60" />
+                        </div>
+                        <h4 className="text-amber-200 font-medium mb-1">No Recipients Available</h4>
+                        <p className="text-amber-200/60 text-sm max-w-xs mx-auto">
+                            P2P transfers require other registered users. Create another account in a different browser to test this feature.
                         </p>
                     </div>
                 )}
