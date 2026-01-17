@@ -1,8 +1,8 @@
-# OtelE2E Architecture & Repository Map
+# Krystaline Exchange Architecture & Repository Map
 
 ## System Overview
 
-This repository demonstrates OpenTelemetry context propagation using a payment processing system with Kong API Gateway and RabbitMQ messaging.
+This repository demonstrates OpenTelemetry context propagation using a cryptocurrency exchange system with Kong API Gateway, RabbitMQ messaging, and blockchain-style wallet addresses (`kx1...`).
 
 ## Architecture Diagram
 
@@ -19,16 +19,16 @@ graph TB
     subgraph "Application Layer"
         EXPRESS["Express Server<br/>(server/index.ts)"]
         ROUTES["API Routes<br/>(server/api/routes.ts)"]
-        PAYMENT["PaymentService<br/>(server/core/payment-service.ts)"]
+        ORDERS["OrderService<br/>(server/core/order-service.ts)"]
     end
 
-    subgraph "Payment Processor Microservice"
-        PROCESSOR["Payment Processor<br/>(payment-processor/index.ts)"]
+    subgraph "Order Matcher Microservice"
+        MATCHER["Order Matcher<br/>(payment-processor/index.ts)"]
     end
 
     subgraph "Message Queues"
-        PAYMENTS_Q["payments queue"]
-        RESPONSE_Q["payment_response queue"]
+        ORDERS_Q["orders queue"]
+        RESPONSE_Q["order_response queue"]
     end
 
     subgraph "Observability Layer"
@@ -40,10 +40,10 @@ graph TB
     UI -->|HTTP POST| KONG
     KONG -->|Proxy + Context Injection| EXPRESS
     EXPRESS --> ROUTES
-    ROUTES --> PAYMENT
-    PAYMENT -->|publish| PAYMENTS_Q
-    PAYMENTS_Q -->|consume| PROCESSOR
-    PROCESSOR -->|ACK response| RESPONSE_Q
+    ROUTES --> ORDERS
+    ORDERS -->|publish| ORDERS_Q
+    ORDERS_Q -->|consume| MATCHER
+    MATCHER -->|ACK response| RESPONSE_Q
     RESPONSE_Q -->|consume| EXPRESS
     OTEL -->|Traces| COLLECTOR
     COLLECTOR --> JAEGER
@@ -52,30 +52,32 @@ graph TB
 ## Repository Structure
 
 ```
-OtelE2E/
+krystaline-exchange/
 ├── client/                     # Frontend React Application
 │   └── src/
 │       ├── App.tsx            # Main app component
-│       ├── pages/             # Page components (PaymentDemo)
+│       ├── pages/             # Page components (Dashboard, Trade)
 │       ├── components/        # UI components (shadcn/ui)
 │       ├── hooks/             # React hooks
-│       └── lib/               # Utilities (queryClient, utils)
+│       └── lib/               # Utilities (queryClient, utils, otel)
 │
 ├── server/                     # Backend Express Application
 │   ├── index.ts               # App entrypoint, middleware setup
 │   ├── otel.ts                # OpenTelemetry SDK configuration
-│   ├── storage.ts             # In-memory data storage
+│   ├── storage.ts             # In-memory data storage with kx1 wallets
 │   ├── vite.ts                # Vite dev server integration
 │   ├── api/
 │   │   └── routes.ts          # REST API endpoints
 │   ├── core/
-│   │   └── payment-service.ts # Payment business logic
+│   │   └── order-service.ts   # Order matching business logic
+│   ├── wallet/
+│   │   └── wallet-service.ts  # Wallet management with kx1 addresses
 │   └── services/
 │       ├── kong-client.ts     # Kong Gateway client
 │       └── rabbitmq-client.ts # RabbitMQ producer/consumer
 │
 ├── shared/
-│   └── schema.ts              # Zod schemas (Payment, Trace, Span)
+│   └── schema.ts              # Zod schemas (Order, Wallet, Transfer)
 │
 ├── scripts/
 │   ├── start-dev.js           # Development startup script

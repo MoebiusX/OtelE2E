@@ -97,6 +97,13 @@ export class RabbitMQClient {
 
       // Create span as child of the current active span
       const parentContext = context.active();
+      const activeSpan = trace.getSpan(parentContext);
+      logger.info({
+        hasActiveSpan: !!activeSpan,
+        activeTraceId: activeSpan?.spanContext().traceId,
+        activeSpanId: activeSpan?.spanContext().spanId,
+      }, 'Publishing order - checking active context');
+
       const span = this.tracer.startSpan('publish orders', {
         kind: SpanKind.PRODUCER,
         attributes: {

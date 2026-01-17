@@ -44,7 +44,7 @@ export default function Layout({ children, showAuth = true }: LayoutProps) {
                 <div className="container mx-auto px-4 py-3 flex items-center justify-between">
                     <div className="flex items-center gap-6">
                         {/* Logo */}
-                        <a href={user ? "/trading" : "/"} className="flex items-center gap-2 hover:opacity-80 transition-opacity">
+                        <a href={user ? "/portfolio" : "/"} className="flex items-center gap-2 hover:opacity-80 transition-opacity">
                             <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-cyan-400 to-blue-500 flex items-center justify-center shadow-lg shadow-cyan-500/25">
                                 <span className="text-white text-sm font-bold">K</span>
                             </div>
@@ -55,19 +55,19 @@ export default function Layout({ children, showAuth = true }: LayoutProps) {
 
                         {/* Nav Links */}
                         <nav className="hidden md:flex items-center gap-1">
-                            <a
-                                href={user ? "/trading" : "/"}
-                                className={`px-3 py-2 rounded-lg text-sm font-medium transition-all ${(location === '/' && !user) || (location === '/trading' && user) ? 'bg-cyan-500/10 text-cyan-400' : 'text-cyan-100/70 hover:text-cyan-100 hover:bg-slate-800/50'}`}
-                            >
-                                Home
-                            </a>
-                            {user && (
+                            {user ? (
                                 <>
                                     <a
-                                        href="/my-wallet"
-                                        className={`px-3 py-2 rounded-lg text-sm font-medium transition-all ${location === '/my-wallet' ? 'bg-cyan-500/10 text-cyan-400' : 'text-cyan-100/70 hover:text-cyan-100 hover:bg-slate-800/50'}`}
+                                        href="/portfolio"
+                                        className={`px-3 py-2 rounded-lg text-sm font-medium transition-all ${location === '/portfolio' || location === '/my-wallet' ? 'bg-cyan-500/10 text-cyan-400' : 'text-cyan-100/70 hover:text-cyan-100 hover:bg-slate-800/50'}`}
                                     >
-                                        Wallet
+                                        Portfolio
+                                    </a>
+                                    <a
+                                        href="/trade"
+                                        className={`px-3 py-2 rounded-lg text-sm font-medium transition-all ${location === '/trade' || location === '/trading' ? 'bg-cyan-500/10 text-cyan-400' : 'text-cyan-100/70 hover:text-cyan-100 hover:bg-slate-800/50'}`}
+                                    >
+                                        Trade
                                     </a>
                                     <a
                                         href="/convert"
@@ -75,14 +75,27 @@ export default function Layout({ children, showAuth = true }: LayoutProps) {
                                     >
                                         Convert
                                     </a>
+                                    <a
+                                        href="/activity"
+                                        className={`px-3 py-2 rounded-lg text-sm font-medium transition-all ${location === '/activity' ? 'bg-cyan-500/10 text-cyan-400' : 'text-cyan-100/70 hover:text-cyan-100 hover:bg-slate-800/50'}`}
+                                    >
+                                        Activity
+                                    </a>
+                                    <a
+                                        href="/transparency"
+                                        className={`px-3 py-2 rounded-lg text-sm font-medium transition-all ${location === '/transparency' || location === '/monitor' ? 'bg-cyan-500/10 text-cyan-400' : 'text-cyan-100/70 hover:text-cyan-100 hover:bg-slate-800/50'}`}
+                                    >
+                                        Transparency
+                                    </a>
                                 </>
+                            ) : (
+                                <a
+                                    href="/"
+                                    className={`px-3 py-2 rounded-lg text-sm font-medium transition-all ${location === '/' ? 'bg-cyan-500/10 text-cyan-400' : 'text-cyan-100/70 hover:text-cyan-100 hover:bg-slate-800/50'}`}
+                                >
+                                    Home
+                                </a>
                             )}
-                            <a
-                                href="/monitor"
-                                className={`px-3 py-2 rounded-lg text-sm font-medium transition-all ${location === '/monitor' ? 'bg-cyan-500/10 text-cyan-400' : 'text-cyan-100/70 hover:text-cyan-100 hover:bg-slate-800/50'}`}
-                            >
-                                Monitor
-                            </a>
                         </nav>
                     </div>
 
@@ -152,9 +165,10 @@ export default function Layout({ children, showAuth = true }: LayoutProps) {
                         <div>
                             <h3 className="text-cyan-100 font-semibold mb-3">Platform</h3>
                             <ul className="space-y-2 text-sm">
-                                <li><a href="/trading" className="text-cyan-100/60 hover:text-cyan-400 transition-colors">Trading</a></li>
-                                <li><a href="/my-wallet" className="text-cyan-100/60 hover:text-cyan-400 transition-colors">Wallet</a></li>
+                                <li><a href="/portfolio" className="text-cyan-100/60 hover:text-cyan-400 transition-colors">Portfolio</a></li>
+                                <li><a href="/trade" className="text-cyan-100/60 hover:text-cyan-400 transition-colors">Trade</a></li>
                                 <li><a href="/convert" className="text-cyan-100/60 hover:text-cyan-400 transition-colors">Convert</a></li>
+                                <li><a href="/activity" className="text-cyan-100/60 hover:text-cyan-400 transition-colors">Activity</a></li>
                             </ul>
                         </div>
 
@@ -162,8 +176,7 @@ export default function Layout({ children, showAuth = true }: LayoutProps) {
                             <h3 className="text-cyan-100 font-semibold mb-3">Transparency</h3>
                             <ul className="space-y-2 text-sm">
                                 <li><a href="/" className="text-cyan-100/60 hover:text-cyan-400 transition-colors">Live Dashboard</a></li>
-                                <li><a href="/monitor" className="text-cyan-100/60 hover:text-cyan-400 transition-colors">System Monitor</a></li>
-                                <li><a href="#" className="text-cyan-100/60 hover:text-cyan-400 transition-colors">API Status</a></li>
+                                <li><a href="/transparency" className="text-cyan-100/60 hover:text-cyan-400 transition-colors">System Transparency</a></li>
                             </ul>
                         </div>
                     </div>

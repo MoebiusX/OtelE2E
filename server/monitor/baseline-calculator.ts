@@ -17,7 +17,7 @@ import { createLogger } from '../lib/logger';
 
 const logger = createLogger('baseline-calculator');
 const JAEGER_URL = config.observability.jaegerUrl;
-const MONITORED_SERVICES = ['crypto-wallet', 'api-gateway', 'exchange-api', 'order-matcher'];
+const MONITORED_SERVICES = ['kx-wallet', 'api-gateway', 'kx-exchange', 'kx-matcher'];
 const LOOKBACK_DAYS = 30;
 const MIN_SAMPLES_FOR_THRESHOLD = 10;
 

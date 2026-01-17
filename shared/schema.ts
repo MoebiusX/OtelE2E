@@ -1,6 +1,42 @@
 import { z } from "zod";
 
 // ============================================
+// KRYSTALINE EXCHANGE - WALLET SCHEMAS
+// ============================================
+
+// Wallet Address Format: kx1 + base32 encoded identifier
+// Example: kx1qxy2kgdygjrsqtzq2n0yrf249
+export const walletAddressSchema = z.string()
+  .regex(/^kx1[a-z0-9]{20,40}$/, "Invalid wallet address format (must start with kx1)");
+
+// Core Wallet - independent of user auth
+export const kxWalletSchema = z.object({
+  walletId: z.string(),           // Primary key: "wal_" + nanoid
+  address: walletAddressSchema,    // Human-readable: kx1...
+  ownerId: z.string(),             // User's UUID from auth
+  label: z.string(),               // "Main Trading Wallet"
+  type: z.enum(["custodial", "non-custodial"]),
+  createdAt: z.date(),
+});
+
+// Wallet Balance - stored separately for each asset
+export const walletBalanceSchema = z.object({
+  walletId: z.string(),
+  asset: z.enum(["BTC", "USD", "ETH"]),
+  // Balance stored as integer in smallest unit (satoshi=8 decimals, cents=2)
+  balance: z.number().int(),
+  decimals: z.number().int().min(0).max(18),  // BTC=8, USD=2
+  lastUpdated: z.date(),
+});
+
+// User-to-Wallet mapping (1 user can have many wallets)
+export const userWalletMappingSchema = z.object({
+  userId: z.string(),
+  walletIds: z.array(z.string()),
+  defaultWalletId: z.string(),
+});
+
+// ============================================
 // CRYPTO EXCHANGE SCHEMAS
 // ============================================
 
@@ -71,17 +107,22 @@ export const userWalletSchema = walletSchema.extend({
   userId: z.string(),
 });
 
-// BTC Transfer between users
+// BTC Transfer between wallets (uses addresses)
 export const insertTransferSchema = z.object({
-  fromUserId: z.string(),
-  toUserId: z.string(),
+  fromAddress: walletAddressSchema,  // kx1... sender address
+  toAddress: walletAddressSchema,    // kx1... recipient address
   amount: z.number().positive(),
+  // Legacy fields for backwards compatibility
+  fromUserId: z.string().optional(),
+  toUserId: z.string().optional(),
 });
 
 export const transferSchema = z.object({
   transferId: z.string(),
-  fromUserId: z.string(),
-  toUserId: z.string(),
+  fromAddress: z.string(),          // kx1... sender address
+  toAddress: z.string(),            // kx1... recipient address
+  fromUserId: z.string().optional(), // Legacy: owner of sender wallet
+  toUserId: z.string().optional(),   // Legacy: owner of recipient wallet
   amount: z.number(),
   status: z.enum(["PENDING", "COMPLETED", "FAILED"]),
   traceId: z.string(),
@@ -141,12 +182,20 @@ export const spanSchema = z.object({
 export type InsertOrder = z.infer<typeof insertOrderSchema>;
 export type Order = z.infer<typeof orderSchema>;
 export type Execution = z.infer<typeof executionSchema>;
-export type Wallet = z.infer<typeof walletSchema>;
 export type Price = z.infer<typeof priceSchema>;
+
+// Krystaline Wallet types (new)
+export type KXWallet = z.infer<typeof kxWalletSchema>;
+export type WalletBalance = z.infer<typeof walletBalanceSchema>;
+export type UserWalletMapping = z.infer<typeof userWalletMappingSchema>;
+export type WalletAddress = z.infer<typeof walletAddressSchema>;
+
+// Legacy wallet types (for backwards compatibility)
+export type Wallet = z.infer<typeof walletSchema>;
+export type UserWallet = z.infer<typeof userWalletSchema>;
 
 // Multi-user types
 export type User = z.infer<typeof userSchema>;
-export type UserWallet = z.infer<typeof userWalletSchema>;
 export type InsertTransfer = z.infer<typeof insertTransferSchema>;
 export type Transfer = z.infer<typeof transferSchema>;
 

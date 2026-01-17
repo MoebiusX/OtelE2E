@@ -11,7 +11,7 @@ const isWindows = process.platform === 'win32';
 const npmCmd = isWindows ? 'npm.cmd' : 'npm';
 const npxCmd = isWindows ? 'npx.cmd' : 'npx';
 
-console.log('🚀 Starting OtelE2E Development Environment...');
+console.log('🚀 Starting Krystaline Exchange Development Environment...');
 
 async function checkDocker() {
     try {

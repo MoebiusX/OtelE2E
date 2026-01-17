@@ -20,10 +20,10 @@ const LOOKBACK_WINDOW = '1h'; // 1 hour of historical data
 
 // Services to monitor
 const MONITORED_SERVICES = [
-    'crypto-wallet',
+    'kx-wallet',
     'api-gateway',
-    'exchange-api',
-    'order-matcher'
+    'kx-exchange',
+    'kx-matcher'
 ];
 
 export class TraceProfiler {

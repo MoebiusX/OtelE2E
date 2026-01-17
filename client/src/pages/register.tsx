@@ -56,8 +56,8 @@ export default function Register() {
             localStorage.setItem("accessToken", data.tokens.accessToken);
             localStorage.setItem("refreshToken", data.tokens.refreshToken);
             localStorage.setItem("user", JSON.stringify(data.user));
-            // Redirect to wallet page
-            setLocation("/my-wallet");
+            // Redirect to portfolio page
+            setLocation("/portfolio");
         },
         onError: (err: Error) => {
             setError(err.message);

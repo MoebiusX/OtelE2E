@@ -1,41 +1,30 @@
 name: E2E Tests
 
 on:
-  push:
-    branches: [main, master]
-  pull_request:
-    branches: [main, master]
+  workflow_dispatch:  # Manual trigger only
+    inputs:
+      reason:
+        description: 'Reason for running e2e tests'
+        required: false
+        default: 'Manual validation'
+
+# Note: E2E tests require Docker Hub authentication to avoid rate limits.
+# Set DOCKERHUB_USERNAME and DOCKERHUB_TOKEN secrets if you want to run these.
+# For PR validation, use the unit tests in ci.yml instead.
 
 jobs:
   e2e-test:
     runs-on: ubuntu-latest
     
-    services:
-      rabbitmq:
-        image: rabbitmq:3-management
-        ports:
-          - 5672:5672
-          - 15672:15672
-      
-      kong:
-        image: kong:latest
-        env:
-          KONG_DATABASE: "off"
-          KONG_DECLARATIVE_CONFIG: /dev/null
-          KONG_PROXY_LISTEN: 0.0.0.0:8000
-          KONG_ADMIN_LISTEN: 0.0.0.0:8001
-        ports:
-          - 8000:8000
-          - 8001:8001
-      
-      jaeger:
-        image: jaegertracing/all-in-one:latest
-        ports:
-          - 16686:16686
-          - 4318:4318
-
     steps:
       - uses: actions/checkout@v4
+
+      - name: Login to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+        continue-on-error: true  # Allow anonymous pulls if no secrets
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
@@ -46,14 +35,11 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      - name: Wait for services
+      - name: Start services with Docker Compose
         run: |
-          echo "Waiting for RabbitMQ..."
-          sleep 10
-          echo "Waiting for Kong..."
-          sleep 5
-          echo "Waiting for Jaeger..."
-          sleep 5
+          docker compose up -d rabbitmq kong jaeger
+          echo "Waiting for services to be ready..."
+          sleep 30
 
       - name: Configure Kong
         run: node scripts/enable-kong-otel.js || echo "Kong OTEL config skipped"
@@ -68,3 +54,7 @@ jobs:
 
       - name: Run E2E tests
         run: npm run test:e2e
+
+      - name: Stop services
+        if: always()
+        run: docker compose down

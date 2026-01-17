@@ -102,6 +102,17 @@ export const db = {
             logger.error({ err: error }, 'Database health check failed');
             return false;
         }
+    },
+
+    // Close all connections (for graceful shutdown)
+    async end(): Promise<void> {
+        try {
+            await pool.end();
+            logger.info('Database pool closed');
+        } catch (error) {
+            logger.error({ err: error }, 'Error closing database pool');
+            throw error;
+        }
     }
 };
 

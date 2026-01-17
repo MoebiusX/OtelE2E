@@ -19,6 +19,12 @@ interface User {
     kyc_level: number;
 }
 
+interface PriceData {
+    BTC: number;
+    ETH: number;
+    source: string;
+}
+
 // Asset icons and colors
 const ASSET_CONFIG: Record<string, { icon: string; color: string; name: string }> = {
     BTC: { icon: "₿", color: "text-orange-400", name: "Bitcoin" },
@@ -29,17 +35,23 @@ const ASSET_CONFIG: Record<string, { icon: string; color: string; name: string }
 };
 
 export default function MyWallet() {
-    const [, setLocation] = useLocation();
+    const [, navigate] = useLocation();
     const [user, setUser] = useState<User | null>(null);
 
     useEffect(() => {
         const storedUser = localStorage.getItem("user");
         if (!storedUser) {
-            setLocation("/login");
+            navigate("/login");
             return;
         }
         setUser(JSON.parse(storedUser));
-    }, [setLocation]);
+    }, [navigate]);
+
+    // Fetch real prices from Binance API
+    const { data: priceData } = useQuery<PriceData>({
+        queryKey: ["/api/price"],
+        refetchInterval: 3000, // Update every 3 seconds
+    });
 
     const { data: walletsData, isLoading } = useQuery<{ wallets: Wallet[] }>({
         queryKey: ["/api/wallet/balances"],
@@ -51,7 +63,7 @@ export default function MyWallet() {
             if (!res.ok) {
                 if (res.status === 401) {
                     localStorage.clear();
-                    setLocation("/login");
+                    navigate("/login");
                 }
                 throw new Error("Failed to fetch wallets");
             }
@@ -60,18 +72,23 @@ export default function MyWallet() {
         enabled: !!user,
     });
 
-    // Calculate total balance in USD (simplified)
+    // Get rate for an asset using real Binance prices
+    const getRate = (asset: string): number => {
+        if (priceData) {
+            if (asset === 'BTC') return priceData.BTC;
+            if (asset === 'ETH') return priceData.ETH;
+        }
+        // Fallback for stablecoins
+        if (asset === 'USDT' || asset === 'USD') return 1;
+        if (asset === 'EUR') return 1.1;
+        return 0;
+    };
+
+    // Calculate total balance in USD using real prices
     const calculateTotalUSD = () => {
         if (!walletsData?.wallets) return 0;
-        const rates: Record<string, number> = {
-            BTC: 42000,
-            ETH: 2500,
-            USDT: 1,
-            USD: 1,
-            EUR: 1.1,
-        };
         return walletsData.wallets.reduce((total, w) => {
-            const rate = rates[w.asset] || 0;
+            const rate = getRate(w.asset);
             return total + parseFloat(w.balance) * rate;
         }, 0);
     };
@@ -98,16 +115,28 @@ export default function MyWallet() {
 
                 {/* Quick Actions */}
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
-                    <Button className="h-16 bg-emerald-600 hover:bg-emerald-700 text-lg font-semibold">
+                    <Button 
+                        className="h-16 bg-emerald-600 hover:bg-emerald-700 text-lg font-semibold"
+                        onClick={() => navigate("/trade")}
+                    >
                         Deposit
                     </Button>
-                    <Button className="h-16 bg-blue-600 hover:bg-blue-700 text-lg font-semibold">
+                    <Button 
+                        className="h-16 bg-blue-600 hover:bg-blue-700 text-lg font-semibold"
+                        onClick={() => navigate("/trade")}
+                    >
                         Withdraw
                     </Button>
-                    <Button className="h-16 bg-cyan-600 hover:bg-cyan-700 text-lg font-semibold">
+                    <Button 
+                        className="h-16 bg-cyan-600 hover:bg-cyan-700 text-lg font-semibold"
+                        onClick={() => navigate("/convert")}
+                    >
                         Convert
                     </Button>
-                    <Button className="h-16 bg-indigo-600 hover:bg-indigo-700 text-lg font-semibold">
+                    <Button 
+                        className="h-16 bg-indigo-600 hover:bg-indigo-700 text-lg font-semibold"
+                        onClick={() => navigate("/trade")}
+                    >
                         Trade
                     </Button>
                 </div>
@@ -122,11 +151,7 @@ export default function MyWallet() {
                         {walletsData?.wallets.map((wallet) => {
                             const config = ASSET_CONFIG[wallet.asset] || { icon: "?", color: "text-slate-400", name: wallet.asset };
                             const balance = parseFloat(wallet.balance);
-                            const usdValue = balance * (
-                                wallet.asset === 'BTC' ? 42000 :
-                                    wallet.asset === 'ETH' ? 2500 :
-                                        wallet.asset === 'EUR' ? 1.1 : 1
-                            );
+                            const usdValue = balance * getRate(wallet.asset);
 
                             return (
                                 <Card key={wallet.asset} className="bg-slate-800/50 border-cyan-500/30 hover:border-cyan-400/50 transition-all backdrop-blur">
