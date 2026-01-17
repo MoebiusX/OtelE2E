@@ -75,7 +75,7 @@ class TrainingStore {
                 logger.info('No existing training data, starting fresh');
             }
             this.loaded = true;
-        } catch (error: any) {
+        } catch (error: unknown) {
             logger.error({ err: error }, 'Failed to load training data');
             this.examples = [];
         }
@@ -84,7 +84,7 @@ class TrainingStore {
     private save(): void {
         try {
             fs.writeFileSync(TRAINING_FILE, JSON.stringify(this.examples, null, 2));
-        } catch (error: any) {
+        } catch (error: unknown) {
             logger.error({ err: error }, 'Failed to save training data');
         }
     }

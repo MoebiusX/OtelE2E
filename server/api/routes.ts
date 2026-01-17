@@ -9,6 +9,7 @@ import { orderService, getPrice } from "../core/order-service";
 import { insertOrderSchema, insertTransferSchema } from "@shared/schema";
 import { traces } from "../otel";
 import { createLogger } from "../lib/logger";
+import { getErrorMessage } from "../lib/errors";
 import db from "../db";
 
 const logger = createLogger('api-routes');
@@ -37,8 +38,8 @@ export function registerRoutes(app: Express) {
       }));
       
       res.json(users);
-    } catch (error: any) {
-      logger.error({ error: error.message }, 'Failed to fetch users');
+    } catch (error: unknown) {
+      logger.error({ error: getErrorMessage(error) }, 'Failed to fetch users');
       res.status(500).json({ error: "Failed to fetch users" });
     }
   });
@@ -57,7 +58,7 @@ export function registerRoutes(app: Express) {
         change24h: (Math.random() - 0.5) * 5,
         timestamp: new Date()
       });
-    } catch (error: any) {
+    } catch (error: unknown) {
       res.status(500).json({ error: "Failed to fetch price" });
     }
   });
@@ -76,7 +77,7 @@ export function registerRoutes(app: Express) {
         btcValue: wallet.btc * price,
         totalValue: wallet.usd + (wallet.btc * price)
       });
-    } catch (error: any) {
+    } catch (error: unknown) {
       res.status(500).json({ error: "Failed to fetch wallet" });
     }
   });
@@ -95,7 +96,7 @@ export function registerRoutes(app: Express) {
         btcValue: wallet.btc * price,
         totalValue: wallet.usd + (wallet.btc * price)
       });
-    } catch (error: any) {
+    } catch (error: unknown) {
       res.status(500).json({ error: "Failed to fetch wallet" });
     }
   });
@@ -152,7 +153,7 @@ export function registerRoutes(app: Express) {
         spanId: result.spanId
       });
 
-    } catch (error: any) {
+    } catch (error: unknown) {
       logger.error({ err: error }, 'Order processing failed');
       res.status(500).json({ error: "Failed to process order" });
     }
@@ -163,7 +164,7 @@ export function registerRoutes(app: Express) {
     try {
       const orders = await orderService.getOrders(10);
       res.json(orders);
-    } catch (error: any) {
+    } catch (error: unknown) {
       res.status(500).json({ error: "Failed to fetch orders" });
     }
   });
@@ -218,7 +219,7 @@ export function registerRoutes(app: Express) {
         spanId: result.spanId
       });
 
-    } catch (error: any) {
+    } catch (error: unknown) {
       logger.error({ err: error }, 'Transfer processing failed');
       res.status(500).json({ error: "Failed to process transfer" });
     }
@@ -229,7 +230,7 @@ export function registerRoutes(app: Express) {
     try {
       const transfers = await orderService.getTransfers(10);
       res.json(transfers);
-    } catch (error: any) {
+    } catch (error: unknown) {
       res.status(500).json({ error: "Failed to fetch transfers" });
     }
   });
@@ -266,7 +267,7 @@ export function registerRoutes(app: Express) {
           processorId: result.execution.processorId
         } : undefined
       });
-    } catch (error: any) {
+    } catch (error: unknown) {
       res.status(500).json({ error: "Failed to process payment" });
     }
   });
@@ -275,7 +276,7 @@ export function registerRoutes(app: Express) {
     try {
       const orders = await orderService.getOrders(10);
       res.json(orders);
-    } catch (error: any) {
+    } catch (error: unknown) {
       res.status(500).json({ error: "Failed to fetch payments" });
     }
   });
@@ -321,7 +322,7 @@ export function registerRoutes(app: Express) {
 
       formattedTraces.sort((a, b) => new Date(b.startTime).getTime() - new Date(a.startTime).getTime());
       res.json(formattedTraces.slice(0, 10));
-    } catch (error: any) {
+    } catch (error: unknown) {
       res.status(500).json({ error: "Failed to fetch traces" });
     }
   });
@@ -333,7 +334,7 @@ export function registerRoutes(app: Express) {
       await orderService.clearAllData();
       clearTraces();
       res.json({ success: true, message: "All data cleared" });
-    } catch (error: any) {
+    } catch (error: unknown) {
       res.status(500).json({ error: "Failed to clear data" });
     }
   });

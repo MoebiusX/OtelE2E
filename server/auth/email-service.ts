@@ -96,7 +96,7 @@ export const emailService = {
             }, 'Email sent successfully');
             logger.debug('Email preview available at http://localhost:1080');
             return true;
-        } catch (error: any) {
+        } catch (error: unknown) {
             logger.error({
                 err: error,
                 to: options.to,

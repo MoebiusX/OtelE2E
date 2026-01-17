@@ -2,7 +2,7 @@ import * as amqp from 'amqplib';
 import { trace, context, SpanStatusCode, SpanKind, propagation } from '@opentelemetry/api';
 import { config } from '../config';
 import { createLogger } from '../lib/logger';
-import { ExternalServiceError, TimeoutError } from '../lib/errors';
+import { ExternalServiceError, TimeoutError, getErrorMessage } from '../lib/errors';
 
 const logger = createLogger('rabbitmq');
 
@@ -170,12 +170,12 @@ export class RabbitMQClient {
             span.setStatus({ code: SpanStatusCode.ERROR, message: 'Failed to send' });
             reject(new ExternalServiceError('RabbitMQ', new Error('Failed to send order to queue')));
           }
-        } catch (error: any) {
+        } catch (error: unknown) {
           clearTimeout(timeout);
           this.pendingResponses.delete(correlationId);
           logger.error({ err: error, orderId: order.orderId }, 'Failed to publish order');
-          span.recordException(error);
-          span.setStatus({ code: SpanStatusCode.ERROR, message: error.message });
+          span.recordException(error as Error);
+          span.setStatus({ code: SpanStatusCode.ERROR, message: getErrorMessage(error) });
           reject(error);
         } finally {
           span.end();
@@ -253,7 +253,7 @@ export class RabbitMQClient {
           }
 
           this.channel!.ack(msg);
-        } catch (error: any) {
+        } catch (error: unknown) {
           logger.error({ err: error }, 'Response consumer error');
           this.channel!.nack(msg, false, false);
         }

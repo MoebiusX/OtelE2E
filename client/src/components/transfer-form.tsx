@@ -12,6 +12,10 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { useToast } from "@/hooks/use-toast";
 import { ArrowRight, Loader2, Send, Bitcoin, Users } from "lucide-react";
 
+// Type-safe error message extraction
+const getErrorMessage = (error: unknown): string =>
+  error instanceof Error ? error.message : 'An error occurred';
+
 const transferSchema = z.object({
     // Support both wallet address (kx1...) and legacy userId
     toAddress: z.string().min(1, "Enter recipient wallet address"),
@@ -119,8 +123,8 @@ export function TransferForm() {
 
                     parentSpan.setStatus({ code: SpanStatusCode.OK });
                     return result;
-                } catch (error: any) {
-                    parentSpan.setStatus({ code: SpanStatusCode.ERROR, message: error.message });
+                } catch (error: unknown) {
+                    parentSpan.setStatus({ code: SpanStatusCode.ERROR, message: getErrorMessage(error) });
                     throw error;
                 } finally {
                     parentSpan.end();

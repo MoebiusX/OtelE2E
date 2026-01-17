@@ -25,7 +25,7 @@
             <div class='fl pad1y space-right2'>
                 <span class="strong">0% </span>
                 <span class="quiet">Statements</span>
-                <span class='fraction'>0/227</span>
+                <span class='fraction'>0/229</span>
             </div>
         
             
@@ -46,7 +46,7 @@
             <div class='fl pad1y space-right2'>
                 <span class="strong">0% </span>
                 <span class="quiet">Lines</span>
-                <span class='fraction'>0/227</span>
+                <span class='fraction'>0/229</span>
             </div>
         
             
@@ -429,7 +429,10 @@
 <a name='L364'></a><a href='#L364'>364</a>
 <a name='L365'></a><a href='#L365'>365</a>
 <a name='L366'></a><a href='#L366'>366</a>
-<a name='L367'></a><a href='#L367'>367</a></td><td class="line-coverage quiet"><span class="cline-any cline-no">&nbsp;</span>
+<a name='L367'></a><a href='#L367'>367</a>
+<a name='L368'></a><a href='#L368'>368</a>
+<a name='L369'></a><a href='#L369'>369</a>
+<a name='L370'></a><a href='#L370'>370</a></td><td class="line-coverage quiet"><span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
@@ -454,6 +457,7 @@
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
@@ -774,6 +778,8 @@
 <span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-no">&nbsp;</span>
@@ -809,6 +815,7 @@ import { traceProfiler } from '../monitor/trace-profiler';
 import { anomalyDetector } from '../monitor/anomaly-detector';
 import { traces } from '../otel';
 import { createLogger } from '../lib/logger';
+import { getErrorMessage } from '../lib/errors';
 import { 
   systemStatusSchema, 
   publicTradeSchema, 
@@ -927,7 +934,7 @@ import { z } from 'zod';
 <span class="cstat-no" title="statement not covered" >      const validatedStatus = systemStatusSchema.parse(status);</span>
 <span class="cstat-no" title="statement not covered" >      logger.info({ status: validatedStatus.status, uptime: validatedStatus.uptime }, 'Generated system status');</span>
 <span class="cstat-no" title="statement not covered" >      return validatedStatus;</span>
-<span class="cstat-no" title="statement not covered" >    } catch (error: any) {</span>
+<span class="cstat-no" title="statement not covered" >    } catch (error: unknown) {</span>
 <span class="cstat-no" title="statement not covered" >      logger.error({ err: error }, 'Failed to generate system status');</span>
 <span class="cstat-no" title="statement not covered" >      throw error;</span>
 <span class="cstat-no" title="statement not covered" >    }</span>
@@ -999,7 +1006,7 @@ import { z } from 'zod';
 &nbsp;
 <span class="cstat-no" title="statement not covered" >      logger.info({ count: publicTrades.length }, 'Retrieved public trades');</span>
 <span class="cstat-no" title="statement not covered" >      return publicTrades;</span>
-<span class="cstat-no" title="statement not covered" >    } catch (error: any) {</span>
+<span class="cstat-no" title="statement not covered" >    } catch (error: unknown) {</span>
 <span class="cstat-no" title="statement not covered" >      logger.error({ err: error }, 'Failed to get public trades');</span>
 <span class="cstat-no" title="statement not covered" >      throw error;</span>
 <span class="cstat-no" title="statement not covered" >    }</span>
@@ -1084,7 +1091,7 @@ import { z } from 'zod';
 <span class="cstat-no" title="statement not covered" >      const validatedMetrics = transparencyMetricsSchema.parse(metrics);</span>
 <span class="cstat-no" title="statement not covered" >      logger.info('Generated transparency metrics');</span>
 <span class="cstat-no" title="statement not covered" >      return validatedMetrics;</span>
-<span class="cstat-no" title="statement not covered" >    } catch (error: any) {</span>
+<span class="cstat-no" title="statement not covered" >    } catch (error: unknown) {</span>
 <span class="cstat-no" title="statement not covered" >      logger.error({ err: error }, 'Failed to generate transparency metrics');</span>
 <span class="cstat-no" title="statement not covered" >      throw error;</span>
 <span class="cstat-no" title="statement not covered" >    }</span>
@@ -1138,9 +1145,11 @@ import { z } from 'zod';
 <span class="cstat-no" title="statement not covered" >        status: 'completed',</span>
 <span class="cstat-no" title="statement not covered" >        aiVerified: true,</span>
 <span class="cstat-no" title="statement not covered" >      };</span>
-<span class="cstat-no" title="statement not covered" >    } catch (error: any) {</span>
+<span class="cstat-no" title="statement not covered" >    } catch (error: unknown) {</span>
       // Handle connection errors gracefully (Jaeger might not be ready)
-<span class="cstat-no" title="statement not covered" >      if (error.cause?.code === 'ECONNREFUSED' || error.code === 'ECONNREFUSED') {</span>
+<span class="cstat-no" title="statement not covered" >      const cause = error instanceof Error ? (error as any).cause : undefined;</span>
+<span class="cstat-no" title="statement not covered" >      const code = error instanceof Error ? (error as any).code : undefined;</span>
+<span class="cstat-no" title="statement not covered" >      if (cause?.code === 'ECONNREFUSED' || code === 'ECONNREFUSED') {</span>
 <span class="cstat-no" title="statement not covered" >        logger.debug({ traceId }, 'Jaeger not available');</span>
 <span class="cstat-no" title="statement not covered" >        return null;</span>
 <span class="cstat-no" title="statement not covered" >      }</span>
@@ -1168,7 +1177,7 @@ import { z } from 'zod';
             <div class='footer quiet pad2 space-top1 center small'>
                 Code coverage generated by
                 <a href="https://istanbul.js.org/" target="_blank" rel="noopener noreferrer">istanbul</a>
-                at 2026-01-17T09:58:17.388Z
+                at 2026-01-17T10:53:51.691Z
             </div>
         <script src="../../prettify.js"></script>
         <script>

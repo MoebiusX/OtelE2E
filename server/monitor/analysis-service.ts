@@ -14,6 +14,7 @@ import type {
 import { historyStore } from './history-store';
 import { metricsCorrelator, type CorrelatedMetrics } from './metrics-correlator';
 import { createLogger } from '../lib/logger';
+import { getErrorMessage } from '../lib/errors';
 
 const logger = createLogger('analysis-service');
 
@@ -98,9 +99,9 @@ export class AnalysisService {
             historyStore.addAnalysis(analysis);
 
             return analysis;
-        } catch (error: any) {
+        } catch (error: unknown) {
             logger.error({ err: error }, 'Ollama analysis request failed');
-            return this.createPlaceholderAnalysis(anomaly, error.message);
+            return this.createPlaceholderAnalysis(anomaly, getErrorMessage(error));
         }
     }
 
@@ -148,9 +149,9 @@ export class AnalysisService {
             analysis.prompt = prompt;           // Exact prompt sent to LLM
             analysis.rawResponse = llmResponse; // Raw LLM response
             return analysis;
-        } catch (error: any) {
+        } catch (error: unknown) {
             clearTimeout(timeoutId);
-            if (error.name === 'AbortError') {
+            if (error instanceof Error && error.name === 'AbortError') {
                 throw new Error('Ollama request timed out after 30 seconds');
             }
             throw error;

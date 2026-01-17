@@ -499,7 +499,7 @@ import { Router, Request, Response, NextFunction } from 'express';
 import { authService, registerSchema, loginSchema, verifySchema, User } from './auth-service';
 import { ZodError } from 'zod';
 import { createLogger } from '../lib/logger';
-import { AuthenticationError, ValidationError } from '../lib/errors';
+import { AuthenticationError, ValidationError, getErrorMessage } from '../lib/errors';
 &nbsp;
 const logger = createLogger('auth-routes');
 const router = Router();
@@ -564,14 +564,14 @@ router.post('/register', async (req, res) =&gt; {
                 status: result.user.status,
             }
         });
-    } catch (error: any) {
+    } catch (error: unknown) {
         if (error instanceof ZodError) <span class="branch-0 cbranch-no" title="branch not covered" >{</span>
 <span class="cstat-no" title="statement not covered" >            return res.status(400).json({</span>
 <span class="cstat-no" title="statement not covered" >                error: 'Validation failed',</span>
 <span class="cstat-no" title="statement not covered" >                details: error.errors.map(e =&gt; e.message),</span>
 <span class="cstat-no" title="statement not covered" >            });</span>
 <span class="cstat-no" title="statement not covered" >        }</span>
-        res.status(400).json({ error: error.message });
+        res.status(400).json({ error: getErrorMessage(error) });
     }
 });
 &nbsp;
@@ -594,14 +594,14 @@ router.post('/verify', async (req, res) =&gt; {
             },
             tokens: result.tokens,
         });
-    } catch (error: any) {
+    } catch (error: unknown) {
         if (error instanceof ZodError) <span class="branch-0 cbranch-no" title="branch not covered" >{</span>
 <span class="cstat-no" title="statement not covered" >            return res.status(400).json({</span>
 <span class="cstat-no" title="statement not covered" >                error: 'Validation failed',</span>
 <span class="cstat-no" title="statement not covered" >                details: error.errors.map(e =&gt; e.message),</span>
 <span class="cstat-no" title="statement not covered" >            });</span>
 <span class="cstat-no" title="statement not covered" >        }</span>
-        res.status(400).json({ error: error.message });
+        res.status(400).json({ error: getErrorMessage(error) });
     }
 });
 &nbsp;
@@ -618,8 +618,8 @@ router.post('/resend-code', async (req, res) =&gt; {
 &nbsp;
         await authService.resendVerificationCode(email);
         res.json({ success: true, message: 'Verification code sent' });
-    } catch (error: any) {
-        res.status(400).json({ error: error.message });
+    } catch (error: unknown) {
+        res.status(400).json({ error: getErrorMessage(error) });
     }
 });
 &nbsp;
@@ -642,14 +642,14 @@ router.post('/login', async (req, res) =&gt; {
             },
             tokens: result.tokens,
         });
-    } catch (error: any) {
+    } catch (error: unknown) {
         if (error instanceof ZodError) <span class="branch-0 cbranch-no" title="branch not covered" >{</span>
 <span class="cstat-no" title="statement not covered" >            return res.status(400).json({</span>
 <span class="cstat-no" title="statement not covered" >                error: 'Validation failed',</span>
 <span class="cstat-no" title="statement not covered" >                details: error.errors.map(e =&gt; e.message),</span>
 <span class="cstat-no" title="statement not covered" >            });</span>
 <span class="cstat-no" title="statement not covered" >        }</span>
-        res.status(401).json({ error: error.message });
+        res.status(401).json({ error: getErrorMessage(error) });
     }
 });
 &nbsp;
@@ -666,8 +666,8 @@ router.post('/refresh', async (req, res) =&gt; {
 &nbsp;
         const tokens = await authService.refreshToken(refreshToken);
         res.json({ success: true, tokens });
-    } catch (error: any) {
-        res.status(401).json({ error: error.message });
+    } catch (error: unknown) {
+        res.status(401).json({ error: getErrorMessage(error) });
     }
 });
 &nbsp;
@@ -679,8 +679,8 @@ router.post('/logout', authenticate, async (req, res) =&gt; {
     try {
         await authService.logout(req.user!.id);
         res.json({ success: true, message: 'Logged out' });
-<span class="branch-0 cbranch-no" title="branch not covered" >    } catch (error: any) {</span>
-<span class="cstat-no" title="statement not covered" >        res.status(500).json({ error: error.message });</span>
+<span class="branch-0 cbranch-no" title="branch not covered" >    } catch (error: unknown) {</span>
+<span class="cstat-no" title="statement not covered" >        res.status(500).json({ error: getErrorMessage(error) });</span>
 <span class="cstat-no" title="statement not covered" >    }</span>
 });
 &nbsp;
@@ -709,7 +709,7 @@ export default router;
             <div class='footer quiet pad2 space-top1 center small'>
                 Code coverage generated by
                 <a href="https://istanbul.js.org/" target="_blank" rel="noopener noreferrer">istanbul</a>
-                at 2026-01-17T09:58:17.388Z
+                at 2026-01-17T10:53:51.691Z
             </div>
         <script src="../../prettify.js"></script>
         <script>

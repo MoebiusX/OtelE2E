@@ -4,13 +4,16 @@
  * Tests for the streaming LLM analysis service.
  */
 
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach, Mock } from 'vitest';
 
-// Mock dependencies
+// Mock dependencies BEFORE importing
 vi.mock('../../server/monitor/ws-server', () => ({
     wsServer: {
         broadcast: vi.fn(),
-        broadcastToSubscribers: vi.fn(),
+        alert: vi.fn(),
+        analysisStart: vi.fn(),
+        analysisComplete: vi.fn(),
+        streamChunk: vi.fn(),
     }
 }));
 
@@ -33,6 +36,8 @@ vi.mock('../../server/lib/logger', () => ({
 global.fetch = vi.fn();
 
 import type { Anomaly } from '../../server/monitor/types';
+import { streamAnalyzer } from '../../server/monitor/stream-analyzer';
+import { wsServer } from '../../server/monitor/ws-server';
 
 // Create test anomaly helper
 const createAnomaly = (
@@ -175,6 +180,58 @@ describe('StreamAnalyzer', () => {
             p2Issues.forEach(issue => {
                 expect(issue.priority).toBe('P2');
             });
+        });
+    });
+
+    // ============================================
+    // Stream Analyzer Singleton
+    // ============================================
+    describe('Stream Analyzer Instance', () => {
+        it('should export streamAnalyzer singleton', () => {
+            expect(streamAnalyzer).toBeDefined();
+        });
+
+        it('should have enqueue method', () => {
+            expect(typeof streamAnalyzer.enqueue).toBe('function');
+        });
+
+        it('should enqueue anomaly and buffer it', async () => {
+            const anomaly = createAnomaly('buffer-1', 'kx-wallet', 'transfer', 2.0);
+            
+            await streamAnalyzer.enqueue(anomaly);
+            
+            // Should not immediately call analysisStart (batch not full)
+            expect(wsServer.analysisStart).not.toHaveBeenCalled();
+        });
+
+        it('should send P0 alert immediately for critical anomalies', async () => {
+            const criticalAnomaly = createAnomaly('critical-1', 'payment-service', 'processPayment', 4.0, {
+                'http.status_code': 500,
+                'error': true
+            });
+
+            await streamAnalyzer.enqueue(criticalAnomaly);
+
+            // Should trigger P0 alert
+            expect(wsServer.alert).toHaveBeenCalledWith(
+                'critical',
+                expect.stringContaining('Payment Gateway Down'),
+                expect.objectContaining({ anomalyId: 'critical-1' })
+            );
+        });
+
+        it('should alert for auth service down (P0)', async () => {
+            const authDown = createAnomaly('auth-1', 'auth-service', 'login', 4.0, {
+                'http.status_code': 503
+            });
+
+            await streamAnalyzer.enqueue(authDown);
+
+            expect(wsServer.alert).toHaveBeenCalledWith(
+                'critical',
+                expect.stringContaining('Auth Service Down'),
+                expect.any(Object)
+            );
         });
     });
 

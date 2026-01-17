@@ -159,7 +159,7 @@ describe('AnalysisService', () => {
             expect(result).toHaveProperty('summary');
             expect(result).toHaveProperty('recommendations');
             expect(result).toHaveProperty('confidence');
-            expect(result).toHaveProperty('timestamp');
+            expect(result).toHaveProperty('analyzedAt');
         });
     });
 

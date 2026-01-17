@@ -339,3 +339,43 @@ export function createErrorFromStatusCode(
       return new AppError(defaultMessage, statusCode, 'UNKNOWN_ERROR', false, details);
   }
 }
+
+/**
+ * Safely extract error message from unknown error
+ * Use this to replace `catch (error: unknown)` patterns
+ */
+export function getErrorMessage(error: unknown): string {
+  if (error instanceof Error) {
+    return error.message;
+  }
+  if (typeof error === 'string') {
+    return error;
+  }
+  if (error && typeof error === 'object' && 'message' in error) {
+    return String(error.message);
+  }
+  return 'An unknown error occurred';
+}
+
+/**
+ * Get HTTP status code from error
+ */
+export function getErrorStatusCode(error: unknown): number {
+  if (error instanceof AppError) {
+    return error.statusCode;
+  }
+  return 500;
+}
+
+/**
+ * Get error code from error
+ */
+export function getErrorCode(error: unknown): string {
+  if (error instanceof AppError) {
+    return error.code;
+  }
+  if (error instanceof Error) {
+    return error.name;
+  }
+  return 'UNKNOWN_ERROR';
+}

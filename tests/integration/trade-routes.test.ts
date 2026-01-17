@@ -122,7 +122,7 @@ function createTradeApp() {
         toAmount: result.toAmount,
         orderId: result.orderId
       });
-    } catch (error: any) {
+    } catch (error: unknown) {
       res.status(400).json({ error: error.message });
     }
   });
@@ -145,7 +145,7 @@ function createTradeApp() {
         quantity
       );
       res.json({ success: true, order });
-    } catch (error: any) {
+    } catch (error: unknown) {
       res.status(400).json({ error: error.message });
     }
   });
@@ -155,7 +155,7 @@ function createTradeApp() {
     try {
       await mockTradeService.cancelOrder((req as any).user.id, req.params.id);
       res.json({ success: true, message: 'Order cancelled' });
-    } catch (error: any) {
+    } catch (error: unknown) {
       res.status(400).json({ error: error.message });
     }
   });

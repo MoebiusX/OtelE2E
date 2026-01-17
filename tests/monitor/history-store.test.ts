@@ -281,13 +281,30 @@ describe('HistoryStore', () => {
                 }
             ];
 
-            store.updateTimeBaselines(timeBaselines);
+            store.setTimeBaselines(timeBaselines);
 
             const retrieved = store.getTimeBaselines();
             expect(retrieved).toHaveLength(1);
         });
 
-        it('should get time baseline by key', () => {
+        it('should get time baselines', () => {
+            // First set some baselines
+            const timeBaselines = [
+                {
+                    spanKey: 'test:op',
+                    service: 'test',
+                    operation: 'op',
+                    dayOfWeek: 1,
+                    hourOfDay: 10,
+                    mean: 100,
+                    stdDev: 20,
+                    sampleCount: 500,
+                    thresholds: { sev5: 1.3, sev4: 1.65, sev3: 2.0, sev2: 2.6, sev1: 3.3 },
+                    lastUpdated: new Date()
+                }
+            ];
+            store.setTimeBaselines(timeBaselines);
+            
             const baselines = store.getTimeBaselines();
             expect(Array.isArray(baselines)).toBe(true);
         });

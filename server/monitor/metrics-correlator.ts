@@ -9,6 +9,7 @@
 import fetch from 'node-fetch';
 import { config } from '../config';
 import { createLogger } from '../lib/logger';
+import { getErrorMessage } from '../lib/errors';
 
 const logger = createLogger('metrics-correlator');
 const PROMETHEUS_URL = config.observability.prometheusUrl;
@@ -140,7 +141,7 @@ class MetricsCorrelator {
             }
 
             return null;
-        } catch (error: any) {
+        } catch (error: unknown) {
             logger.warn({ metricQuery, err: error }, 'Error querying metric from Prometheus');
             return null;
         }
@@ -175,7 +176,7 @@ class MetricsCorrelator {
             }
 
             return 0;
-        } catch (error: any) {
+        } catch (error: unknown) {
             logger.warn({ err: error }, 'Error querying error rate from Prometheus');
             return null;
         }
@@ -209,7 +210,7 @@ class MetricsCorrelator {
             }
 
             return null;
-        } catch (error: any) {
+        } catch (error: unknown) {
             logger.warn({ err: error }, 'Error querying P99 latency from Prometheus');
             return null;
         }
@@ -291,12 +292,12 @@ class MetricsCorrelator {
                 avgLatencyMs: avgLatency !== null ? avgLatency * 1000 : null,
                 prometheusHealthy: true,
             };
-        } catch (error: any) {
+        } catch (error: unknown) {
             logger.error({ err: error }, 'Error getting metrics summary from Prometheus');
             return {
                 timestamp: new Date(),
                 prometheusHealthy: false,
-                error: error.message,
+                error: getErrorMessage(error),
             };
         }
     }

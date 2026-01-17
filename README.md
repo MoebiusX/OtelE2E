@@ -49,6 +49,17 @@ kx-wallet: transfer.submit.client          ← Browser starts transfer
 | Kong Gateway | http://localhost:8000 | `api-gateway` |
 | Jaeger UI | http://localhost:16686 | - |
 | RabbitMQ | http://localhost:15672 | - |
+| Prometheus | http://localhost:9090 | - |
+
+### Metrics Endpoints
+
+| Metric Source | URL | Description |
+|---------------|-----|-------------|
+| Exchange API | http://localhost:5000/metrics | Application metrics (requests, orders, latency) |
+| RabbitMQ | http://localhost:15692/metrics | Queue depth, message rates, connections |
+| PostgreSQL (App) | http://localhost:9187/metrics | Database connections, query stats |
+| PostgreSQL (Kong) | http://localhost:9188/metrics | Kong database metrics |
+| Node Exporter | http://localhost:9100/metrics | OS metrics (CPU, memory, disk, network) |
 
 ## Architecture
 

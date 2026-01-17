@@ -11,6 +11,7 @@ import { historyStore } from './history-store';
 import { metricsCorrelator } from './metrics-correlator';
 import { trainingStore } from './training-store';
 import { createLogger } from '../lib/logger';
+import { getErrorMessage } from '../lib/errors';
 import type {
     HealthResponse,
     AnomaliesResponse,
@@ -173,8 +174,8 @@ router.get('/trace/:traceId', async (req, res) => {
 
         const data = await response.json();
         res.json(data);
-    } catch (error: any) {
-        res.status(500).json({ error: error.message });
+    } catch (error: unknown) {
+        res.status(500).json({ error: getErrorMessage(error) });
     }
 });
 
@@ -228,9 +229,9 @@ router.post('/correlate', async (req, res) => {
         );
 
         res.json(correlatedMetrics);
-    } catch (error: any) {
+    } catch (error: unknown) {
         logger.error({ err: error }, 'Metrics correlation failed');
-        res.status(500).json({ error: 'Failed to correlate metrics', details: error.message });
+        res.status(500).json({ error: 'Failed to correlate metrics', details: getErrorMessage(error) });
     }
 });
 
@@ -242,7 +243,7 @@ router.get('/metrics/summary', async (req, res) => {
     try {
         const summary = await metricsCorrelator.getMetricsSummary();
         res.json(summary);
-    } catch (error: any) {
+    } catch (error: unknown) {
         logger.error({ err: error }, 'Failed to get metrics summary');
         res.status(500).json({ error: 'Failed to get metrics summary' });
     }

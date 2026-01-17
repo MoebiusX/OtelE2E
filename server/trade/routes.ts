@@ -8,6 +8,7 @@ import { Router } from 'express';
 import { tradeService } from './trade-service';
 import { authenticate } from '../auth/routes';
 import { priceService } from '../services/price-service';
+import { getErrorMessage } from '../lib/errors';
 
 const router = Router();
 
@@ -93,8 +94,8 @@ router.post('/convert/quote', authenticate, (req, res) => {
 
         const quote = tradeService.getConvertQuote(fromAsset, toAsset, amount);
         res.json({ success: true, quote });
-    } catch (error: any) {
-        res.status(400).json({ error: error.message });
+    } catch (error: unknown) {
+        res.status(400).json({ error: getErrorMessage(error) });
     }
 });
 
@@ -123,8 +124,8 @@ router.post('/convert', authenticate, async (req, res) => {
             toAmount: result.toAmount,
             orderId: result.orderId
         });
-    } catch (error: any) {
-        res.status(400).json({ error: error.message });
+    } catch (error: unknown) {
+        res.status(400).json({ error: getErrorMessage(error) });
     }
 });
 
@@ -153,8 +154,8 @@ router.post('/order', authenticate, async (req, res) => {
         );
 
         res.json({ success: true, order });
-    } catch (error: any) {
-        res.status(400).json({ error: error.message });
+    } catch (error: unknown) {
+        res.status(400).json({ error: getErrorMessage(error) });
     }
 });
 
@@ -166,8 +167,8 @@ router.delete('/order/:id', authenticate, async (req, res) => {
     try {
         await tradeService.cancelOrder(req.user!.id, req.params.id);
         res.json({ success: true, message: 'Order cancelled' });
-    } catch (error: any) {
-        res.status(400).json({ error: error.message });
+    } catch (error: unknown) {
+        res.status(400).json({ error: getErrorMessage(error) });
     }
 });
 
@@ -180,8 +181,8 @@ router.get('/orders', authenticate, async (req, res) => {
         const status = req.query.status as string | undefined;
         const orders = await tradeService.getOrders(req.user!.id, status);
         res.json({ success: true, orders });
-    } catch (error: any) {
-        res.status(500).json({ error: error.message });
+    } catch (error: unknown) {
+        res.status(500).json({ error: getErrorMessage(error) });
     }
 });
 

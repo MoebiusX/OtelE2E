@@ -11,6 +11,10 @@ import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
 import { ArrowUpRight, ArrowDownRight, Wallet, TrendingUp, Loader2, Bitcoin } from "lucide-react";
 
+// Type-safe error message extraction
+const getErrorMessage = (error: unknown): string =>
+  error instanceof Error ? error.message : 'An error occurred';
+
 // Order schema
 const orderSchema = z.object({
     pair: z.literal("BTC/USD"),
@@ -146,8 +150,8 @@ export function TradeForm({ currentUser: propUser, walletAddress: propAddress }:
 
                     parentSpan.setStatus({ code: SpanStatusCode.OK });
                     return result;
-                } catch (error: any) {
-                    parentSpan.setStatus({ code: SpanStatusCode.ERROR, message: error.message });
+                } catch (error: unknown) {
+                    parentSpan.setStatus({ code: SpanStatusCode.ERROR, message: getErrorMessage(error) });
                     throw error;
                 } finally {
                     parentSpan.end();
