@@ -9,6 +9,7 @@ import { orderService, getPrice } from "../core/order-service";
 import { insertOrderSchema, insertTransferSchema } from "@shared/schema";
 import { traces } from "../otel";
 import { createLogger } from "../lib/logger";
+import db from "../db";
 
 const logger = createLogger('api-routes');
 
@@ -19,12 +20,25 @@ export function registerRoutes(app: Express) {
   // USER ENDPOINTS
   // ============================================
 
-  // Get all users
+  // Get all verified users (for transfers)
   app.get("/api/users", async (req: Request, res: Response) => {
     try {
-      const users = await orderService.getUsers();
+      // Get real users from database (only verified ones)
+      const result = await db.query(
+        `SELECT id, email, status FROM users WHERE status = 'verified' ORDER BY created_at DESC LIMIT 50`
+      );
+      
+      // Map to expected format for transfer form
+      const users = result.rows.map(user => ({
+        id: user.id,
+        name: user.email.split('@')[0], // Use username part of email
+        email: user.email,
+        avatar: '👤'
+      }));
+      
       res.json(users);
     } catch (error: any) {
+      logger.error({ error: error.message }, 'Failed to fetch users');
       res.status(500).json({ error: "Failed to fetch users" });
     }
   });
@@ -175,16 +189,20 @@ export function registerRoutes(app: Express) {
       }
 
       const transferData = validation.data;
+      
+      // fromUserId and toUserId are optional - provide defaults if needed
+      const fromUserId = transferData.fromUserId || 'unknown';
+      const toUserId = transferData.toUserId || 'unknown';
 
       const result = await orderService.processTransfer({
-        fromUserId: transferData.fromUserId,
-        toUserId: transferData.toUserId,
+        fromUserId,
+        toUserId,
         amount: transferData.amount
       });
 
       // Get updated wallets
-      const fromWallet = await orderService.getWallet(transferData.fromUserId);
-      const toWallet = await orderService.getWallet(transferData.toUserId);
+      const fromWallet = await orderService.getWallet(fromUserId);
+      const toWallet = await orderService.getWallet(toUserId);
 
       res.json({
         success: result.status === 'COMPLETED',
@@ -193,8 +211,8 @@ export function registerRoutes(app: Express) {
         status: result.status,
         message: result.message,
         wallets: {
-          [transferData.fromUserId]: fromWallet,
-          [transferData.toUserId]: toWallet
+          [fromUserId]: fromWallet,
+          [toUserId]: toWallet
         },
         traceId: result.traceId,
         spanId: result.spanId
@@ -348,5 +366,5 @@ function getServiceName(span: any): string {
 
   if (messagingSystem === 'rabbitmq') return 'rabbitmq';
   if (httpUrl?.includes(':8000')) return 'kong-gateway';
-  return serviceName || 'exchange-api';
+  return serviceName || 'kx-exchange';
 }

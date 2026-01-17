@@ -3,7 +3,7 @@
 
 import { storage } from '../storage';
 import { rabbitMQClient } from '../services/rabbitmq-client';
-import { trace, SpanStatusCode } from '@opentelemetry/api';
+import { trace, context, SpanStatusCode } from '@opentelemetry/api';
 import { createLogger } from '../lib/logger';
 import { OrderError, ValidationError, InsufficientFundsError } from '../lib/errors';
 
@@ -158,22 +158,34 @@ export class OrderService {
             userId
         });
 
-        // Process via RabbitMQ
+        // Process via RabbitMQ - MUST preserve the current context for proper trace propagation
         if (rabbitMQClient.isConnected()) {
+            // Capture the current context to ensure it's passed to RabbitMQ
+            const currentContext = context.active();
+            const activeSpanForRabbit = trace.getSpan(currentContext);
+            
+            logger.info({
+                hasContext: !!activeSpanForRabbit,
+                contextTraceId: activeSpanForRabbit?.spanContext().traceId,
+            }, 'Calling RabbitMQ with captured context');
+            
             try {
-                const executionResponse = await rabbitMQClient.publishOrderAndWait({
-                    orderId,
-                    correlationId,
-                    pair: request.pair,
-                    side: request.side,
-                    quantity: request.quantity,
-                    orderType: request.orderType,
-                    currentPrice: price,
-                    traceId,
-                    spanId,
-                    userId,
-                    timestamp: new Date().toISOString()
-                }, 5000);
+                // Execute within the captured context to ensure trace propagation
+                const executionResponse = await context.with(currentContext, () => 
+                    rabbitMQClient.publishOrderAndWait({
+                        orderId,
+                        correlationId,
+                        pair: request.pair,
+                        side: request.side,
+                        quantity: request.quantity,
+                        orderType: request.orderType,
+                        currentPrice: price,
+                        traceId,
+                        spanId,
+                        userId,
+                        timestamp: new Date().toISOString()
+                    }, 5000)
+                );
 
                 logger.info({
                     orderId,
@@ -229,7 +241,7 @@ export class OrderService {
 
     // Process BTC transfer between users
     async processTransfer(request: TransferRequest): Promise<TransferResult> {
-        const tracer = trace.getTracer('exchange-api');
+        const tracer = trace.getTracer('kx-exchange');
 
         return tracer.startActiveSpan('btc.transfer', async (span) => {
             const activeSpan = trace.getActiveSpan();
@@ -282,8 +294,8 @@ export class OrderService {
                 // Create transfer record
                 const transfer = await storage.createTransfer({
                     transferId,
-                    fromUserId: request.fromUserId,
-                    toUserId: request.toUserId,
+                    fromAddress: request.fromUserId,  // Use userId as address for legacy compatibility
+                    toAddress: request.toUserId,      // Use userId as address for legacy compatibility
                     amount: request.amount,
                     traceId,
                     spanId

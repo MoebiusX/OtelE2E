@@ -17,7 +17,7 @@ import { trace, context, SpanStatusCode, SpanKind, propagation } from '@opentele
 
 // Initialize OpenTelemetry
 const sdk = new NodeSDK({
-    serviceName: 'order-matcher',
+    serviceName: 'kx-matcher',
     traceExporter: new OTLPTraceExporter({
         url: process.env.OTEL_EXPORTER_OTLP_ENDPOINT || 'http://localhost:4318/v1/traces'
     }),
@@ -60,7 +60,7 @@ const ORDERS_QUEUE = 'payments';  // Keep legacy queue name for compat
 const RESPONSE_QUEUE = 'payment_response';  // Keep legacy queue name
 const PROCESSOR_ID = `matcher-${Date.now()}`;
 
-const tracer = trace.getTracer('order-matcher', '1.0.0');
+const tracer = trace.getTracer('kx-matcher', '1.0.0');
 
 // Price simulation with volatility
 function simulateExecution(price: number, side: string): { fillPrice: number; slippage: number } {

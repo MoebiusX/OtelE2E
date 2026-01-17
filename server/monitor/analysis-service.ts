@@ -284,7 +284,7 @@ ${spans.length > 10 ? `... and ${spans.length - 10} more spans` : ''}`;
             ],
             recommendations: [
                 'Start Ollama: docker compose up -d ollama',
-                `Pull model: docker exec -it otele2e-ollama-1 ollama pull ${MODEL}`,
+                `Pull model: docker exec -it krystaline-ollama-1 ollama pull ${MODEL}`,
                 'Check the service logs for errors around the timestamp'
             ],
             confidence: 'low',

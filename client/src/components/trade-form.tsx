@@ -4,7 +4,6 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { z } from "zod";
 import { trace, context, SpanStatusCode } from "@opentelemetry/api";
-import { apiRequest } from "@/lib/queryClient";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
@@ -28,6 +27,7 @@ interface WalletData {
     btcValue: number;
     totalValue: number;
     lastUpdated: string;
+    address?: string;  // Krystaline wallet address (kx1...)
 }
 
 interface PriceData {
@@ -39,12 +39,38 @@ interface PriceData {
 
 interface TradeFormProps {
     currentUser?: string;
+    walletAddress?: string;  // Optional kx1 address
 }
 
-export function TradeForm({ currentUser = 'alice' }: TradeFormProps) {
+// Helper to format wallet address for display
+function formatAddress(address: string): string {
+    if (!address || address.length < 12) return address;
+    return `${address.slice(0, 8)}...${address.slice(-6)}`;
+}
+
+export function TradeForm({ currentUser: propUser, walletAddress: propAddress }: TradeFormProps) {
     const [side, setSide] = useState<"BUY" | "SELL">("BUY");
     const { toast } = useToast();
     const queryClient = useQueryClient();
+
+    // Get user and wallet address from props or localStorage
+    const [currentUser, setCurrentUser] = useState<string>(propUser || 'alice');
+    const [walletAddress, setWalletAddress] = useState<string | undefined>(propAddress);
+    
+    useEffect(() => {
+        if (!propUser) {
+            const userData = localStorage.getItem('user');
+            if (userData) {
+                try {
+                    const parsed = JSON.parse(userData);
+                    // Use email as userId since wallets are keyed by email
+                    setCurrentUser(parsed.email || parsed.id || 'alice');
+                    // Get wallet address if stored
+                    setWalletAddress(parsed.walletAddress);
+                } catch {}
+            }
+        }
+    }, [propUser]);
 
     // Fetch wallet balance for current user
     const { data: wallet } = useQuery<WalletData>({
@@ -80,6 +106,7 @@ export function TradeForm({ currentUser = 'alice' }: TradeFormProps) {
     const orderMutation = useMutation({
         mutationFn: async (data: OrderFormData) => {
             const tracer = trace.getTracer('crypto-wallet');
+            const token = localStorage.getItem('accessToken');
 
             // Create a parent span for the entire order flow on the client
             return tracer.startActiveSpan('order.submit.client', async (parentSpan) => {
@@ -89,10 +116,23 @@ export function TradeForm({ currentUser = 'alice' }: TradeFormProps) {
                 try {
                     parentSpan.setAttribute('order.side', data.side);
                     parentSpan.setAttribute('order.quantity', data.quantity);
+                    parentSpan.setAttribute('order.pair', data.pair);
 
-                    // The fetch is auto-instrumented and will be a child span
-                    const response = await apiRequest("POST", "/api/orders", { ...data, userId: currentUser });
+                    // Route through Kong Gateway for proper API gateway tracing
+                    const response = await fetch('http://localhost:8000/api/orders', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'Authorization': `Bearer ${token}`,
+                        },
+                        body: JSON.stringify({ ...data, userId: currentUser }),
+                    });
+
                     const result = await response.json();
+
+                    if (!response.ok) {
+                        throw new Error(result.error || 'Order failed');
+                    }
 
                     // Create a child span for response processing, explicitly within parent context
                     context.with(trace.setSpan(parentContext, parentSpan), () => {
@@ -194,7 +234,7 @@ export function TradeForm({ currentUser = 'alice' }: TradeFormProps) {
                         <div>
                             <p className="text-xs text-slate-400">BTC Balance</p>
                             <p className="font-mono font-bold text-orange-400">
-                                {wallet?.btc.toFixed(6) || "0.000000"}
+                                {(wallet?.btc ?? 0).toFixed(6)}
                             </p>
                         </div>
                     </div>
@@ -203,7 +243,7 @@ export function TradeForm({ currentUser = 'alice' }: TradeFormProps) {
                         <div>
                             <p className="text-xs text-slate-400">USD Balance</p>
                             <p className="font-mono font-bold text-green-400">
-                                {wallet?.usd.toLocaleString(undefined, { minimumFractionDigits: 2 }) || "0.00"}
+                                {(wallet?.usd ?? 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}
                             </p>
                         </div>
                     </div>

@@ -1,6 +1,6 @@
-# Crypto Exchange - OpenTelemetry Demo
+# Krystaline Exchange - OpenTelemetry Demo
 
-A **multi-user cryptocurrency exchange** demonstrating end-to-end distributed tracing with OpenTelemetry. Trade BTC/USD between Alice and Bob, and watch your requests flow through the entire system in Jaeger.
+A **multi-user cryptocurrency exchange** demonstrating end-to-end distributed tracing with OpenTelemetry. Trade BTC/USD with proper blockchain-style wallet addresses (`kx1...`), and watch your requests flow through the entire system in Jaeger.
 
 ## Quick Start
 
@@ -18,34 +18,34 @@ scripts\restart.bat
 
 ### Full Distributed Trace (17 spans)
 ```
-crypto-wallet: order.submit.client         ← Browser starts trade
-├── crypto-wallet: HTTP POST               ← Fetch request
+kx-wallet: order.submit.client             ← Browser starts trade
+├── kx-wallet: HTTP POST                   ← Fetch request
 │   └── api-gateway: kong                  ← Kong Gateway (routes + plugins)
 │       └── api-gateway: kong.balancer
-│           └── exchange-api: POST         ← Exchange API handler
-│               ├── exchange-api: publish orders      ← RabbitMQ publish
-│               │   └── exchange-api: publish <default>
-│               │       └── order-matcher: order.match   ← Consumer processes
-│               │           └── order-matcher: order.response
-│               └── exchange-api: payment_response process  ← Response received
-└── crypto-wallet: order.response.received ← Browser receives FILLED
+│           └── kx-exchange: POST          ← Exchange API handler
+│               ├── kx-exchange: publish orders      ← RabbitMQ publish
+│               │   └── kx-exchange: publish <default>
+│               │       └── kx-matcher: order.match  ← Consumer processes
+│               │           └── kx-matcher: order.response
+│               └── kx-exchange: payment_response process  ← Response received
+└── kx-wallet: order.response.received     ← Browser receives FILLED
 ```
 
 ### Multi-User Transfers
 ```
-crypto-wallet: transfer.submit.client      ← Browser starts transfer
-├── crypto-wallet: HTTP POST               ← Fetch request
-│   └── api-gateway: kong → exchange-api: btc.transfer
-└── crypto-wallet: transfer.response.received
+kx-wallet: transfer.submit.client          ← Browser starts transfer
+├── kx-wallet: HTTP POST                   ← Fetch request
+│   └── api-gateway: kong → kx-exchange: btc.transfer
+└── kx-wallet: transfer.response.received
 ```
 
 ### Services & OTEL Names
 
 | Service | URL | OTEL Service Name |
 |---------|-----|-------------------|
-| Crypto Wallet (Browser) | http://localhost:5173 | `crypto-wallet` |
-| Exchange API (Server) | http://localhost:5000 | `exchange-api` |
-| Order Matcher (Processor) | RabbitMQ consumer | `order-matcher` |
+| Krystaline Wallet (Browser) | http://localhost:5173 | `kx-wallet` |
+| Krystaline Exchange API (Server) | http://localhost:5000 | `kx-exchange` |
+| Krystaline Matcher (Processor) | RabbitMQ consumer | `kx-matcher` |
 | Kong Gateway | http://localhost:8000 | `api-gateway` |
 | Jaeger UI | http://localhost:16686 | - |
 | RabbitMQ | http://localhost:15672 | - |
@@ -53,11 +53,11 @@ crypto-wallet: transfer.submit.client      ← Browser starts transfer
 ## Architecture
 
 ```
-Browser (crypto-wallet)
+Browser (kx-wallet)
     ↓ HTTP POST /api/orders (or /api/transfer)
 Kong Gateway (api-gateway)
     ↓
-Exchange API (exchange-api)
+Krystaline Exchange API (kx-exchange)
     ↓ RabbitMQ publish (with trace context)
 Order Matcher (order-matcher)
     ↓ Execute trade

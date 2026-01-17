@@ -6,6 +6,13 @@ import { config } from "./config";
 import { createLogger } from "./lib/logger";
 import { requestLogger } from "./middleware/request-logger";
 import { errorHandler, notFoundHandler, handleUnhandledRejection, handleUncaughtException } from "./middleware/error-handler";
+import { 
+  generalRateLimiter, 
+  authRateLimiter, 
+  securityHeaders, 
+  corsMiddleware, 
+  requestTimeout 
+} from "./middleware/security";
 
 import express, { type Request, Response, NextFunction } from "express";
 import { registerRoutes } from "./api/routes";
@@ -19,6 +26,8 @@ import authRoutes from "./auth/routes";
 import walletRoutes from "./wallet/routes";
 import tradeRoutes from "./trade/routes";
 import publicRoutes from "./api/public-routes";
+import healthRoutes from "./api/health-routes";
+import { binanceFeed } from "./services/binance-feed";
 
 const logger = createLogger('server');
 const app = express();
@@ -30,28 +39,29 @@ handleUncaughtException();
 // Register Prometheus metrics endpoint FIRST (before other middleware)
 registerMetricsEndpoint(app);
 
+// Health check routes (no rate limiting, no auth - for load balancers)
+app.use(healthRoutes);
+
+// Security headers (helmet)
+app.use(securityHeaders);
+
+// Apply rate limiting to all API routes
+app.use('/api', generalRateLimiter);
+
 // Apply metrics collection middleware
 app.use(metricsMiddleware);
+
+// Request timeout (30 seconds)
+app.use(requestTimeout(30000));
 
 // Request logging with correlation IDs (early in middleware chain)
 app.use(requestLogger);
 
-app.use(express.json());
+app.use(express.json({ limit: '1mb' }));
 app.use(express.urlencoded({ extended: false }));
 
-// CORS configuration for Kong Gateway requests
-app.use((req, res, next) => {
-  res.header('Access-Control-Allow-Origin', '*');
-  res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
-  res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept, Authorization, x-trace-id, x-span-id, traceparent');
-  res.header('Access-Control-Allow-Credentials', 'true');
-
-  if (req.method === 'OPTIONS') {
-    res.sendStatus(200);
-  } else {
-    next();
-  }
-});
+// CORS configuration (environment-aware)
+app.use(corsMiddleware);
 
 (async () => {
   // Initialize external services
@@ -77,6 +87,14 @@ app.use((req, res, next) => {
     console.warn('[INIT] RabbitMQ initialization failed - continuing without message queue');
   }
 
+  // Start real-time price feed (Binance public WebSocket - no API key needed)
+  try {
+    binanceFeed.start();
+    console.log('[INIT] Binance price feed started - real-time prices enabled');
+  } catch (error) {
+    console.warn('[INIT] Binance price feed failed to start - trading will show prices unavailable');
+  }
+
   // Check Kong Gateway health
   const kongHealthy = await kongClient.checkHealth();
   if (kongHealthy) {
@@ -89,8 +107,8 @@ app.use((req, res, next) => {
   // Register API routes
   registerRoutes(app);
 
-  // Register auth routes
-  app.use('/api/auth', authRoutes);
+  // Register auth routes (with stricter rate limiting)
+  app.use('/api/auth', authRateLimiter, authRoutes);
 
   // Register wallet routes
   app.use('/api/wallet', walletRoutes);
@@ -110,12 +128,6 @@ app.use((req, res, next) => {
   // Start transparency service for public metrics
   transparencyService.start();
 
-  // 404 handler for undefined routes (before error handler)
-  app.use(notFoundHandler);
-
-  // Global error handler (MUST be last)
-  app.use(errorHandler);
-
   // Create server
   const { createServer } = await import("http");
   const server = createServer(app);
@@ -125,18 +137,18 @@ app.use((req, res, next) => {
   wsServer.setup(server);
 
   // Setup Vite in development or serve static in production
+  // This MUST come before notFoundHandler to serve SPA routes
   if (app.get("env") === "development") {
     await setupVite(app, server);
   } else {
     serveStatic(app);
   }
 
-  // Setup Vite in development or serve static in production
-  if (app.get("env") === "development") {
-    await setupVite(app, server);
-  } else {
-    serveStatic(app);
-  }
+  // 404 handler for undefined API routes only (after Vite serves SPA)
+  app.use('/api', notFoundHandler);
+
+  // Global error handler (MUST be last)
+  app.use(errorHandler);
 
   // ALWAYS serve the app on port 5000
   // this serves both the API and the client.
@@ -152,21 +164,73 @@ app.use((req, res, next) => {
     }, `Server started successfully`);
     logger.info(`Serving on http://${host}:${port}`);
     logger.info(`WebSocket available at ws://localhost:${port}/ws/monitor`);
+    logger.info(`Health check at http://${host}:${port}/health`);
   });
 
   // Graceful shutdown
-  const shutdown = async () => {
-    logger.info('Shutting down gracefully...');
+  let isShuttingDown = false;
+  
+  const shutdown = async (signal: string) => {
+    if (isShuttingDown) {
+      logger.warn('Shutdown already in progress');
+      return;
+    }
+    isShuttingDown = true;
     
+    logger.info({ signal }, 'Received shutdown signal, closing gracefully...');
+    
+    // Stop accepting new connections
     server.close(() => {
       logger.info('HTTP server closed');
     });
 
-    await rabbitMQClient.disconnect();
-    
+    // Stop monitor services
+    try {
+      const { stopMonitor } = await import('./monitor');
+      stopMonitor();
+      logger.info('Monitor services stopped');
+    } catch (error) {
+      logger.error({ err: error }, 'Error stopping monitor services');
+    }
+
+    // Stop Binance price feed
+    try {
+      binanceFeed.stop();
+      logger.info('Binance price feed stopped');
+    } catch (error) {
+      logger.error({ err: error }, 'Error stopping Binance feed');
+    }
+
+    // Stop transparency service
+    try {
+      transparencyService.stop();
+      logger.info('Transparency service stopped');
+    } catch (error) {
+      logger.error({ err: error }, 'Error stopping transparency service');
+    }
+
+    // Disconnect RabbitMQ
+    try {
+      await rabbitMQClient.disconnect();
+      logger.info('RabbitMQ disconnected');
+    } catch (error) {
+      logger.error({ err: error }, 'Error disconnecting RabbitMQ');
+    }
+
+    // Close database connections
+    try {
+      const db = await import('./db');
+      await db.default.end();
+      logger.info('Database connections closed');
+    } catch (error) {
+      logger.error({ err: error }, 'Error closing database');
+    }
+
+    logger.info('Graceful shutdown complete');
     process.exit(0);
   };
 
-  process.on('SIGTERM', shutdown);
-  process.on('SIGINT', shutdown);
+  // Handle termination signals
+  process.on('SIGTERM', () => shutdown('SIGTERM'));
+  process.on('SIGINT', () => shutdown('SIGINT'));
 })();

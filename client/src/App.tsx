@@ -9,6 +9,8 @@ import Register from "@/pages/register";
 import Login from "@/pages/login";
 import MyWallet from "@/pages/my-wallet";
 import Convert from "@/pages/convert";
+import Activity from "@/pages/activity";
+import TransparencyPage from "@/pages/transparency";
 import NotFound from "@/pages/not-found";
 import { TransparencyDashboard } from "@/components/transparency-dashboard";
 
@@ -18,18 +20,23 @@ function Router() {
       {/* Public transparency landing page */}
       <Route path="/" component={TransparencyDashboard} />
       
-      {/* User Journey: Registration → Login → Trading */}
+      {/* Auth */}
       <Route path="/register" component={Register} />
       <Route path="/login" component={Login} />
-      <Route path="/trading" component={Dashboard} />
-      <Route path="/my-wallet" component={MyWallet} />
-      <Route path="/convert" component={Convert} />
       
-      {/* Monitoring & Analytics */}
+      {/* Main App - requires auth */}
+      <Route path="/portfolio" component={MyWallet} />
+      <Route path="/trade" component={Dashboard} />
+      <Route path="/convert" component={Convert} />
+      <Route path="/activity" component={Activity} />
+      <Route path="/transparency" component={TransparencyPage} />
+      
+      {/* Advanced monitoring (for power users/devs) */}
       <Route path="/monitor" component={Monitor} />
       
-      {/* Demo (legacy trading UI - will be removed later) */}
-      <Route path="/demo" component={Dashboard} />
+      {/* Legacy redirects */}
+      <Route path="/trading" component={Dashboard} />
+      <Route path="/my-wallet" component={MyWallet} />
       
       <Route component={NotFound} />
     </Switch>

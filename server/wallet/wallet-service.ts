@@ -2,11 +2,13 @@
  * Wallet Service
  * 
  * Manages user wallets, balances, and transactions.
+ * Uses Krystaline Exchange wallet addresses (kx1...)
  */
 
 import db from '../db';
 import { createLogger } from '../lib/logger';
 import { WalletError, ValidationError, NotFoundError, InsufficientFundsError } from '../lib/errors';
+import { generateWalletAddress, generateWalletId, storage } from '../storage';
 
 const logger = createLogger('wallet');
 
@@ -29,6 +31,7 @@ export interface Wallet {
     balance: string;
     available: string;
     locked: string;
+    address?: string;  // Krystaline address (kx1...)
 }
 
 export interface Transaction {
@@ -47,9 +50,20 @@ export interface Transaction {
 export const walletService = {
     /**
      * Create default wallets for a new user with test funds
+     * Also creates a Krystaline Exchange wallet address (kx1...)
      */
     async createDefaultWallets(userId: string): Promise<Wallet[]> {
         const wallets: Wallet[] = [];
+        
+        // Generate Krystaline wallet address for this user
+        const kxAddress = generateWalletAddress(userId);
+        const kxWalletId = generateWalletId();
+        
+        logger.info({
+            userId,
+            kxAddress,
+            kxWalletId
+        }, 'Creating Krystaline wallet for user');
 
         await db.transaction(async (client) => {
             for (const asset of SUPPORTED_ASSETS) {
@@ -62,7 +76,9 @@ export const walletService = {
                     [userId, asset, balance]
                 );
 
-                wallets.push(result.rows[0]);
+                // Add the kx1 address to the wallet object
+                const wallet = { ...result.rows[0], address: kxAddress };
+                wallets.push(wallet);
 
                 // Log bonus transaction if balance > 0
                 if (balance > 0) {
@@ -74,13 +90,38 @@ export const walletService = {
                 }
             }
         });
+        
+        // Also register in the in-memory storage for the trading system
+        try {
+            await storage.createWallet(userId, 'Main Trading Wallet');
+        } catch (err) {
+            // Non-fatal - in-memory storage may already have this user
+            logger.debug({ userId, error: err }, 'In-memory wallet may already exist');
+        }
 
         logger.info({
             userId,
+            kxAddress,
             walletsCreated: wallets.length,
             assets: SUPPORTED_ASSETS
         }, 'Created default wallets for user');
         return wallets;
+    },
+
+    /**
+     * Get Krystaline wallet address for a user
+     */
+    async getKXAddress(userId: string): Promise<string | null> {
+        const wallet = await storage.getDefaultWallet(userId);
+        return wallet?.address || null;
+    },
+
+    /**
+     * Resolve a wallet address from userId/email
+     */
+    async resolveAddress(identifier: string): Promise<string | null> {
+        const address = await storage.resolveAddress(identifier);
+        return address || null;
     },
 
     /**
@@ -91,7 +132,10 @@ export const walletService = {
             `SELECT * FROM wallets WHERE user_id = $1 ORDER BY asset`,
             [userId]
         );
-        return result.rows;
+        
+        // Add kx1 address to each wallet
+        const kxAddress = await this.getKXAddress(userId);
+        return result.rows.map(w => ({ ...w, address: kxAddress }));
     },
 
     /**
@@ -268,6 +312,102 @@ export const walletService = {
         }
 
         return summary;
+    },
+
+    /**
+     * Transfer funds between users (P2P transfer)
+     */
+    async transfer(
+        fromUserId: string,
+        toUserId: string,
+        asset: string,
+        amount: number
+    ): Promise<{ success: boolean; fromBalance: string; toBalance: string; transferId: string }> {
+        const transferId = `TXF-${Date.now()}-${Math.random().toString(36).substring(7)}`;
+
+        return db.transaction(async (client) => {
+            // Get sender's wallet
+            const senderResult = await client.query(
+                `SELECT * FROM wallets WHERE user_id = $1 AND asset = $2 FOR UPDATE`,
+                [fromUserId, asset.toUpperCase()]
+            );
+
+            if (senderResult.rows.length === 0) {
+                throw new NotFoundError(`Sender wallet not found for asset: ${asset}`);
+            }
+
+            const senderWallet = senderResult.rows[0];
+            const availableAmount = parseFloat(senderWallet.available);
+            if (availableAmount < amount) {
+                throw new InsufficientFundsError(asset, amount, availableAmount);
+            }
+
+            // Get receiver's wallet
+            const receiverResult = await client.query(
+                `SELECT * FROM wallets WHERE user_id = $1 AND asset = $2 FOR UPDATE`,
+                [toUserId, asset.toUpperCase()]
+            );
+
+            if (receiverResult.rows.length === 0) {
+                throw new NotFoundError(`Receiver wallet not found for asset: ${asset}`);
+            }
+
+            const receiverWallet = receiverResult.rows[0];
+
+            // Debit from sender
+            await client.query(
+                `UPDATE wallets 
+                 SET balance = balance - $1, available = available - $1, updated_at = NOW()
+                 WHERE id = $2`,
+                [amount, senderWallet.id]
+            );
+
+            // Credit to receiver
+            await client.query(
+                `UPDATE wallets 
+                 SET balance = balance + $1, available = available + $1, updated_at = NOW()
+                 WHERE id = $2`,
+                [amount, receiverWallet.id]
+            );
+
+            // Create transaction records for both parties
+            await client.query(
+                `INSERT INTO transactions (user_id, wallet_id, type, amount, description, reference_id)
+                 VALUES ($1, $2, 'withdrawal', $3, $4, $5)`,
+                [fromUserId, senderWallet.id, -amount, `Transfer to user`, transferId]
+            );
+
+            await client.query(
+                `INSERT INTO transactions (user_id, wallet_id, type, amount, description, reference_id)
+                 VALUES ($1, $2, 'deposit', $3, $4, $5)`,
+                [toUserId, receiverWallet.id, amount, `Transfer from user`, transferId]
+            );
+
+            // Get updated balances
+            const updatedSender = await client.query(
+                `SELECT available FROM wallets WHERE id = $1`,
+                [senderWallet.id]
+            );
+            const updatedReceiver = await client.query(
+                `SELECT available FROM wallets WHERE id = $1`,
+                [receiverWallet.id]
+            );
+
+            logger.info({
+                transferId,
+                fromUserId,
+                toUserId,
+                asset,
+                amount
+            }, 'P2P Transfer completed');
+
+            return {
+                success: true,
+                fromBalance: updatedSender.rows[0].available,
+                toBalance: updatedReceiver.rows[0].available,
+                transferId
+            };
+        });
     }
 };
 

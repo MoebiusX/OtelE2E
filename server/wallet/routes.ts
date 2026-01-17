@@ -168,4 +168,39 @@ router.post('/withdraw', authenticate, async (req, res) => {
     }
 });
 
+/**
+ * POST /api/wallet/transfer
+ * Transfer funds to another user (P2P)
+ */
+router.post('/transfer', authenticate, async (req, res) => {
+    try {
+        const { toUserId, asset, amount } = req.body;
+
+        if (!toUserId || !asset || !amount || amount <= 0) {
+            return res.status(400).json({ error: 'Valid toUserId, asset, and amount required' });
+        }
+
+        if (toUserId === req.user!.id) {
+            return res.status(400).json({ error: 'Cannot transfer to yourself' });
+        }
+
+        const result = await walletService.transfer(
+            req.user!.id,
+            toUserId,
+            asset,
+            amount
+        );
+
+        res.json({
+            success: true,
+            message: `Transferred ${amount} ${asset}`,
+            transferId: result.transferId,
+            fromBalance: result.fromBalance,
+            toBalance: result.toBalance,
+        });
+    } catch (error: any) {
+        res.status(400).json({ error: error.message });
+    }
+});
+
 export default router;

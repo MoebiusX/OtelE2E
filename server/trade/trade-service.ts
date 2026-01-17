@@ -2,24 +2,16 @@
  * Trading Service
  * 
  * Handles crypto conversions, market orders, and limit orders.
- * For demo: uses simulated market prices.
+ * Uses REAL prices from external price feeds - no fake data.
  */
 
 import db from '../db';
 import { walletService } from '../wallet/wallet-service';
 import { createLogger } from '../lib/logger';
 import { ValidationError, NotFoundError, InsufficientFundsError } from '../lib/errors';
+import { priceService } from '../services/price-service';
 
 const logger = createLogger('trade');
-
-// Simulated market prices (in USD)
-const MARKET_PRICES: Record<string, number> = {
-    BTC: 42000,
-    ETH: 2500,
-    USDT: 1,
-    USD: 1,
-    EUR: 1.1,
-};
 
 // Trading pairs supported
 export const TRADING_PAIRS = [
@@ -56,27 +48,42 @@ export interface Order {
 export const tradeService = {
     /**
      * Get current market price for an asset (in USD)
+     * Returns null if price is not available (no fake prices!)
      */
-    getPrice(asset: string): number {
-        return MARKET_PRICES[asset.toUpperCase()] || 0;
+    getPrice(asset: string): number | null {
+        const priceData = priceService.getPrice(asset);
+        return priceData ? priceData.price : null;
+    },
+
+    /**
+     * Check if price is available for an asset
+     */
+    isPriceAvailable(asset: string): boolean {
+        return priceService.isPriceAvailable(asset);
     },
 
     /**
      * Get exchange rate between two assets
+     * Returns null if either price is unavailable
      */
-    getRate(fromAsset: string, toAsset: string): number {
-        const fromPrice = this.getPrice(fromAsset);
-        const toPrice = this.getPrice(toAsset);
-
-        if (toPrice === 0) return 0;
-        return fromPrice / toPrice;
+    getRate(fromAsset: string, toAsset: string): number | null {
+        return priceService.getRate(fromAsset, toAsset);
     },
 
     /**
      * Get a quote for converting assets
+     * Throws if prices are not available
      */
     getConvertQuote(fromAsset: string, toAsset: string, fromAmount: number): ConvertQuote {
         const rate = this.getRate(fromAsset, toAsset);
+        
+        if (rate === null) {
+            throw new ValidationError(
+                `Price not available for ${fromAsset}/${toAsset}. ` +
+                `Real-time price feed may be disconnected.`
+            );
+        }
+        
         const grossAmount = fromAmount * rate;
         const fee = grossAmount * TRADING_FEE;
         const toAmount = grossAmount - fee;
@@ -281,7 +288,7 @@ export const tradeService = {
             const rate = this.getRate(base, quote);
             // Simulated 24h change (-5% to +5%)
             const change24h = (Math.random() - 0.5) * 10;
-            return { pair, price: rate, change24h };
+            return { pair, price: rate ?? 0, change24h };
         });
     }
 };

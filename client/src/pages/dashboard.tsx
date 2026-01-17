@@ -1,23 +1,40 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
 import { TradeForm } from "@/components/trade-form";
 import { TransferForm } from "@/components/transfer-form";
-import { UserSwitcher } from "@/components/user-switcher";
 import { TraceViewer } from "@/components/trace-viewer";
 import { formatTimeAgo } from "@/lib/utils";
 import { Bitcoin, TrendingUp, Wallet, ArrowUpRight, ArrowDownRight, Send, ArrowRightLeft } from "lucide-react";
 import type { Order, Transfer } from "@shared/schema";
 import Layout from "@/components/Layout";
+import { useLocation } from "wouter";
 
 type TabType = 'trade' | 'transfer';
 
 export default function Dashboard() {
-  const [currentUser, setCurrentUser] = useState('alice');
+  const [, navigate] = useLocation();
   const [activeTab, setActiveTab] = useState<TabType>('trade');
+
+  // Get current user from localStorage
+  const [currentUser, setCurrentUser] = useState<string | null>(null);
+  
+  useEffect(() => {
+    const userData = localStorage.getItem('user');
+    if (userData) {
+      try {
+        const parsed = JSON.parse(userData);
+        // Use email as userId since wallets are keyed by email
+        setCurrentUser(parsed.email || parsed.id || 'alice');
+      } catch {
+        navigate('/login');
+      }
+    } else {
+      navigate('/login');
+    }
+  }, [navigate]);
 
   const { data: orders, isLoading: ordersLoading } = useQuery<Order[]>({
     queryKey: ["/api/orders"],
@@ -47,51 +64,7 @@ export default function Dashboard() {
             <div className="flex items-center space-x-4">
               <div className="flex items-center space-x-2">
                 <Bitcoin className="w-6 h-6 text-orange-500" />
-                <h1 className="text-xl font-bold text-white">Trading Dashboard</h1>
-              </div>
-              <Badge className="px-2 py-1 bg-orange-500/20 text-orange-400 text-xs font-medium border-none">
-                OpenTelemetry Demo
-              </Badge>
-            </div>
-
-            {/* User Switcher */}
-            <div className="flex items-center space-x-6">
-              <UserSwitcher currentUser={currentUser} onUserChange={setCurrentUser} />
-              <div className="flex items-center space-x-4 text-sm">
-                <a
-                  href="/monitor"
-                  className="flex items-center space-x-2 text-slate-400 hover:text-white transition-colors"
-                >
-                  <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
-                  <span>Monitor</span>
-                </a>
-                <a
-                  href="http://localhost:8000"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="flex items-center space-x-2 text-slate-400 hover:text-white transition-colors"
-                >
-                  <div className="w-2 h-2 bg-blue-500 rounded-full animate-pulse"></div>
-                  <span>Kong</span>
-                </a>
-                <a
-                  href="http://localhost:15672"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="flex items-center space-x-2 text-slate-400 hover:text-white transition-colors"
-                >
-                  <div className="w-2 h-2 bg-orange-500 rounded-full animate-pulse"></div>
-                  <span>RabbitMQ</span>
-                </a>
-                <a
-                  href="http://localhost:16686"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="flex items-center space-x-2 text-slate-400 hover:text-white transition-colors"
-                >
-                  <div className="w-2 h-2 bg-purple-500 rounded-full animate-pulse"></div>
-                  <span>Jaeger</span>
-                </a>
+                <h1 className="text-xl font-bold text-white">Trade</h1>
               </div>
             </div>
           </div>
@@ -128,10 +101,14 @@ export default function Dashboard() {
             </div>
 
             {/* Active Form */}
-            {activeTab === 'trade' ? (
+            {!currentUser ? (
+              <Card className="bg-slate-900 border-slate-700 p-8 text-center">
+                <Skeleton className="h-32 w-full bg-slate-800" />
+              </Card>
+            ) : activeTab === 'trade' ? (
               <TradeForm currentUser={currentUser} />
             ) : (
-              <TransferForm currentUser={currentUser} />
+              <TransferForm />
             )}
 
             {/* Recent Activity */}

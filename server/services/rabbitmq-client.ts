@@ -17,6 +17,7 @@ export interface OrderMessage {
   traceId: string;
   spanId: string;
   timestamp: string;
+  userId?: string;  // Optional user ID for order tracking
 }
 
 export interface ExecutionResponse {
@@ -53,8 +54,9 @@ export class RabbitMQClient {
   async connect(): Promise<boolean> {
     try {
       logger.info({ url: config.rabbitmq.url.replace(/\/\/.*@/, '//*****@') }, 'Connecting to RabbitMQ...');
-      this.connection = await amqp.connect(config.rabbitmq.url);
-      this.channel = await this.connection.createChannel();
+      const conn = await amqp.connect(config.rabbitmq.url);
+      this.connection = conn as unknown as amqp.Connection;
+      this.channel = await conn.createChannel();
 
       // Declare queues
       await this.channel.assertQueue(this.ORDERS_QUEUE, { durable: true });
@@ -97,6 +99,13 @@ export class RabbitMQClient {
 
       // Create span as child of the current active span
       const parentContext = context.active();
+      const activeSpan = trace.getSpan(parentContext);
+      logger.info({
+        hasActiveSpan: !!activeSpan,
+        activeTraceId: activeSpan?.spanContext().traceId,
+        activeSpanId: activeSpan?.spanContext().spanId,
+      }, 'Publishing order - checking active context');
+
       const span = this.tracer.startSpan('publish orders', {
         kind: SpanKind.PRODUCER,
         attributes: {
@@ -261,11 +270,11 @@ export class RabbitMQClient {
         this.channel = null;
       }
       if (this.connection) {
-        await this.connection.close();
+        await (this.connection as any).close();
         this.connection = null;
       }
       logger.info('RabbitMQ disconnected');
-    } catch (error: any) {
+    } catch (error: unknown) {
       logger.error({ err: error }, 'Error disconnecting from RabbitMQ');
     }
   }

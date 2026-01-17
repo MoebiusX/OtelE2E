@@ -7,8 +7,26 @@
 import { Router } from 'express';
 import { tradeService } from './trade-service';
 import { authenticate } from '../auth/routes';
+import { priceService } from '../services/price-service';
 
 const router = Router();
+
+/**
+ * GET /api/trade/price-status
+ * Get price service status (for transparency)
+ */
+router.get('/price-status', (req, res) => {
+    const status = priceService.getStatus();
+    const prices = priceService.getAllPrices();
+    res.json({ 
+        success: true, 
+        status,
+        prices,
+        message: status.connected 
+            ? 'Real-time prices from ' + status.source
+            : 'Price feed disconnected - trading may be unavailable'
+    });
+});
 
 /**
  * GET /api/trade/pairs
@@ -25,6 +43,15 @@ router.get('/pairs', (req, res) => {
  */
 router.get('/price/:asset', (req, res) => {
     const price = tradeService.getPrice(req.params.asset);
+    
+    if (price === null) {
+        return res.status(503).json({ 
+            success: false, 
+            asset: req.params.asset.toUpperCase(), 
+            error: 'Price not available - real-time feed may be disconnected'
+        });
+    }
+    
     res.json({ success: true, asset: req.params.asset.toUpperCase(), price });
 });
 
@@ -34,6 +61,16 @@ router.get('/price/:asset', (req, res) => {
  */
 router.get('/rate/:from/:to', (req, res) => {
     const rate = tradeService.getRate(req.params.from, req.params.to);
+    
+    if (rate === null) {
+        return res.status(503).json({
+            success: false,
+            from: req.params.from.toUpperCase(),
+            to: req.params.to.toUpperCase(),
+            error: 'Rate not available - real-time price feed may be disconnected'
+        });
+    }
+    
     res.json({
         success: true,
         from: req.params.from.toUpperCase(),

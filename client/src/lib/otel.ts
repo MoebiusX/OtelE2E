@@ -1,6 +1,7 @@
 // Browser OpenTelemetry SDK Initialization
 // Creates spans for fetch() requests and exports to OTEL collector
 
+import { trace } from '@opentelemetry/api';
 import { WebTracerProvider } from '@opentelemetry/sdk-trace-web';
 import { SimpleSpanProcessor } from '@opentelemetry/sdk-trace-base';
 import { OTLPTraceExporter } from '@opentelemetry/exporter-trace-otlp-http';
@@ -24,7 +25,7 @@ export function initBrowserOtel(): void {
 
     // Create resource with service name using OTEL v2 API
     const resource = resourceFromAttributes({
-        [SemanticResourceAttributes.SERVICE_NAME]: 'crypto-wallet',
+        [SemanticResourceAttributes.SERVICE_NAME]: 'kx-wallet',
         [SemanticResourceAttributes.SERVICE_NAMESPACE]: 'web',
         [SemanticResourceAttributes.SERVICE_VERSION]: '1.0.0',
     });
@@ -41,10 +42,15 @@ export function initBrowserOtel(): void {
         spanProcessors: [new SimpleSpanProcessor(exporter)],
     });
 
-    // Register the provider with zone context manager
+    // Register the provider globally with zone context manager
+    // This makes trace.getTracer() from @opentelemetry/api use this provider
     provider.register({
         contextManager: new ZoneContextManager(),
     });
+
+    // Verify the global trace API is using our provider
+    const testTracer = trace.getTracer('test-tracer');
+    console.log('[OTEL] Global tracer registered:', !!testTracer);
 
     // Register fetch instrumentation
     registerInstrumentations({
@@ -58,14 +64,18 @@ export function initBrowserOtel(): void {
                     /localhost:3000/,   // Don't trace Grafana
                     /localhost:4319/,   // Don't trace OTEL collector
                 ],
-                // Propagate trace context to all origins
+                // Propagate trace context to ALL API origins including same-origin (Vite proxy)
                 propagateTraceHeaderCorsUrls: [
+                    /localhost:5173/,   // Vite dev server (same-origin proxy)
                     /localhost:8000/,   // Kong Gateway
-                    /localhost:5000/,   // Payment API
+                    /localhost:5000/,   // Payment API direct
+                    /^\/api\//,         // Relative /api paths
                 ],
                 // Add useful attributes to spans
                 applyCustomAttributesOnSpan: (span, request, _result) => {
-                    span.setAttribute('http.url', request.url || '');
+                    if (request instanceof Request) {
+                        span.setAttribute('http.url', request.url || '');
+                    }
                 },
             }),
         ],

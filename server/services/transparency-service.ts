@@ -6,6 +6,7 @@
  */
 
 import { db } from '../db';
+import { config } from '../config';
 import { historyStore } from '../monitor/history-store';
 import { traceProfiler } from '../monitor/trace-profiler';
 import { anomalyDetector } from '../monitor/anomaly-detector';

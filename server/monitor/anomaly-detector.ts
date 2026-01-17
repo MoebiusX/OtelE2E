@@ -284,7 +284,7 @@ export class AnomalyDetector {
 
         try {
             // Get recent traces from each service
-            for (const service of ['crypto-wallet', 'exchange-api', 'order-matcher']) {
+            for (const service of ['kx-wallet', 'kx-exchange', 'kx-matcher']) {
                 const url = `${JAEGER_API_URL}/api/traces?service=${service}&lookback=1m&limit=20`;
                 const response = await fetch(url);
 

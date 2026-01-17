@@ -207,17 +207,17 @@ export function TransparencyDashboard() {
               </>
             ) : (
               <button
-                onClick={() => setLocation('/trading')}
+                onClick={() => setLocation('/portfolio')}
                 className="w-full sm:w-auto bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-white font-bold px-12 py-5 rounded-2xl shadow-2xl shadow-cyan-500/50 hover:shadow-cyan-400/60 transition-all duration-300 hover:-translate-y-1 hover:scale-105 text-center cursor-pointer text-lg border-2 border-cyan-400/30"
               >
-                Go to Trading →
+                Go to Portfolio →
               </button>
             )}
             <button
-              onClick={() => setLocation('/monitor')}
+              onClick={() => setLocation('/transparency')}
               className="w-full sm:w-auto bg-slate-800/70 hover:bg-slate-700/80 text-cyan-100 font-semibold px-10 py-5 rounded-2xl border-2 border-indigo-500/40 hover:border-indigo-400/60 backdrop-blur-xl transition-all duration-300 hover:-translate-y-1 text-center cursor-pointer text-base shadow-lg shadow-indigo-500/10"
             >
-              View Live Monitoring
+              View Live Transparency
             </button>
           </div>
         </div>
