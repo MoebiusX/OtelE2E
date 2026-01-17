@@ -7,7 +7,7 @@ import Dashboard from "@/pages/dashboard";
 import Monitor from "@/pages/monitor";
 import Register from "@/pages/register";
 import Login from "@/pages/login";
-import MyWallet from "@/pages/my-wallet";
+import Portfolio from "@/pages/portfolio";
 import Convert from "@/pages/convert";
 import Activity from "@/pages/activity";
 import TransparencyPage from "@/pages/transparency";
@@ -25,7 +25,7 @@ function Router() {
       <Route path="/login" component={Login} />
       
       {/* Main App - requires auth */}
-      <Route path="/portfolio" component={MyWallet} />
+      <Route path="/portfolio" component={Portfolio} />
       <Route path="/trade" component={Dashboard} />
       <Route path="/convert" component={Convert} />
       <Route path="/activity" component={Activity} />
@@ -34,9 +34,8 @@ function Router() {
       {/* Advanced monitoring (for power users/devs) */}
       <Route path="/monitor" component={Monitor} />
       
-      {/* Legacy redirects */}
+      {/* Legacy redirect */}
       <Route path="/trading" component={Dashboard} />
-      <Route path="/my-wallet" component={MyWallet} />
       
       <Route component={NotFound} />
     </Switch>

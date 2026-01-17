@@ -27,10 +27,10 @@ This document defines the proper user journey for Krystaline Exchange, replacing
 | `/` (TransparencyDashboard) | ✅ Good | Public landing, observability story |
 | `/register` | ✅ Good | Clean registration flow |
 | `/login` | ✅ Good | Professional login |
-| `/trading` (Dashboard) | ⚠️ PoC Hack | UserSwitcher, demo links, no auth integration |
-| `/my-wallet` | ⚠️ Partial | Hardcoded rates, buttons not wired |
+| `/trade` (Dashboard) | ✅ Good | Trade with trace viewer integration |
+| `/portfolio` | ✅ Good | Real prices, first-trade CTA for new users |
 | `/convert` | ✅ Good | Proper swap functionality |
-| `/monitor` | ⚠️ PoC Hack | Internal tool exposed, no context |
+| `/monitor` | ⚠️ Advanced | Power user tool, linked from transparency |
 
 ### Core Problems
 1. **UserSwitcher Anti-Pattern**: Demo concept allowing switching between fake users - breaks auth
@@ -74,7 +74,7 @@ Portfolio → Trade → Activity → Transparency
 ```
 
 #### 3a. Portfolio (My Assets)
-**Route**: `/portfolio` (rename from `/my-wallet`)
+**Route**: `/portfolio` ✅ DONE
 
 **What it shows**:
 - Total portfolio value (using REAL Binance prices)
@@ -173,7 +173,7 @@ Profile → Security → API Keys → Verification
 - [ ] Remove demo external links from trading page
 - [ ] Wire Portfolio buttons to actual routes
 - [ ] Use real price service in all components (remove hardcoded rates)
-- [ ] Rename routes: `/my-wallet` → `/portfolio`, `/trading` → `/trade`
+- [x] Routes renamed: `/portfolio`, `/trade` ✅
 
 ### Phase 2: Core Trading (Day 3-5)
 - [ ] Create proper Trade page with:

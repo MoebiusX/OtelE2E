@@ -62,6 +62,8 @@ export function TransparencyDashboard() {
   const [loading, setLoading] = useState(true);
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [, setLocation] = useLocation();
+  const [lastFetched, setLastFetched] = useState<Date>(new Date());
+  const [secondsAgo, setSecondsAgo] = useState(0);
 
   useEffect(() => {
     // Check if user is logged in
@@ -72,9 +74,17 @@ export function TransparencyDashboard() {
       .catch(() => setIsLoggedIn(false));
 
     fetchData();
-    const interval = setInterval(fetchData, 5000); // Refresh every 5 seconds
+    const interval = setInterval(fetchData, 30000); // Refresh every 30 seconds
     return () => clearInterval(interval);
   }, []);
+
+  // Update "seconds ago" counter every second
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setSecondsAgo(Math.floor((Date.now() - lastFetched.getTime()) / 1000));
+    }, 1000);
+    return () => clearInterval(timer);
+  }, [lastFetched]);
 
   const fetchData = async () => {
     try {
@@ -94,6 +104,8 @@ export function TransparencyDashboard() {
 
       setStatus(statusData);
       setTrades(tradesData.trades || []);
+      setLastFetched(new Date());
+      setSecondsAgo(0);
       setLoading(false);
     } catch (error) {
       console.error('Failed to fetch transparency data:', error);
@@ -122,103 +134,134 @@ export function TransparencyDashboard() {
     );
   }
 
-  const statusColor = status.status === 'operational' ? 'bg-emerald-500' : 'bg-amber-500';
+  const statusColor = status.status === 'operational' ? 'bg-emerald-500' : status.status === 'degraded' ? 'bg-amber-500' : 'bg-red-500';
+  const statusBgClass = status.status === 'operational' ? 'bg-emerald-500/10 border-emerald-500/20' : status.status === 'degraded' ? 'bg-amber-500/10 border-amber-500/20' : 'bg-red-500/10 border-red-500/20';
+  const statusTextClass = status.status === 'operational' ? 'text-emerald-400' : status.status === 'degraded' ? 'text-amber-400' : 'text-red-400';
+  const statusText = status.status === 'operational' ? 'All Systems Operational' : status.status === 'degraded' ? 'Partial Degradation' : 'Service Outage';
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-950 via-blue-950 to-slate-900">
       <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-12 space-y-12">
         {/* Hero Section */}
         <div className="text-center space-y-8 py-8 sm:py-16 animate-in fade-in slide-in-from-top-4 duration-700">
-          {/* Status Badge */}
-          <div className="flex items-center justify-center gap-3 bg-emerald-500/10 border border-emerald-500/20 rounded-full px-4 sm:px-6 py-2 sm:py-3 backdrop-blur-sm inline-flex animate-pulse-slow">
-            <div className={`h-2.5 w-2.5 sm:h-3 sm:w-3 rounded-full ${statusColor} animate-pulse shadow-lg shadow-emerald-500/50`} />
-            <span className="text-xs sm:text-sm font-medium text-emerald-400">All Systems Operational</span>
+          {/* Live Status Badge - Prominent */}
+          <div className={`flex items-center justify-center gap-3 ${statusBgClass} rounded-full px-5 sm:px-8 py-3 sm:py-4 backdrop-blur-sm inline-flex`}>
+            <div className={`h-3 w-3 sm:h-4 sm:w-4 rounded-full ${statusColor} animate-pulse shadow-lg shadow-emerald-500/50`} />
+            <span className={`text-sm sm:text-base font-semibold ${statusTextClass}`}>Live Now — {statusText}</span>
+            <span className={`text-sm ${statusTextClass}/60 hidden sm:inline`}>• Updated {secondsAgo}s ago</span>
           </div>
 
-          {/* Main Headline */}
-          <div className="space-y-4">
-            <div className="inline-flex items-center gap-3 mb-2">
-              <Shield className="h-6 w-6 sm:h-8 sm:w-8 text-cyan-400" />
-              <h1 className="text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-bold tracking-tight bg-gradient-to-r from-cyan-400 via-blue-400 to-indigo-400 bg-clip-text text-transparent">
-                Krystaline Exchange
-              </h1>
+          {/* Main Headline - More Impactful */}
+          <div className="space-y-6">
+            <h1 className="text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-bold tracking-tight">
+              <span className="bg-gradient-to-r from-cyan-400 via-blue-400 to-indigo-400 bg-clip-text text-transparent">
+                Don't Trust.
+              </span>
+              <br />
+              <span className="bg-gradient-to-r from-emerald-400 via-cyan-400 to-blue-400 bg-clip-text text-transparent">
+                Verify.
+              </span>
+            </h1>
+            
+            <div className="flex items-center justify-center gap-3 mb-4">
+              <Shield className="h-6 w-6 sm:h-7 sm:w-7 text-cyan-400" />
+              <h2 className="text-2xl sm:text-3xl md:text-4xl font-bold bg-gradient-to-r from-cyan-300 to-blue-300 bg-clip-text text-transparent">
+                Proof of Observability™
+              </h2>
             </div>
-            <h2 className="text-xl sm:text-2xl md:text-3xl font-light text-cyan-100/70 max-w-4xl mx-auto leading-tight">
-              The First Crypto Exchange with
-            </h2>
-            <div className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-bold bg-gradient-to-r from-emerald-400 via-cyan-400 to-blue-400 bg-clip-text text-transparent mt-4 mb-6">
-              Proof of Observability™
-            </div>
-            <p className="text-base sm:text-lg md:text-xl text-cyan-100/70 max-w-3xl mx-auto leading-relaxed px-4">
-              Every trade traced, verified, and auditable in real-time. See exactly how your transactions flow through our distributed system with OpenTelemetry-powered transparency.
+            
+            <p className="text-lg sm:text-xl md:text-2xl text-cyan-100/80 max-w-4xl mx-auto leading-relaxed px-4 font-light">
+              The first crypto exchange where <span className="text-cyan-400 font-medium">every trade is traced</span>, 
+              <span className="text-emerald-400 font-medium"> verified</span>, and 
+              <span className="text-blue-400 font-medium"> auditable</span> — in real-time.
+            </p>
+            
+            <p className="text-base sm:text-lg text-cyan-100/60 max-w-2xl mx-auto">
+              See exactly how your transactions flow through our system. No black boxes. No trust required.
             </p>
           </div>
 
-          {/* Live Metrics Counter */}
+          {/* Live Metrics - More Dynamic */}
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 sm:gap-6 max-w-5xl mx-auto px-4">
             <div className="group relative bg-gradient-to-br from-emerald-900/30 via-slate-800/60 to-slate-900/60 backdrop-blur-xl border-2 border-emerald-500/30 rounded-2xl p-6 sm:p-8 hover:border-emerald-400/50 transition-all duration-300 hover:shadow-2xl hover:shadow-emerald-500/20 hover:-translate-y-2 cursor-default">
-              <div className="absolute top-4 right-4 opacity-20 group-hover:opacity-40 transition-opacity">
-                <Activity className="h-8 w-8 text-emerald-400" />
+              <div className="absolute top-4 right-4 flex items-center gap-1.5">
+                <div className="h-2 w-2 rounded-full bg-emerald-400 animate-pulse" />
+                <span className="text-xs text-emerald-400/70 font-medium">LIVE</span>
               </div>
               <div className="text-4xl sm:text-5xl md:text-6xl font-bold bg-gradient-to-r from-emerald-300 to-cyan-300 bg-clip-text text-transparent mb-3">
                 {status.uptime.toFixed(1)}%
               </div>
               <div className="text-sm sm:text-base text-emerald-100/70 font-medium">System Uptime</div>
-              <div className="mt-2 text-xs text-emerald-300/50">Last 30 days</div>
+              <div className="mt-2 text-sm text-emerald-300/60">Continuous since launch</div>
             </div>
             <div className="group relative bg-gradient-to-br from-blue-900/30 via-slate-800/60 to-slate-900/60 backdrop-blur-xl border-2 border-blue-500/30 rounded-2xl p-6 sm:p-8 hover:border-blue-400/50 transition-all duration-300 hover:shadow-2xl hover:shadow-blue-500/20 hover:-translate-y-2 cursor-default">
-              <div className="absolute top-4 right-4 opacity-20 group-hover:opacity-40 transition-opacity">
-                <TrendingUp className="h-8 w-8 text-blue-400" />
+              <div className="absolute top-4 right-4 flex items-center gap-1.5">
+                <div className="h-2 w-2 rounded-full bg-blue-400 animate-pulse" />
+                <span className="text-xs text-blue-400/70 font-medium">LIVE</span>
               </div>
               <div className="text-4xl sm:text-5xl md:text-6xl font-bold bg-gradient-to-r from-blue-300 to-cyan-300 bg-clip-text text-transparent mb-3">
                 {status.metrics.tradesLast24h}
               </div>
-              <div className="text-sm sm:text-base text-blue-100/70 font-medium">Trades (24h)</div>
-              <div className="mt-2 text-xs text-blue-300/50">Live updating</div>
+              <div className="text-sm sm:text-base text-blue-100/70 font-medium">Trades Today</div>
+              <div className="mt-2 text-sm text-blue-300/60">Each one fully traced</div>
             </div>
             <div className="group relative bg-gradient-to-br from-amber-900/30 via-slate-800/60 to-slate-900/60 backdrop-blur-xl border-2 border-amber-500/30 rounded-2xl p-6 sm:p-8 hover:border-amber-400/50 transition-all duration-300 hover:shadow-2xl hover:shadow-amber-500/20 hover:-translate-y-2 cursor-default">
-              <div className="absolute top-4 right-4 opacity-20 group-hover:opacity-40 transition-opacity">
-                <Zap className="h-8 w-8 text-amber-400" />
+              <div className="absolute top-4 right-4 flex items-center gap-1.5">
+                <div className="h-2 w-2 rounded-full bg-amber-400 animate-pulse" />
+                <span className="text-xs text-amber-400/70 font-medium">LIVE</span>
               </div>
               <div className="text-4xl sm:text-5xl md:text-6xl font-bold bg-gradient-to-r from-amber-300 to-yellow-300 bg-clip-text text-transparent mb-3">
                 {status.metrics.avgExecutionMs === 0 ? '< 1' : status.metrics.avgExecutionMs}<span className="text-3xl sm:text-4xl">ms</span>
               </div>
               <div className="text-sm sm:text-base text-amber-100/70 font-medium">Avg Execution</div>
-              <div className="mt-2 text-xs text-amber-300/50">Sub-second trades</div>
+              <div className="mt-2 text-sm text-amber-300/60">Verified by OpenTelemetry</div>
             </div>
           </div>
 
-          {/* CTAs */}
-          <div className="flex flex-col sm:flex-row items-center justify-center gap-5 pt-6">
+          {/* Single Clear CTA */}
+          <div className="flex flex-col items-center justify-center gap-4 pt-8">
             {!isLoggedIn ? (
               <>
                 <button
                   onClick={() => setLocation('/register')}
-                  className="w-full sm:w-auto bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-white font-bold px-12 py-5 rounded-2xl shadow-2xl shadow-cyan-500/50 hover:shadow-cyan-400/60 transition-all duration-300 hover:-translate-y-1 hover:scale-105 text-center cursor-pointer text-lg border-2 border-cyan-400/30"
+                  className="w-full sm:w-auto bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-white font-bold px-16 py-6 rounded-2xl shadow-2xl shadow-cyan-500/50 hover:shadow-cyan-400/60 transition-all duration-300 hover:-translate-y-1 hover:scale-105 text-center cursor-pointer text-xl border-2 border-cyan-400/30"
                 >
-                  Start Trading →
+                  Start Trading with Full Transparency →
                 </button>
-                <button
-                  onClick={() => setLocation('/login')}
-                  className="w-full sm:w-auto bg-slate-800/70 hover:bg-slate-700/80 text-cyan-100 font-semibold px-10 py-5 rounded-2xl border-2 border-cyan-500/40 hover:border-cyan-400/60 backdrop-blur-xl transition-all duration-300 hover:-translate-y-1 text-center cursor-pointer text-base shadow-lg shadow-cyan-500/10"
-                >
-                  Sign In
-                </button>
+                <div className="flex items-center gap-4 text-sm text-cyan-100/60">
+                  <span>Already have an account?</span>
+                  <button
+                    onClick={() => setLocation('/login')}
+                    className="text-cyan-400 hover:text-cyan-300 font-medium underline underline-offset-4 cursor-pointer"
+                  >
+                    Sign In
+                  </button>
+                </div>
               </>
             ) : (
               <button
-                onClick={() => setLocation('/portfolio')}
-                className="w-full sm:w-auto bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-white font-bold px-12 py-5 rounded-2xl shadow-2xl shadow-cyan-500/50 hover:shadow-cyan-400/60 transition-all duration-300 hover:-translate-y-1 hover:scale-105 text-center cursor-pointer text-lg border-2 border-cyan-400/30"
+                onClick={() => setLocation('/trade')}
+                className="w-full sm:w-auto bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-white font-bold px-16 py-6 rounded-2xl shadow-2xl shadow-cyan-500/50 hover:shadow-cyan-400/60 transition-all duration-300 hover:-translate-y-1 hover:scale-105 text-center cursor-pointer text-xl border-2 border-cyan-400/30"
               >
-                Go to Portfolio →
+                Make a Trade — See It Traced Live →
               </button>
             )}
-            <button
-              onClick={() => setLocation('/transparency')}
-              className="w-full sm:w-auto bg-slate-800/70 hover:bg-slate-700/80 text-cyan-100 font-semibold px-10 py-5 rounded-2xl border-2 border-indigo-500/40 hover:border-indigo-400/60 backdrop-blur-xl transition-all duration-300 hover:-translate-y-1 text-center cursor-pointer text-base shadow-lg shadow-indigo-500/10"
-            >
-              View Live Transparency
-            </button>
+          </div>
+
+          {/* Trust Indicators */}
+          <div className="flex flex-wrap items-center justify-center gap-6 sm:gap-10 pt-6 text-sm text-cyan-100/50">
+            <div className="flex items-center gap-2">
+              <Activity className="h-4 w-4" />
+              <span>OpenTelemetry Powered</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <Eye className="h-4 w-4" />
+              <span>Real-Time Traces</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <Shield className="h-4 w-4" />
+              <span>AI Anomaly Detection</span>
+            </div>
           </div>
         </div>
 
@@ -233,7 +276,7 @@ export function TransparencyDashboard() {
               <div className="text-4xl font-bold bg-gradient-to-r from-emerald-400 to-cyan-400 bg-clip-text text-transparent">
                 {status.uptime.toFixed(2)}%
               </div>
-              <p className="text-xs text-cyan-100/60 mt-2 font-light">Last 30 days</p>
+              <p className="text-sm text-cyan-100/60 mt-2">Last 30 days</p>
             </CardContent>
           </Card>
 
@@ -246,7 +289,7 @@ export function TransparencyDashboard() {
               <div className="text-4xl font-bold bg-gradient-to-r from-blue-400 to-cyan-400 bg-clip-text text-transparent">
                 {status.metrics.tradesLast24h}
               </div>
-              <p className="text-xs text-cyan-100/60 mt-2 font-light">{status.metrics.tradesTotal} total</p>
+              <p className="text-sm text-cyan-100/60 mt-2">{status.metrics.tradesTotal} total</p>
             </CardContent>
           </Card>
 
@@ -259,7 +302,7 @@ export function TransparencyDashboard() {
               <div className="text-4xl font-bold bg-gradient-to-r from-amber-400 to-yellow-400 bg-clip-text text-transparent">
                 {status.metrics.avgExecutionMs}ms
               </div>
-              <p className="text-xs text-cyan-100/60 mt-2 font-light">P99: {status.performance.p99ResponseMs}ms</p>
+              <p className="text-sm text-cyan-100/60 mt-2">P99: {status.performance.p99ResponseMs}ms</p>
             </CardContent>
           </Card>
 
@@ -270,7 +313,7 @@ export function TransparencyDashboard() {
           </CardHeader>
           <CardContent>
             <div className="text-3xl font-bold">{status.metrics?.anomaliesResolved || '0'}</div>
-            <p className="text-xs text-muted-foreground mt-1">Anomalies resolved</p>
+            <p className="text-sm text-muted-foreground mt-1">Anomalies resolved</p>
           </CardContent>
         </Card>
       </div>
@@ -387,14 +430,14 @@ export function TransparencyDashboard() {
                       <div className="font-mono text-sm text-cyan-100 font-medium">
                         {trade.amount.toFixed(4)} {trade.asset.split('/')[0]}
                       </div>
-                      <div className="text-xs text-cyan-100/60">
-                        @ ${trade.price.toLocaleString()} • Trace ID: {trade.tradeId.slice(0, 8)}...
+                      <div className="text-sm text-cyan-100/60">
+                        @ ${trade.price.toLocaleString()} • Trace: {trade.tradeId.slice(0, 8)}...
                       </div>
                     </div>
                   </div>
                   <div className="text-right">
-                    <div className="text-sm font-medium text-amber-400">{trade.executionTimeMs}ms</div>
-                    <div className="text-xs text-cyan-100/60 flex items-center gap-1 justify-end">
+                    <div className="text-sm font-semibold text-amber-400">{trade.executionTimeMs}ms</div>
+                    <div className="text-sm text-cyan-100/60 flex items-center gap-1 justify-end">
                       {trade.aiVerified && <Shield className="h-3 w-3 text-emerald-400" />}
                       <span className="group-hover:text-cyan-400 transition-colors">View Trace →</span>
                     </div>
@@ -403,9 +446,28 @@ export function TransparencyDashboard() {
               ))}
             </div>
             {trades.length === 0 && (
-              <div className="text-center py-8 text-cyan-100/60">
-                <Activity className="h-12 w-12 mx-auto mb-3 text-blue-400/50" />
-                <p>Waiting for trades... Make a trade to see real-time trace data appear here.</p>
+              <div className="text-center py-12">
+                <div className="relative inline-block mb-4">
+                  <Activity className="h-14 w-14 text-blue-400/40" />
+                  <div className="absolute inset-0 animate-ping">
+                    <Activity className="h-14 w-14 text-blue-400/20" />
+                  </div>
+                </div>
+                <h4 className="text-lg font-medium text-cyan-100 mb-2">Waiting for Live Trades</h4>
+                <p className="text-cyan-100/50 text-sm max-w-md mx-auto mb-4">
+                  Real trade data will stream here as users execute transactions. Each trade shows execution time, AI verification status, and links to full OpenTelemetry traces.
+                </p>
+                <div className="flex items-center justify-center gap-4 text-xs text-cyan-100/40">
+                  <span className="flex items-center gap-1">
+                    <Shield className="w-3 h-3" /> AI Verified
+                  </span>
+                  <span className="flex items-center gap-1">
+                    <Zap className="w-3 h-3" /> Sub-second
+                  </span>
+                  <span className="flex items-center gap-1">
+                    <Eye className="w-3 h-3" /> Fully Traced
+                  </span>
+                </div>
               </div>
             )}
           </CardContent>

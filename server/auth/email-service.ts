@@ -150,13 +150,13 @@ export const emailService = {
                     <li><strong>10 ETH</strong> - test Ethereum</li>
                 </ul>
                 <p style="margin-top: 30px;">
-                    <a href="http://localhost:5000/my-wallet" class="btn">View Your Wallet</a>
+                    <a href="http://localhost:5000/portfolio" class="btn">View Your Portfolio</a>
                 </p>
                 <p style="color: #666; margin-top: 30px; font-size: 14px;">
                     Crystal clear transparency. Every transaction, every trade, fully observable.
                 </p>
             `),
-            text: `Welcome to ${BRAND.name}!\n\nYou've been credited with test funds:\n- 10,000 USDT\n- 1 BTC\n- 10 ETH\n\nStart trading at http://localhost:5000/my-wallet`
+            text: `Welcome to ${BRAND.name}!\n\nYou've been credited with test funds:\n- 10,000 USDT\n- 1 BTC\n- 10 ETH\n\nStart trading at http://localhost:5000/portfolio`
         });
     }
 };
