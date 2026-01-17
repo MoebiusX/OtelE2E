@@ -9,6 +9,7 @@ import { Router, Request, Response } from 'express';
 import db from '../db';
 import { rabbitMQClient } from '../services/rabbitmq-client';
 import { createLogger } from '../lib/logger';
+import { getErrorMessage } from '../lib/errors';
 
 const router = Router();
 const logger = createLogger('health');
@@ -70,7 +71,7 @@ router.get('/ready', async (req: Request, res: Response) => {
     if (dbLatency > 1000) {
       logger.warn({ latencyMs: dbLatency }, 'Database response slow');
     }
-  } catch (error: any) {
+  } catch (error: unknown) {
     checks.database = {
       status: 'disconnected',
     };
@@ -85,7 +86,7 @@ router.get('/ready', async (req: Request, res: Response) => {
       status: isConnected ? 'connected' : 'disconnected',
     };
     // RabbitMQ is optional - don't fail health check if down
-  } catch (error: any) {
+  } catch (error: unknown) {
     checks.rabbitmq = {
       status: 'error',
     };
@@ -128,10 +129,10 @@ router.get('/metrics/health', async (req: Request, res: Response) => {
       latencyMs: dbLatency,
       stats: result.rows[0],
     };
-  } catch (error: any) {
+  } catch (error: unknown) {
     checks.database = {
       status: 'error',
-      error: error.message,
+      error: getErrorMessage(error),
     };
   }
 

@@ -12,6 +12,7 @@ import type {
 } from './types';
 import { config } from '../config';
 import { createLogger } from '../lib/logger';
+import { getErrorMessage } from '../lib/errors';
 
 const logger = createLogger('trace-profiler');
 const JAEGER_API_URL = config.observability.jaegerUrl;
@@ -106,7 +107,7 @@ export class TraceProfiler {
                 baselinesCount: this.baselines.size,
                 spansCount: allSpans.length
             }, 'Updated baselines from spans');
-        } catch (error: any) {
+        } catch (error: unknown) {
             logger.error({ err: error }, 'Error collecting traces');
         }
     }
@@ -125,9 +126,10 @@ export class TraceProfiler {
 
             const data = await response.json();
             return data.data || [];
-        } catch (error: any) {
+        } catch (error: unknown) {
             // Jaeger might not be ready on startup
-            if (error.cause?.code === 'ECONNREFUSED') {
+            const cause = error instanceof Error && 'cause' in error ? (error.cause as { code?: string }) : undefined;
+            if (cause?.code === 'ECONNREFUSED') {
                 logger.debug({ service, err: error }, 'Jaeger not ready for service');
                 return [];
             }

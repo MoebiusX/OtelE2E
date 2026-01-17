@@ -10,6 +10,7 @@ import { traceProfiler } from './trace-profiler';
 import { streamAnalyzer } from './stream-analyzer';
 import { config } from '../config';
 import { createLogger } from '../lib/logger';
+import { getErrorMessage } from '../lib/errors';
 
 const logger = createLogger('anomaly-detector');
 const JAEGER_API_URL = config.observability.jaegerUrl;
@@ -199,7 +200,7 @@ export class AnomalyDetector {
             if (newAnomalies > 0) {
                 logger.info({ newAnomaliesCount: newAnomalies }, 'Detection cycle completed');
             }
-        } catch (error: any) {
+        } catch (error: unknown) {
             logger.error({ err: error }, 'Anomaly detection cycle failed');
         }
     }
@@ -293,9 +294,10 @@ export class AnomalyDetector {
                     traces.push(...(data.data || []));
                 }
             }
-        } catch (error: any) {
+        } catch (error: unknown) {
             // Jaeger might not be available
-            if (error.cause?.code !== 'ECONNREFUSED') {
+            const cause = error instanceof Error && 'cause' in error ? (error.cause as { code?: string }) : undefined;
+            if (cause?.code !== 'ECONNREFUSED') {
                 throw error;
             }
         }

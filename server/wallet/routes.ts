@@ -7,6 +7,7 @@
 import { Router } from 'express';
 import { walletService } from './wallet-service';
 import { authenticate } from '../auth/routes';
+import { getErrorMessage } from '../lib/errors';
 
 const router = Router();
 
@@ -27,8 +28,8 @@ router.get('/balances', authenticate, async (req, res) => {
                 locked: w.locked,
             }))
         });
-    } catch (error: any) {
-        res.status(500).json({ error: error.message });
+    } catch (error: unknown) {
+        res.status(500).json({ error: getErrorMessage(error) });
     }
 });
 
@@ -40,8 +41,8 @@ router.get('/summary', authenticate, async (req, res) => {
     try {
         const summary = await walletService.getBalanceSummary(req.user!.id);
         res.json({ success: true, balances: summary });
-    } catch (error: any) {
-        res.status(500).json({ error: error.message });
+    } catch (error: unknown) {
+        res.status(500).json({ error: getErrorMessage(error) });
     }
 });
 
@@ -66,8 +67,8 @@ router.get('/:asset', authenticate, async (req, res) => {
                 locked: wallet.locked,
             }
         });
-    } catch (error: any) {
-        res.status(500).json({ error: error.message });
+    } catch (error: unknown) {
+        res.status(500).json({ error: getErrorMessage(error) });
     }
 });
 
@@ -93,8 +94,8 @@ router.get('/transactions/history', authenticate, async (req, res) => {
                 created_at: t.created_at,
             }))
         });
-    } catch (error: any) {
-        res.status(500).json({ error: error.message });
+    } catch (error: unknown) {
+        res.status(500).json({ error: getErrorMessage(error) });
     }
 });
 
@@ -128,8 +129,8 @@ router.post('/deposit', authenticate, async (req, res) => {
                 created_at: transaction.created_at,
             }
         });
-    } catch (error: any) {
-        res.status(400).json({ error: error.message });
+    } catch (error: unknown) {
+        res.status(400).json({ error: getErrorMessage(error) });
     }
 });
 
@@ -163,8 +164,8 @@ router.post('/withdraw', authenticate, async (req, res) => {
                 created_at: transaction.created_at,
             }
         });
-    } catch (error: any) {
-        res.status(400).json({ error: error.message });
+    } catch (error: unknown) {
+        res.status(400).json({ error: getErrorMessage(error) });
     }
 });
 
@@ -198,8 +199,8 @@ router.post('/transfer', authenticate, async (req, res) => {
             fromBalance: result.fromBalance,
             toBalance: result.toBalance,
         });
-    } catch (error: any) {
-        res.status(400).json({ error: error.message });
+    } catch (error: unknown) {
+        res.status(400).json({ error: getErrorMessage(error) });
     }
 });
 

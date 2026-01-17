@@ -236,7 +236,7 @@ export class HistoryStore {
                 this.history.timeBaselines = JSON.parse(data);
                 logger.info({ timeBaselinesCount: this.history.timeBaselines?.length || 0 }, 'Loaded time baselines from file');
             }
-        } catch (error: any) {
+        } catch (error: unknown) {
             logger.warn({ err: error }, 'Could not load history from file');
         }
     }
@@ -250,7 +250,7 @@ export class HistoryStore {
             fs.writeFileSync(HISTORY_FILE, data, 'utf-8');
             this.dirty = false;
             logger.info({ anomaliesCount: this.history.anomalies.length }, 'Saved history to file');
-        } catch (error: any) {
+        } catch (error: unknown) {
             logger.error({ err: error }, 'Could not save history to file');
         }
     }
@@ -265,7 +265,7 @@ export class HistoryStore {
                 fs.writeFileSync(TIME_BASELINES_FILE, data, 'utf-8');
                 logger.info({ timeBaselinesCount: this.history.timeBaselines.length }, 'Saved time baselines to file');
             }
-        } catch (error: any) {
+        } catch (error: unknown) {
             logger.error({ err: error }, 'Could not save time baselines to file');
         }
     }

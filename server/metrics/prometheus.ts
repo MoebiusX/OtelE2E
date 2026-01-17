@@ -149,7 +149,7 @@ export function registerMetricsEndpoint(app: Express): void {
         try {
             res.set('Content-Type', register.contentType);
             res.end(await register.metrics());
-        } catch (error: any) {
+        } catch (error: unknown) {
             logger.error({ err: error }, 'Error generating Prometheus metrics');
             res.status(500).end('Error generating metrics');
         }

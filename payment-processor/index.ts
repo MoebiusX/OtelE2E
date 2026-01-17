@@ -206,7 +206,7 @@ async function main() {
                     span.setStatus({ code: SpanStatusCode.OK });
                     console.log(`[MATCHER] Order ${orderId} filled → response sent`);
 
-                } catch (error: any) {
+                } catch (error: unknown) {
                     console.error(`[MATCHER] Error:`, error.message);
                     span.setStatus({ code: SpanStatusCode.ERROR, message: error.message });
                     channel.nack(msg, false, false);
@@ -225,7 +225,7 @@ async function main() {
             process.exit(0);
         });
 
-    } catch (error: any) {
+    } catch (error: unknown) {
         console.error('[MATCHER] Failed to start:', error.message);
         process.exit(1);
     }

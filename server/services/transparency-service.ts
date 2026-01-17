@@ -12,6 +12,7 @@ import { traceProfiler } from '../monitor/trace-profiler';
 import { anomalyDetector } from '../monitor/anomaly-detector';
 import { traces } from '../otel';
 import { createLogger } from '../lib/logger';
+import { getErrorMessage } from '../lib/errors';
 import { 
   systemStatusSchema, 
   publicTradeSchema, 
@@ -130,7 +131,7 @@ class TransparencyService {
       const validatedStatus = systemStatusSchema.parse(status);
       logger.info({ status: validatedStatus.status, uptime: validatedStatus.uptime }, 'Generated system status');
       return validatedStatus;
-    } catch (error: any) {
+    } catch (error: unknown) {
       logger.error({ err: error }, 'Failed to generate system status');
       throw error;
     }
@@ -202,7 +203,7 @@ class TransparencyService {
 
       logger.info({ count: publicTrades.length }, 'Retrieved public trades');
       return publicTrades;
-    } catch (error: any) {
+    } catch (error: unknown) {
       logger.error({ err: error }, 'Failed to get public trades');
       throw error;
     }
@@ -287,7 +288,7 @@ class TransparencyService {
       const validatedMetrics = transparencyMetricsSchema.parse(metrics);
       logger.info('Generated transparency metrics');
       return validatedMetrics;
-    } catch (error: any) {
+    } catch (error: unknown) {
       logger.error({ err: error }, 'Failed to generate transparency metrics');
       throw error;
     }
@@ -341,9 +342,11 @@ class TransparencyService {
         status: 'completed',
         aiVerified: true,
       };
-    } catch (error: any) {
+    } catch (error: unknown) {
       // Handle connection errors gracefully (Jaeger might not be ready)
-      if (error.cause?.code === 'ECONNREFUSED' || error.code === 'ECONNREFUSED') {
+      const cause = error instanceof Error ? (error as any).cause : undefined;
+      const code = error instanceof Error ? (error as any).code : undefined;
+      if (cause?.code === 'ECONNREFUSED' || code === 'ECONNREFUSED') {
         logger.debug({ traceId }, 'Jaeger not available');
         return null;
       }

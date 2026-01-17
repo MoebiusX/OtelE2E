@@ -432,7 +432,9 @@
 <a name='L367'></a><a href='#L367'>367</a>
 <a name='L368'></a><a href='#L368'>368</a>
 <a name='L369'></a><a href='#L369'>369</a>
-<a name='L370'></a><a href='#L370'>370</a></td><td class="line-coverage quiet"><span class="cline-any cline-yes">1x</span>
+<a name='L370'></a><a href='#L370'>370</a>
+<a name='L371'></a><a href='#L371'>371</a></td><td class="line-coverage quiet"><span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
@@ -812,6 +814,7 @@ import { orderService, getPrice } from "../core/order-service";
 import { insertOrderSchema, insertTransferSchema } from "@shared/schema";
 import { traces } from "../otel";
 import { createLogger } from "../lib/logger";
+import { getErrorMessage } from "../lib/errors";
 import db from "../db";
 &nbsp;
 const logger = createLogger('api-routes');
@@ -840,8 +843,8 @@ export function registerRoutes(app: Express) {
       }));
       
       res.json(users);
-    } catch (error: any) {
-      logger.error({ error: error.message }, 'Failed to fetch users');
+    } catch (error: unknown) {
+      logger.error({ error: getErrorMessage(error) }, 'Failed to fetch users');
       res.status(500).json({ error: "Failed to fetch users" });
     }
   });
@@ -860,7 +863,7 @@ export function registerRoutes(app: Express) {
         change24h: (Math.random() - 0.5) * 5,
         timestamp: new Date()
       });
-<span class="branch-0 cbranch-no" title="branch not covered" >    } catch (error: any) {</span>
+<span class="branch-0 cbranch-no" title="branch not covered" >    } catch (error: unknown) {</span>
 <span class="cstat-no" title="statement not covered" >      res.status(500).json({ error: "Failed to fetch price" });</span>
 <span class="cstat-no" title="statement not covered" >    }</span>
   });
@@ -879,7 +882,7 @@ export function registerRoutes(app: Express) {
         btcValue: wallet.btc * price,
         totalValue: wallet.usd + (wallet.btc * price)
       });
-    } catch (error: any) {
+    } catch (error: unknown) {
       res.status(500).json({ error: "Failed to fetch wallet" });
     }
   });
@@ -898,7 +901,7 @@ export function registerRoutes(app: Express) {
         btcValue: wallet.btc * price,
         totalValue: wallet.usd + (wallet.btc * price)
       });
-<span class="branch-0 cbranch-no" title="branch not covered" >    } catch (error: any) {</span>
+<span class="branch-0 cbranch-no" title="branch not covered" >    } catch (error: unknown) {</span>
 <span class="cstat-no" title="statement not covered" >      res.status(500).json({ error: "Failed to fetch wallet" });</span>
 <span class="cstat-no" title="statement not covered" >    }</span>
   });
@@ -955,7 +958,7 @@ export function registerRoutes(app: Express) {
         spanId: result.spanId
       });
 &nbsp;
-<span class="branch-0 cbranch-no" title="branch not covered" >    } catch (error: any) {</span>
+<span class="branch-0 cbranch-no" title="branch not covered" >    } catch (error: unknown) {</span>
 <span class="cstat-no" title="statement not covered" >      logger.error({ err: error }, 'Order processing failed');</span>
 <span class="cstat-no" title="statement not covered" >      res.status(500).json({ error: "Failed to process order" });</span>
 <span class="cstat-no" title="statement not covered" >    }</span>
@@ -966,7 +969,7 @@ export function registerRoutes(app: Express) {
     try {
       const orders = await orderService.getOrders(10);
       res.json(orders);
-    } catch (error: any) {
+    } catch (error: unknown) {
       res.status(500).json({ error: "Failed to fetch orders" });
     }
   });
@@ -1021,7 +1024,7 @@ export function registerRoutes(app: Express) {
         spanId: result.spanId
       });
 &nbsp;
-    } catch (error: any) {
+    } catch (error: unknown) {
       logger.error({ err: error }, 'Transfer processing failed');
       res.status(500).json({ error: "Failed to process transfer" });
     }
@@ -1032,7 +1035,7 @@ export function registerRoutes(app: Express) {
     try {
       const transfers = await orderService.getTransfers(10);
       res.json(transfers);
-    } catch (error: any) {
+    } catch (error: unknown) {
       res.status(500).json({ error: "Failed to fetch transfers" });
     }
   });
@@ -1069,7 +1072,7 @@ export function registerRoutes(app: Express) {
           processorId: result.execution.processorId
 <span class="branch-0 cbranch-no" title="branch not covered" >        } : undefined</span>
       });
-<span class="branch-0 cbranch-no" title="branch not covered" >    } catch (error: any) {</span>
+<span class="branch-0 cbranch-no" title="branch not covered" >    } catch (error: unknown) {</span>
 <span class="cstat-no" title="statement not covered" >      res.status(500).json({ error: "Failed to process payment" });</span>
 <span class="cstat-no" title="statement not covered" >    }</span>
   });
@@ -1078,7 +1081,7 @@ export function registerRoutes(app: Express) {
     try {
       const orders = await orderService.getOrders(10);
       res.json(orders);
-    } catch (error: any) {
+    } catch (error: unknown) {
       res.status(500).json({ error: "Failed to fetch payments" });
     }
   });
@@ -1124,7 +1127,7 @@ export function registerRoutes(app: Express) {
 &nbsp;
 <span class="cstat-no" title="statement not covered" >      formattedTraces.sort((a, b) =&gt; new Date(b.startTime).getTime() - new Date(a.startTime).getTime());</span>
 <span class="cstat-no" title="statement not covered" >      res.json(formattedTraces.slice(0, 10));</span>
-<span class="cstat-no" title="statement not covered" >    } catch (error: any) {</span>
+<span class="cstat-no" title="statement not covered" >    } catch (error: unknown) {</span>
 <span class="cstat-no" title="statement not covered" >      res.status(500).json({ error: "Failed to fetch traces" });</span>
 <span class="cstat-no" title="statement not covered" >    }</span>
   });
@@ -1136,7 +1139,7 @@ export function registerRoutes(app: Express) {
 <span class="cstat-no" title="statement not covered" >      await orderService.clearAllData();</span>
 <span class="cstat-no" title="statement not covered" >      clearTraces();</span>
 <span class="cstat-no" title="statement not covered" >      res.json({ success: true, message: "All data cleared" });</span>
-<span class="cstat-no" title="statement not covered" >    } catch (error: any) {</span>
+<span class="cstat-no" title="statement not covered" >    } catch (error: unknown) {</span>
 <span class="cstat-no" title="statement not covered" >      res.status(500).json({ error: "Failed to clear data" });</span>
 <span class="cstat-no" title="statement not covered" >    }</span>
   });
@@ -1177,7 +1180,7 @@ export function registerRoutes(app: Express) {
             <div class='footer quiet pad2 space-top1 center small'>
                 Code coverage generated by
                 <a href="https://istanbul.js.org/" target="_blank" rel="noopener noreferrer">istanbul</a>
-                at 2026-01-17T08:58:51.509Z
+                at 2026-01-17T10:53:51.691Z
             </div>
         <script src="../../prettify.js"></script>
         <script>

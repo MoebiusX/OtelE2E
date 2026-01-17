@@ -14,6 +14,7 @@ import type {
 import { historyStore } from './history-store';
 import { config } from '../config';
 import { createLogger } from '../lib/logger';
+import { getErrorMessage } from '../lib/errors';
 
 const logger = createLogger('baseline-calculator');
 const JAEGER_URL = config.observability.jaegerUrl;
@@ -75,7 +76,7 @@ export class BaselineCalculator {
 
             const data = await response.json();
             return data.data || [];
-        } catch (error: any) {
+        } catch (error: unknown) {
             logger.error({ service, err: error }, 'Error fetching traces from Jaeger');
             return [];
         }
@@ -318,13 +319,13 @@ export class BaselineCalculator {
                 message: `Calculated ${newBaselines.size} baselines from ${allSpans.length} spans`
             };
 
-        } catch (error: any) {
+        } catch (error: unknown) {
             logger.error({ err: error }, 'Baseline recalculation failed');
             return {
                 success: false,
                 baselinesCount: 0,
                 duration: Date.now() - startTime,
-                message: error.message
+                message: getErrorMessage(error)
             };
         } finally {
             this.isCalculating = false;

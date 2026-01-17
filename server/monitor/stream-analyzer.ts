@@ -9,6 +9,7 @@ import type { Anomaly } from './types';
 import { wsServer } from './ws-server';
 import { metricsCorrelator } from './metrics-correlator';
 import { createLogger } from '../lib/logger';
+import { getErrorMessage } from '../lib/errors';
 
 const logger = createLogger('stream-analyzer');
 
@@ -165,9 +166,9 @@ class StreamAnalyzer {
 
         try {
             await this.streamAnalysis(batch);
-        } catch (error: any) {
+        } catch (error: unknown) {
             logger.error({ err: error }, 'Analysis batch processing failed');
-            wsServer.analysisComplete(anomalyIds, `Analysis failed: ${error.message}`);
+            wsServer.analysisComplete(anomalyIds, `Analysis failed: ${getErrorMessage(error)}`);
         }
 
         this.isProcessing = false;

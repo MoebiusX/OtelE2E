@@ -6,19 +6,60 @@ global:
   evaluation_interval: 15s
 
 scrape_configs:
-  # crypto-wallet service (main Express server)
-  - job_name: 'crypto-wallet'
+  # ============================================
+  # APPLICATION METRICS
+  # ============================================
+
+  # Krystaline Exchange API (main Express server)
+  - job_name: 'krystaline-exchange'
     static_configs:
       - targets: ['host.docker.internal:5000']
     metrics_path: /metrics
     scrape_interval: 10s
 
-  # order-matcher service (payment processor)
+  # Order Matcher / Payment Processor
   - job_name: 'order-matcher'
     static_configs:
       - targets: ['payment-processor:3001']
     metrics_path: /metrics
     scrape_interval: 10s
+
+  # ============================================
+  # INFRASTRUCTURE METRICS
+  # ============================================
+
+  # RabbitMQ metrics (via rabbitmq_prometheus plugin)
+  - job_name: 'rabbitmq'
+    static_configs:
+      - targets: ['rabbitmq:15692']
+    metrics_path: /metrics
+    scrape_interval: 15s
+
+  # PostgreSQL - App Database (wallets, orders, users)
+  - job_name: 'postgres-app'
+    static_configs:
+      - targets: ['postgres-exporter:9187']
+    scrape_interval: 15s
+
+  # PostgreSQL - Kong Database
+  - job_name: 'postgres-kong'
+    static_configs:
+      - targets: ['kong-postgres-exporter:9187']
+    scrape_interval: 30s
+
+  # ============================================
+  # SYSTEM METRICS
+  # ============================================
+
+  # Node Exporter - OS/Host metrics (CPU, memory, disk, network)
+  - job_name: 'node'
+    static_configs:
+      - targets: ['node-exporter:9100']
+    scrape_interval: 15s
+
+  # ============================================
+  # OBSERVABILITY STACK
+  # ============================================
 
   # Prometheus itself
   - job_name: 'prometheus'

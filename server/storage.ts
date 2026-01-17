@@ -512,4 +512,45 @@ export class MemoryStorage implements IStorage {
   }
 }
 
+// ============================================
+// STORAGE FACTORY
+// ============================================
+
+/**
+ * Storage type configuration
+ * Set via STORAGE_TYPE environment variable: 'memory' | 'postgres'
+ */
+export type StorageType = 'memory' | 'postgres';
+
+/**
+ * Get the configured storage type
+ */
+export function getStorageType(): StorageType {
+  const envType = process.env.STORAGE_TYPE?.toLowerCase();
+  if (envType === 'postgres' || envType === 'postgresql') {
+    return 'postgres';
+  }
+  return 'memory';
+}
+
+/**
+ * Create the appropriate storage instance based on configuration
+ * Use this for async initialization (required for PostgreSQL)
+ */
+export async function createStorage(): Promise<IStorage> {
+  const storageType = getStorageType();
+  
+  if (storageType === 'postgres') {
+    // Dynamic import to avoid loading pg when not needed
+    const { getPostgresStorage } = await import('./db/postgres-storage');
+    console.log('[storage] Using PostgreSQL storage');
+    return getPostgresStorage();
+  }
+  
+  console.log('[storage] Using in-memory storage');
+  return new MemoryStorage();
+}
+
+// Default export: in-memory storage for backwards compatibility
+// For PostgreSQL, use createStorage() instead
 export const storage = new MemoryStorage();

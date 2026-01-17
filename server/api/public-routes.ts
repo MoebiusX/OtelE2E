@@ -36,7 +36,7 @@ router.get('/status', async (req: Request, res: Response) => {
   try {
     const status = await transparencyService.getSystemStatus();
     res.json(status);
-  } catch (error: any) {
+  } catch (error: unknown) {
     logger.error({ err: error }, 'Failed to get system status');
     res.status(500).json({ 
       error: 'Failed to retrieve system status',
@@ -62,7 +62,7 @@ router.get('/trades', async (req: Request, res: Response) => {
       count: trades.length,
       timestamp: new Date().toISOString()
     });
-  } catch (error: any) {
+  } catch (error: unknown) {
     if (error instanceof z.ZodError) {
       logger.warn({ err: error.errors }, 'Invalid query parameters');
       return res.status(400).json({ 
@@ -90,7 +90,7 @@ router.get('/metrics', async (req: Request, res: Response) => {
   try {
     const metrics = await transparencyService.getTransparencyMetrics();
     res.json(metrics);
-  } catch (error: any) {
+  } catch (error: unknown) {
     logger.error({ err: error }, 'Failed to get transparency metrics');
     res.status(500).json({ 
       error: 'Failed to retrieve metrics',
@@ -120,7 +120,7 @@ router.get('/trace/:traceId', async (req: Request, res: Response) => {
     }
     
     res.json(trace);
-  } catch (error: any) {
+  } catch (error: unknown) {
     if (error instanceof z.ZodError) {
       logger.warn({ err: error.errors }, 'Invalid trace ID');
       return res.status(400).json({ 

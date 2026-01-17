@@ -8,7 +8,7 @@ import { Router, Request, Response, NextFunction } from 'express';
 import { authService, registerSchema, loginSchema, verifySchema, User } from './auth-service';
 import { ZodError } from 'zod';
 import { createLogger } from '../lib/logger';
-import { AuthenticationError, ValidationError } from '../lib/errors';
+import { AuthenticationError, ValidationError, getErrorMessage } from '../lib/errors';
 
 const logger = createLogger('auth-routes');
 const router = Router();
@@ -73,14 +73,14 @@ router.post('/register', async (req, res) => {
                 status: result.user.status,
             }
         });
-    } catch (error: any) {
+    } catch (error: unknown) {
         if (error instanceof ZodError) {
             return res.status(400).json({
                 error: 'Validation failed',
                 details: error.errors.map(e => e.message),
             });
         }
-        res.status(400).json({ error: error.message });
+        res.status(400).json({ error: getErrorMessage(error) });
     }
 });
 
@@ -103,14 +103,14 @@ router.post('/verify', async (req, res) => {
             },
             tokens: result.tokens,
         });
-    } catch (error: any) {
+    } catch (error: unknown) {
         if (error instanceof ZodError) {
             return res.status(400).json({
                 error: 'Validation failed',
                 details: error.errors.map(e => e.message),
             });
         }
-        res.status(400).json({ error: error.message });
+        res.status(400).json({ error: getErrorMessage(error) });
     }
 });
 
@@ -127,8 +127,8 @@ router.post('/resend-code', async (req, res) => {
 
         await authService.resendVerificationCode(email);
         res.json({ success: true, message: 'Verification code sent' });
-    } catch (error: any) {
-        res.status(400).json({ error: error.message });
+    } catch (error: unknown) {
+        res.status(400).json({ error: getErrorMessage(error) });
     }
 });
 
@@ -151,14 +151,14 @@ router.post('/login', async (req, res) => {
             },
             tokens: result.tokens,
         });
-    } catch (error: any) {
+    } catch (error: unknown) {
         if (error instanceof ZodError) {
             return res.status(400).json({
                 error: 'Validation failed',
                 details: error.errors.map(e => e.message),
             });
         }
-        res.status(401).json({ error: error.message });
+        res.status(401).json({ error: getErrorMessage(error) });
     }
 });
 
@@ -175,8 +175,8 @@ router.post('/refresh', async (req, res) => {
 
         const tokens = await authService.refreshToken(refreshToken);
         res.json({ success: true, tokens });
-    } catch (error: any) {
-        res.status(401).json({ error: error.message });
+    } catch (error: unknown) {
+        res.status(401).json({ error: getErrorMessage(error) });
     }
 });
 
@@ -188,8 +188,8 @@ router.post('/logout', authenticate, async (req, res) => {
     try {
         await authService.logout(req.user!.id);
         res.json({ success: true, message: 'Logged out' });
-    } catch (error: any) {
-        res.status(500).json({ error: error.message });
+    } catch (error: unknown) {
+        res.status(500).json({ error: getErrorMessage(error) });
     }
 });
 

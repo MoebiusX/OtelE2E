@@ -5,7 +5,7 @@ import { storage } from '../storage';
 import { rabbitMQClient } from '../services/rabbitmq-client';
 import { trace, context, SpanStatusCode } from '@opentelemetry/api';
 import { createLogger } from '../lib/logger';
-import { OrderError, ValidationError, InsufficientFundsError } from '../lib/errors';
+import { OrderError, ValidationError, InsufficientFundsError, getErrorMessage } from '../lib/errors';
 
 const logger = createLogger('order');
 
@@ -215,7 +215,7 @@ export class OrderService {
                         processorId: executionResponse.processorId
                     }
                 };
-            } catch (error: any) {
+            } catch (error: unknown) {
                 logger.warn({
                     err: error,
                     orderId
@@ -325,14 +325,14 @@ export class OrderService {
                     transfer: { ...transfer, status: 'COMPLETED' },
                     status: 'COMPLETED'
                 };
-            } catch (error: any) {
-                span.setStatus({ code: SpanStatusCode.ERROR, message: error.message });
+            } catch (error: unknown) {
+                span.setStatus({ code: SpanStatusCode.ERROR, message: getErrorMessage(error) });
                 span.end();
                 return {
                     transferId, traceId, spanId,
                     transfer: null,
                     status: 'FAILED',
-                    message: error.message
+                    message: getErrorMessage(error)
                 };
             }
         });
