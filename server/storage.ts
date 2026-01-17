@@ -458,6 +458,9 @@ export class MemoryStorage implements IStorage {
     const span: Span = {
       id: this.nextId++,
       ...spanData,
+      status: spanData.status || 'OK',
+      duration: spanData.duration ?? null,
+      tags: spanData.tags ?? null,
       startTime: new Date(),
       endTime: spanData.endTime ? new Date(spanData.endTime) : null,
     };

@@ -108,7 +108,7 @@ export default function Dashboard() {
             ) : activeTab === 'trade' ? (
               <TradeForm currentUser={currentUser} />
             ) : (
-              <TransferForm currentUser={currentUser} />
+              <TransferForm />
             )}
 
             {/* Recent Activity */}

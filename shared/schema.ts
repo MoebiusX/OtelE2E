@@ -48,6 +48,14 @@ export const insertOrderSchema = z.object({
   orderType: z.enum(["MARKET"]),
 });
 
+// Payment schema - for direct payment transfers (legacy payment form)
+export const insertPaymentSchema = z.object({
+  amount: z.number().positive(),
+  currency: z.enum(["USD", "BTC", "ETH"]),
+  recipient: z.string().email(),
+  description: z.string().optional(),
+});
+
 export const orderSchema = z.object({
   orderId: z.string(),
   pair: z.literal("BTC/USD"),

@@ -189,16 +189,20 @@ export function registerRoutes(app: Express) {
       }
 
       const transferData = validation.data;
+      
+      // fromUserId and toUserId are optional - provide defaults if needed
+      const fromUserId = transferData.fromUserId || 'unknown';
+      const toUserId = transferData.toUserId || 'unknown';
 
       const result = await orderService.processTransfer({
-        fromUserId: transferData.fromUserId,
-        toUserId: transferData.toUserId,
+        fromUserId,
+        toUserId,
         amount: transferData.amount
       });
 
       // Get updated wallets
-      const fromWallet = await orderService.getWallet(transferData.fromUserId);
-      const toWallet = await orderService.getWallet(transferData.toUserId);
+      const fromWallet = await orderService.getWallet(fromUserId);
+      const toWallet = await orderService.getWallet(toUserId);
 
       res.json({
         success: result.status === 'COMPLETED',
@@ -207,8 +211,8 @@ export function registerRoutes(app: Express) {
         status: result.status,
         message: result.message,
         wallets: {
-          [transferData.fromUserId]: fromWallet,
-          [transferData.toUserId]: toWallet
+          [fromUserId]: fromWallet,
+          [toUserId]: toWallet
         },
         traceId: result.traceId,
         spanId: result.spanId

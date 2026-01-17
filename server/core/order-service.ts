@@ -294,8 +294,8 @@ export class OrderService {
                 // Create transfer record
                 const transfer = await storage.createTransfer({
                     transferId,
-                    fromUserId: request.fromUserId,
-                    toUserId: request.toUserId,
+                    fromAddress: request.fromUserId,  // Use userId as address for legacy compatibility
+                    toAddress: request.toUserId,      // Use userId as address for legacy compatibility
                     amount: request.amount,
                     traceId,
                     spanId

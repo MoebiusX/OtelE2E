@@ -1,12 +1,10 @@
 // Payment Service - Core Business Logic
 // Clean separation of payment processing concerns
+// NOTE: This is a legacy service - the system now uses order-service.ts for trades
 
-import { storage } from '../storage';
 import { rabbitMQClient } from '../services/rabbitmq-client';
-import { InsertPayment } from '@shared/schema';
 import { trace } from '@opentelemetry/api';
 import { createLogger } from '../lib/logger';
-import { PaymentError, ValidationError, TimeoutError } from '../lib/errors';
 
 const logger = createLogger('payment');
 
@@ -28,6 +26,21 @@ export interface PaymentResult {
   };
 }
 
+// In-memory payment storage (legacy - not persisted)
+interface StoredPayment {
+  id: number;
+  amount: number;
+  currency: string;
+  recipient: string;
+  description?: string;
+  traceId: string;
+  spanId: string;
+  createdAt: Date;
+}
+
+const paymentsStore: StoredPayment[] = [];
+let paymentIdCounter = 1;
+
 export class PaymentService {
   async processPayment(request: PaymentRequest): Promise<PaymentResult> {
     // Get REAL trace context from OpenTelemetry active span
@@ -46,12 +59,18 @@ export class PaymentService {
       currency: request.currency
     }, 'Processing payment with OTEL trace context');
 
-    // Store payment record
-    const payment = await storage.createPayment({
-      ...request,
+    // Store payment record in memory
+    const payment: StoredPayment = {
+      id: paymentIdCounter++,
+      amount: request.amount,
+      currency: request.currency,
+      recipient: request.recipient,
+      description: request.description,
       traceId,
-      spanId
-    });
+      spanId,
+      createdAt: new Date()
+    };
+    paymentsStore.push(payment);
 
     // Publish payment and wait for processor response
     if (rabbitMQClient.isConnected()) {
@@ -65,7 +84,7 @@ export class PaymentService {
           description: payment.description || '',
           traceId,
           spanId,
-          timestamp: payment.createdAt instanceof Date ? payment.createdAt.toISOString() : new Date().toISOString()
+          timestamp: payment.createdAt.toISOString()
         }, 5000); // 5 second timeout
 
         logger.info({
@@ -84,7 +103,7 @@ export class PaymentService {
             processorId: processorResponse.processorId
           }
         };
-      } catch (error: any) {
+      } catch (error: unknown) {
         logger.warn({
           err: error,
           paymentId: payment.id
@@ -120,16 +139,17 @@ export class PaymentService {
     return Array.from({ length: 16 }, () => Math.floor(Math.random() * 16).toString(16)).join('');
   }
 
-  async getPayments(limit: number = 10) {
-    return storage.getPayments(limit);
+  async getPayments(limit: number = 10): Promise<StoredPayment[]> {
+    return paymentsStore.slice(-limit);
   }
 
-  async getPayment(id: number) {
-    return storage.getPayment(id);
+  async getPayment(id: number): Promise<StoredPayment | undefined> {
+    return paymentsStore.find(p => p.id === id);
   }
 
-  async clearAllData() {
-    return storage.clearAllData();
+  async clearAllData(): Promise<void> {
+    paymentsStore.length = 0;
+    paymentIdCounter = 1;
   }
 }
 

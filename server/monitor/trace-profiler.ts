@@ -154,15 +154,15 @@ export class TraceProfiler {
         }
 
         // Calculate statistics for each span type
-        for (const [key, durations] of spanGroups) {
+        for (const [key, durations] of Array.from(spanGroups.entries())) {
             const [service, operation] = key.split(':');
 
             // Sort for percentiles
-            durations.sort((a, b) => a - b);
+            durations.sort((a: number, b: number) => a - b);
 
             const n = durations.length;
-            const mean = durations.reduce((a, b) => a + b, 0) / n;
-            const variance = durations.reduce((sum, d) => sum + Math.pow(d - mean, 2), 0) / n;
+            const mean = durations.reduce((a: number, b: number) => a + b, 0) / n;
+            const variance = durations.reduce((sum: number, d: number) => sum + Math.pow(d - mean, 2), 0) / n;
             const stdDev = Math.sqrt(variance);
 
             const baseline: SpanBaseline = {

@@ -90,7 +90,7 @@ export const binanceFeed = {
           const message = JSON.parse(data.toString());
           this.handleMessage(message);
         } catch (err) {
-          logger.error('Failed to parse Binance message', err);
+          logger.error({ err }, 'Failed to parse Binance message');
         }
       });
       
@@ -101,12 +101,12 @@ export const binanceFeed = {
       });
       
       ws.on('error', (err) => {
-        logger.error('Binance WebSocket error', err);
+        logger.error({ err }, 'Binance WebSocket error');
         priceService.setConnected(false, 'binance');
       });
       
     } catch (err) {
-      logger.error('Failed to connect to Binance', err);
+      logger.error({ err }, 'Failed to connect to Binance');
       this.scheduleReconnect();
     }
   },

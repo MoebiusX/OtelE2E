@@ -73,7 +73,9 @@ export function initBrowserOtel(): void {
                 ],
                 // Add useful attributes to spans
                 applyCustomAttributesOnSpan: (span, request, _result) => {
-                    span.setAttribute('http.url', request.url || '');
+                    if (request instanceof Request) {
+                        span.setAttribute('http.url', request.url || '');
+                    }
                 },
             }),
         ],

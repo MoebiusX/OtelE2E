@@ -5,6 +5,7 @@
  * Provides context for WHY an anomaly occurred.
  */
 
+// @ts-ignore - node-fetch types not installed
 import fetch from 'node-fetch';
 import { config } from '../config';
 import { createLogger } from '../lib/logger';

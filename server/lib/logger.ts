@@ -70,18 +70,18 @@ function getTraceContext(): { traceId?: string; spanId?: string } {
 // ============================================
 
 export interface ComponentLogger {
-  trace: (obj: any, msg?: string) => void;
-  trace: (msg: string) => void;
-  debug: (obj: any, msg?: string) => void;
-  debug: (msg: string) => void;
-  info: (obj: any, msg?: string) => void;
-  info: (msg: string) => void;
-  warn: (obj: any, msg?: string) => void;
-  warn: (msg: string) => void;
-  error: (obj: any, msg?: string) => void;
-  error: (msg: string) => void;
-  fatal: (obj: any, msg?: string) => void;
-  fatal: (msg: string) => void;
+  trace(obj: object, msg?: string): void;
+  trace(msg: string): void;
+  debug(obj: object, msg?: string): void;
+  debug(msg: string): void;
+  info(obj: object, msg?: string): void;
+  info(msg: string): void;
+  warn(obj: object, msg?: string): void;
+  warn(msg: string): void;
+  error(obj: object, msg?: string): void;
+  error(msg: string): void;
+  fatal(obj: object, msg?: string): void;
+  fatal(msg: string): void;
   child: (bindings: object) => ComponentLogger;
 }
 

@@ -337,8 +337,9 @@ export const walletService = {
             }
 
             const senderWallet = senderResult.rows[0];
-            if (parseFloat(senderWallet.available) < amount) {
-                throw new InsufficientFundsError(`Insufficient ${asset}. Available: ${senderWallet.available}`);
+            const availableAmount = parseFloat(senderWallet.available);
+            if (availableAmount < amount) {
+                throw new InsufficientFundsError(asset, amount, availableAmount);
             }
 
             // Get receiver's wallet

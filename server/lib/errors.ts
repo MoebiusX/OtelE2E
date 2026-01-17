@@ -40,15 +40,18 @@ export class AppError extends Error {
    * Serialize error for API response
    */
   toJSON() {
-    return {
+    const base = {
       error: {
         message: this.message,
         code: this.code,
         statusCode: this.statusCode,
         timestamp: this.timestamp.toISOString(),
-        ...(this.details && { details: this.details }),
-      },
+      } as Record<string, unknown>,
     };
+    if (this.details) {
+      base.error.details = this.details;
+    }
+    return base;
   }
 
   /**
@@ -321,7 +324,7 @@ export function createErrorFromStatusCode(
     case 403:
       return new ForbiddenError(defaultMessage);
     case 404:
-      return new NotFoundError(message || 'Resource', details);
+      return new NotFoundError(message || 'Resource');
     case 409:
       return new ConflictError(defaultMessage, details);
     case 422:

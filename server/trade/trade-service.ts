@@ -288,7 +288,7 @@ export const tradeService = {
             const rate = this.getRate(base, quote);
             // Simulated 24h change (-5% to +5%)
             const change24h = (Math.random() - 0.5) * 10;
-            return { pair, price: rate, change24h };
+            return { pair, price: rate ?? 0, change24h };
         });
     }
 };

@@ -172,7 +172,7 @@ export const priceService = {
     }
     
     // Add cached prices
-    for (const priceData of priceCache.values()) {
+    for (const priceData of Array.from(priceCache.values())) {
       const age = Date.now() - priceData.timestamp.getTime();
       if (age < CACHE_TTL_MS) {
         prices.push(priceData);
