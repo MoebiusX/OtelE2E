@@ -82,7 +82,7 @@ export function TransferForm() {
 
     const transferMutation = useMutation({
         mutationFn: async (data: TransferFormData) => {
-            const tracer = trace.getTracer('crypto-wallet');
+            const tracer = trace.getTracer('kx-wallet');
             const token = localStorage.getItem('accessToken');
 
             return tracer.startActiveSpan('transfer.submit.client', async (parentSpan) => {

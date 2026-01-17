@@ -117,7 +117,7 @@ export function TradeForm({ currentUser: propUser, walletAddress: propAddress }:
 
     const orderMutation = useMutation({
         mutationFn: async (data: OrderFormData) => {
-            const tracer = trace.getTracer('crypto-wallet');
+            const tracer = trace.getTracer('kx-wallet');
             const token = localStorage.getItem('accessToken');
 
             // Create a parent span for the entire order flow on the client

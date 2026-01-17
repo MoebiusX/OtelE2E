@@ -48,7 +48,7 @@ export class RabbitMQClient {
     this.RESPONSE_QUEUE = config.rabbitmq.responseQueue;
     this.LEGACY_QUEUE = config.rabbitmq.legacyQueue;
     this.LEGACY_RESPONSE = config.rabbitmq.legacyResponseQueue;
-    this.tracer = trace.getTracer('rabbitmq-client', '1.0.0');
+    this.tracer = trace.getTracer('kx-exchange', '1.0.0');
   }
 
   async connect(): Promise<boolean> {

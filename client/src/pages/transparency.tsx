@@ -40,8 +40,15 @@ interface SpanBaseline {
 }
 
 // Friendly service name mapping
+// NOTE: When renaming services, update BOTH the kx-* names AND legacy fallbacks
+// See docs/TRACING.md for the full service naming convention
 const SERVICE_DISPLAY_NAMES: Record<string, { name: string; description: string; icon: React.ReactNode }> = {
-    'exchange-api': { 
+    'kx-exchange': { 
+        name: 'Trading Engine', 
+        description: 'Core trading engine processing orders',
+        icon: <TrendingUp className="w-5 h-5" />
+    },
+    'exchange-api': {  // Legacy fallback
         name: 'Trading API', 
         description: 'Core trading engine processing orders',
         icon: <TrendingUp className="w-5 h-5" />
@@ -61,12 +68,27 @@ const SERVICE_DISPLAY_NAMES: Record<string, { name: string; description: string;
         description: 'Order processing pipeline',
         icon: <Zap className="w-5 h-5" />
     },
+    'kx-matcher': {
+        name: 'Order Matcher', 
+        description: 'Order matching and execution engine',
+        icon: <Zap className="w-5 h-5" />
+    },
+    'order-matcher': {  // Legacy fallback
+        name: 'Order Matcher', 
+        description: 'Order matching and execution engine',
+        icon: <Zap className="w-5 h-5" />
+    },
     'jaeger-all-in-one': { 
         name: 'Trace Collector', 
         description: 'Observability data collection',
         icon: <Eye className="w-5 h-5" />
     },
-    'crypto-wallet': { 
+    'kx-wallet': { 
+        name: 'Wallet Service', 
+        description: 'Balance management and transfers',
+        icon: <Shield className="w-5 h-5" />
+    },
+    'crypto-wallet': {  // Legacy fallback
         name: 'Wallet Service', 
         description: 'Balance management and transfers',
         icon: <Shield className="w-5 h-5" />

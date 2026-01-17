@@ -153,11 +153,15 @@ async function testCase1_EmptyHeaders() {
         const result = await retryWithBackoff(async (attempt) => {
             process.stdout.write(`\r   Attempt ${attempt}/10... `);
 
-            // Try both service names (old and new)
-            let traces = await queryJaegerTraces('api-gateway');
+            // Try service names in order of preference (new kx-* names first)
+            let traces = await queryJaegerTraces('kx-exchange');
             if (!traces.data || traces.data.length === 0) {
-                traces = await queryJaegerTraces('kong-gateway');
+                traces = await queryJaegerTraces('api-gateway');
             }
+            if (!traces.data || traces.data.length === 0) {
+                traces = await queryJaegerTraces('kx-wallet');
+            }
+            // Legacy fallbacks
             if (!traces.data || traces.data.length === 0) {
                 traces = await queryJaegerTraces('exchange-api');
             }
