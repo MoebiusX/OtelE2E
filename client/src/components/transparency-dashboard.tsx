@@ -137,7 +137,7 @@ export function TransparencyDashboard() {
   const statusColor = status.status === 'operational' ? 'bg-emerald-500' : status.status === 'degraded' ? 'bg-amber-500' : 'bg-red-500';
   const statusBgClass = status.status === 'operational' ? 'bg-emerald-500/10 border-emerald-500/20' : status.status === 'degraded' ? 'bg-amber-500/10 border-amber-500/20' : 'bg-red-500/10 border-red-500/20';
   const statusTextClass = status.status === 'operational' ? 'text-emerald-400' : status.status === 'degraded' ? 'text-amber-400' : 'text-red-400';
-  const statusText = status.status === 'operational' ? 'All Systems Operational' : status.status === 'degraded' ? 'Partial Degradation' : 'Service Outage';
+  const statusText = status.status === 'operational' ? 'All Systems Operational' : status.status === 'degraded' ? 'Partial Degradation' : 'Service Maintenance';
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-950 via-blue-950 to-slate-900">

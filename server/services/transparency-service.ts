@@ -111,9 +111,9 @@ class TransparencyService {
 
       // Determine overall status based on service health
       const serviceStatuses = Object.values(services);
-      const hasOutage = serviceStatuses.includes('outage' as any);
+      const hasOutage = serviceStatuses.includes('maintenance' as any);
       const hasDegraded = serviceStatuses.includes('degraded');
-      const overallStatus = hasOutage ? 'outage' : hasDegraded ? 'degraded' : 'operational';
+      const overallStatus = hasOutage ? 'maintenance' : hasDegraded ? 'degraded' : 'operational';
 
       // Performance metrics from traces
       const durations = recentTraces.map(t => t.duration || 0).sort((a, b) => a - b);
