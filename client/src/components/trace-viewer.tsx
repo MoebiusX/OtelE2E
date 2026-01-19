@@ -1,11 +1,12 @@
-import { useQuery, useMutation } from "@tanstack/react-query";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import { Trash2, Clock, Activity, ChevronDown, ChevronRight, ExternalLink } from "lucide-react";
-import { formatTimeAgo, truncateId } from "@/lib/utils";
-import { apiRequest, queryClient } from "@/lib/queryClient";
-import { useState } from "react";
+import { useQuery, useMutation } from '@tanstack/react-query';
+import { Trash2, Clock, Activity, ChevronDown, ChevronRight, ExternalLink } from 'lucide-react';
+import { useState } from 'react';
+
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import { formatTimeAgo, truncateId } from '@/lib/utils';
+import { apiRequest, queryClient } from '@/lib/queryClient';
 
 interface TraceData {
   traceId: string;
@@ -32,7 +33,7 @@ function TraceItem({ trace, onTraceViewed }: { trace: TraceData; onTraceViewed?:
   const [expanded, setExpanded] = useState(false);
 
   // Get operation info from spans
-  const orderSpan = trace.spans.find(s => s.operationName?.includes('order')) || trace.spans[0];
+  const orderSpan = trace.spans.find((s) => s.operationName?.includes('order')) || trace.spans[0];
   const operation = orderSpan?.operationName || 'Trade';
 
   const handleExpand = () => {
@@ -53,10 +54,7 @@ function TraceItem({ trace, onTraceViewed }: { trace: TraceData; onTraceViewed?:
 
   return (
     <div className="border border-slate-700 rounded-lg bg-slate-800 hover:bg-slate-750 transition-colors">
-      <div
-        className="p-4 cursor-pointer flex items-center justify-between"
-        onClick={handleExpand}
-      >
+      <div className="p-4 cursor-pointer flex items-center justify-between" onClick={handleExpand}>
         <div className="flex items-center space-x-3">
           {expanded ? (
             <ChevronDown className="w-4 h-4 text-slate-400" />
@@ -66,15 +64,12 @@ function TraceItem({ trace, onTraceViewed }: { trace: TraceData; onTraceViewed?:
           <Activity className="w-4 h-4 text-orange-400" />
           <div>
             <div className="flex items-center space-x-2">
-              <span className="font-medium text-white text-sm">
-                {operation}
-              </span>
-              <Badge className="bg-green-500/20 text-green-400 border-none text-xs">
-                OK
-              </Badge>
+              <span className="font-medium text-white text-sm">{operation}</span>
+              <Badge className="bg-green-500/20 text-green-400 border-none text-xs">OK</Badge>
             </div>
             <div className="text-sm text-slate-400">
-              {truncateId(trace.traceId)} • {trace.duration?.toFixed(1)}ms • {formatTimeAgo(new Date(trace.startTime))}
+              {truncateId(trace.traceId)} • {trace.duration?.toFixed(1)}ms •{' '}
+              {formatTimeAgo(new Date(trace.startTime))}
             </div>
           </div>
         </div>
@@ -97,11 +92,16 @@ function TraceItem({ trace, onTraceViewed }: { trace: TraceData; onTraceViewed?:
       {expanded && (
         <div className="border-t border-slate-700 bg-slate-850 p-4">
           <div className="mb-3">
-            <h4 className="text-sm font-medium text-slate-400 uppercase tracking-wider">Trace Flow</h4>
+            <h4 className="text-sm font-medium text-slate-400 uppercase tracking-wider">
+              Trace Flow
+            </h4>
           </div>
           <div className="space-y-2">
             {trace.spans.map((span) => (
-              <div key={span.spanId} className="flex items-center justify-between text-sm py-1.5 px-2 bg-slate-900 rounded">
+              <div
+                key={span.spanId}
+                className="flex items-center justify-between text-sm py-1.5 px-2 bg-slate-900 rounded"
+              >
                 <div className="flex items-center space-x-3">
                   <div className="w-2 h-2 rounded-full bg-orange-500"></div>
                   <span className="font-medium text-slate-300">{span.operationName}</span>
@@ -127,7 +127,7 @@ function TraceItem({ trace, onTraceViewed }: { trace: TraceData; onTraceViewed?:
 export function TraceViewer() {
   const { data: traces, isLoading } = useQuery<TraceData[]>({
     queryKey: ['/api/traces'],
-    refetchInterval: 3000
+    refetchInterval: 3000,
   });
 
   const clearMutation = useMutation({
@@ -138,7 +138,7 @@ export function TraceViewer() {
       queryClient.invalidateQueries({ queryKey: ['/api/traces'] });
       queryClient.invalidateQueries({ queryKey: ['/api/orders'] });
       queryClient.invalidateQueries({ queryKey: ['/api/wallet'] });
-    }
+    },
   });
 
   const traceList = traces || [];
@@ -186,7 +186,9 @@ export function TraceViewer() {
                 {traceList.length}
               </Badge>
             </CardTitle>
-            <p className="text-xs text-purple-300/60 mt-1">OpenTelemetry • Real-time verification</p>
+            <p className="text-xs text-purple-300/60 mt-1">
+              OpenTelemetry • Real-time verification
+            </p>
           </div>
           <div className="flex items-center gap-2">
             <a
@@ -217,7 +219,7 @@ export function TraceViewer() {
             {traceList.map((trace) => (
               <TraceItem key={trace.traceId} trace={trace} onTraceViewed={handleTraceViewed} />
             ))}
-            
+
             {/* Jaeger CTA */}
             <div className="mt-4 p-4 bg-gradient-to-r from-indigo-900/30 to-purple-900/30 rounded-lg border border-indigo-500/20">
               <p className="text-sm text-indigo-200/80 mb-2">Want the full picture?</p>

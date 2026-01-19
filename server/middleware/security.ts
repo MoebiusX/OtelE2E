@@ -1,6 +1,6 @@
 /**
  * Security Middleware
- * 
+ *
  * Rate limiting, security headers, and CORS configuration.
  * These are critical for production security.
  */
@@ -8,6 +8,7 @@
 import rateLimit from 'express-rate-limit';
 import helmet from 'helmet';
 import { Request, Response, NextFunction } from 'express';
+
 import { config } from '../config';
 import { createLogger } from '../lib/logger';
 
@@ -32,12 +33,15 @@ export const generalRateLimiter = rateLimit({
   standardHeaders: true, // Return rate limit info in headers
   legacyHeaders: false, // Disable X-RateLimit-* headers
   handler: (req: Request, res: Response) => {
-    logger.warn({ 
-      ip: req.ip, 
-      path: req.path,
-      method: req.method 
-    }, 'Rate limit exceeded');
-    
+    logger.warn(
+      {
+        ip: req.ip,
+        path: req.path,
+        method: req.method,
+      },
+      'Rate limit exceeded',
+    );
+
     res.status(429).json({
       error: 'Too many requests',
       message: 'Please try again in a minute',
@@ -61,12 +65,15 @@ export const authRateLimiter = rateLimit({
   standardHeaders: true,
   legacyHeaders: false,
   handler: (req: Request, res: Response) => {
-    logger.warn({ 
-      ip: req.ip, 
-      path: req.path,
-      email: req.body?.email ? `${req.body.email.substring(0, 3)}***` : undefined
-    }, 'Auth rate limit exceeded');
-    
+    logger.warn(
+      {
+        ip: req.ip,
+        path: req.path,
+        email: req.body?.email ? `${req.body.email.substring(0, 3)}***` : undefined,
+      },
+      'Auth rate limit exceeded',
+    );
+
     res.status(429).json({
       error: 'Too many authentication attempts',
       message: 'Please try again in a minute',
@@ -90,11 +97,14 @@ export const sensitiveRateLimiter = rateLimit({
   standardHeaders: true,
   legacyHeaders: false,
   handler: (req: Request, res: Response) => {
-    logger.warn({ 
-      ip: req.ip, 
-      path: req.path 
-    }, 'Sensitive operation rate limit exceeded');
-    
+    logger.warn(
+      {
+        ip: req.ip,
+        path: req.path,
+      },
+      'Sensitive operation rate limit exceeded',
+    );
+
     res.status(429).json({
       error: 'Too many attempts',
       message: 'Please wait before trying again',
@@ -117,15 +127,15 @@ export const securityHeaders = helmet({
     directives: {
       defaultSrc: ["'self'"],
       scriptSrc: ["'self'", "'unsafe-inline'"], // Needed for Vite dev
-      styleSrc: ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com"],
-      fontSrc: ["'self'", "https://fonts.gstatic.com"],
-      imgSrc: ["'self'", "data:", "https:"],
+      styleSrc: ["'self'", "'unsafe-inline'", 'https://fonts.googleapis.com'],
+      fontSrc: ["'self'", 'https://fonts.gstatic.com'],
+      imgSrc: ["'self'", 'data:', 'https:'],
       connectSrc: [
         "'self'",
-        "http://localhost:*",
-        "ws://localhost:*",
-        "http://localhost:4319", // OTEL collector
-        "http://localhost:16686", // Jaeger
+        'http://localhost:*',
+        'ws://localhost:*',
+        'http://localhost:4319', // OTEL collector
+        'http://localhost:16686', // Jaeger
       ],
     },
   },
@@ -149,23 +159,24 @@ export const securityHeaders = helmet({
  * CORS middleware with environment-specific origins
  */
 export function corsMiddleware(req: Request, res: Response, next: NextFunction) {
-  const allowedOrigins = config.env === 'production'
-    ? [
-        // Production: only allow specific domains
-        'https://krystaline.io',
-        'https://www.krystaline.io',
-        'https://app.krystaline.io',
-      ]
-    : [
-        // Development: allow localhost variants
-        'http://localhost:5173',
-        'http://localhost:5000',
-        'http://127.0.0.1:5173',
-        'http://127.0.0.1:5000',
-      ];
+  const allowedOrigins =
+    config.env === 'production'
+      ? [
+          // Production: only allow specific domains
+          'https://krystaline.io',
+          'https://www.krystaline.io',
+          'https://app.krystaline.io',
+        ]
+      : [
+          // Development: allow localhost variants
+          'http://localhost:5173',
+          'http://localhost:5000',
+          'http://127.0.0.1:5173',
+          'http://127.0.0.1:5000',
+        ];
 
   const origin = req.headers.origin;
-  
+
   // Check if origin is allowed
   if (origin && allowedOrigins.includes(origin)) {
     res.header('Access-Control-Allow-Origin', origin);
@@ -179,7 +190,10 @@ export function corsMiddleware(req: Request, res: Response, next: NextFunction) 
   // In production, if origin not in list, no CORS header is set (request blocked)
 
   res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
-  res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept, Authorization, x-trace-id, x-span-id, traceparent');
+  res.header(
+    'Access-Control-Allow-Headers',
+    'Origin, X-Requested-With, Content-Type, Accept, Authorization, x-trace-id, x-span-id, traceparent',
+  );
   res.header('Access-Control-Allow-Credentials', 'true');
   res.header('Access-Control-Max-Age', '86400'); // 24 hours preflight cache
 
@@ -201,13 +215,16 @@ export function corsMiddleware(req: Request, res: Response, next: NextFunction) 
 export function requestTimeout(timeoutMs: number = 30000) {
   return (req: Request, res: Response, next: NextFunction) => {
     res.setTimeout(timeoutMs, () => {
-      logger.warn({
-        path: req.path,
-        method: req.method,
-        ip: req.ip,
-        timeoutMs,
-      }, 'Request timeout');
-      
+      logger.warn(
+        {
+          path: req.path,
+          method: req.method,
+          ip: req.ip,
+          timeoutMs,
+        },
+        'Request timeout',
+      );
+
       if (!res.headersSent) {
         res.status(408).json({
           error: 'Request Timeout',

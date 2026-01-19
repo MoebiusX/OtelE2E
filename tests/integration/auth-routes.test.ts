@@ -1,6 +1,6 @@
 /**
  * Auth Routes Integration Tests
- * 
+ *
  * Tests for /api/auth/* endpoints
  */
 
@@ -88,12 +88,10 @@ describe('Auth Routes Integration', () => {
         message: 'Verification code sent',
       } as any);
 
-      const response = await request(app)
-        .post('/api/auth/register')
-        .send({
-          email: 'test@example.com',
-          password: 'securePassword123',
-        });
+      const response = await request(app).post('/api/auth/register').send({
+        email: 'test@example.com',
+        password: 'securePassword123',
+      });
 
       expect(response.status).toBe(201);
       expect(response.body.success).toBe(true);
@@ -101,24 +99,18 @@ describe('Auth Routes Integration', () => {
     });
 
     it('should return 400 for missing email', async () => {
-      const response = await request(app)
-        .post('/api/auth/register')
-        .send({ password: 'test123' });
+      const response = await request(app).post('/api/auth/register').send({ password: 'test123' });
 
       expect(response.status).toBe(400);
     });
 
     it('should return 400 for duplicate email', async () => {
-      vi.mocked(authService.register).mockRejectedValue(
-        new Error('Email already registered')
-      );
+      vi.mocked(authService.register).mockRejectedValue(new Error('Email already registered'));
 
-      const response = await request(app)
-        .post('/api/auth/register')
-        .send({
-          email: 'existing@example.com',
-          password: 'password123',
-        });
+      const response = await request(app).post('/api/auth/register').send({
+        email: 'existing@example.com',
+        password: 'password123',
+      });
 
       expect(response.status).toBe(400);
       expect(response.body.error).toBe('Email already registered');
@@ -139,12 +131,10 @@ describe('Auth Routes Integration', () => {
         },
       } as any);
 
-      const response = await request(app)
-        .post('/api/auth/verify')
-        .send({
-          email: 'test@example.com',
-          code: '123456',
-        });
+      const response = await request(app).post('/api/auth/verify').send({
+        email: 'test@example.com',
+        code: '123456',
+      });
 
       expect(response.status).toBe(200);
       expect(response.body.success).toBe(true);
@@ -152,16 +142,12 @@ describe('Auth Routes Integration', () => {
     });
 
     it('should return 400 for invalid code', async () => {
-      vi.mocked(authService.verifyEmail).mockRejectedValue(
-        new Error('Invalid verification code')
-      );
+      vi.mocked(authService.verifyEmail).mockRejectedValue(new Error('Invalid verification code'));
 
-      const response = await request(app)
-        .post('/api/auth/verify')
-        .send({
-          email: 'test@example.com',
-          code: '000000',
-        });
+      const response = await request(app).post('/api/auth/verify').send({
+        email: 'test@example.com',
+        code: '000000',
+      });
 
       expect(response.status).toBe(400);
       expect(response.body.error).toBe('Invalid verification code');
@@ -183,12 +169,10 @@ describe('Auth Routes Integration', () => {
         },
       } as any);
 
-      const response = await request(app)
-        .post('/api/auth/login')
-        .send({
-          email: 'test@example.com',
-          password: 'password123',
-        });
+      const response = await request(app).post('/api/auth/login').send({
+        email: 'test@example.com',
+        password: 'password123',
+      });
 
       expect(response.status).toBe(200);
       expect(response.body.success).toBe(true);
@@ -197,32 +181,24 @@ describe('Auth Routes Integration', () => {
     });
 
     it('should return 401 for invalid credentials', async () => {
-      vi.mocked(authService.login).mockRejectedValue(
-        new Error('Invalid email or password')
-      );
+      vi.mocked(authService.login).mockRejectedValue(new Error('Invalid email or password'));
 
-      const response = await request(app)
-        .post('/api/auth/login')
-        .send({
-          email: 'test@example.com',
-          password: 'wrongpassword',
-        });
+      const response = await request(app).post('/api/auth/login').send({
+        email: 'test@example.com',
+        password: 'wrongpassword',
+      });
 
       expect(response.status).toBe(401);
       expect(response.body.error).toBe('Invalid email or password');
     });
 
     it('should return 401 for unverified account', async () => {
-      vi.mocked(authService.login).mockRejectedValue(
-        new Error('Please verify your email first')
-      );
+      vi.mocked(authService.login).mockRejectedValue(new Error('Please verify your email first'));
 
-      const response = await request(app)
-        .post('/api/auth/login')
-        .send({
-          email: 'unverified@example.com',
-          password: 'password123',
-        });
+      const response = await request(app).post('/api/auth/login').send({
+        email: 'unverified@example.com',
+        password: 'password123',
+      });
 
       expect(response.status).toBe(401);
     });
@@ -242,18 +218,14 @@ describe('Auth Routes Integration', () => {
     });
 
     it('should return 400 for missing email', async () => {
-      const response = await request(app)
-        .post('/api/auth/resend-code')
-        .send({});
+      const response = await request(app).post('/api/auth/resend-code').send({});
 
       expect(response.status).toBe(400);
       expect(response.body.error).toBe('Email required');
     });
 
     it('should return 400 for non-existent email', async () => {
-      vi.mocked(authService.resendVerificationCode).mockRejectedValue(
-        new Error('User not found')
-      );
+      vi.mocked(authService.resendVerificationCode).mockRejectedValue(new Error('User not found'));
 
       const response = await request(app)
         .post('/api/auth/resend-code')
@@ -280,18 +252,14 @@ describe('Auth Routes Integration', () => {
     });
 
     it('should return 400 for missing refresh token', async () => {
-      const response = await request(app)
-        .post('/api/auth/refresh')
-        .send({});
+      const response = await request(app).post('/api/auth/refresh').send({});
 
       expect(response.status).toBe(400);
       expect(response.body.error).toBe('Refresh token required');
     });
 
     it('should return 401 for invalid refresh token', async () => {
-      vi.mocked(authService.refreshToken).mockRejectedValue(
-        new Error('Invalid refresh token')
-      );
+      vi.mocked(authService.refreshToken).mockRejectedValue(new Error('Invalid refresh token'));
 
       const response = await request(app)
         .post('/api/auth/refresh')
@@ -304,8 +272,7 @@ describe('Auth Routes Integration', () => {
   describe('Protected routes (require authentication)', () => {
     describe('POST /api/auth/logout', () => {
       it('should return 401 without token', async () => {
-        const response = await request(app)
-          .post('/api/auth/logout');
+        const response = await request(app).post('/api/auth/logout');
 
         expect(response.status).toBe(401);
         expect(response.body.error).toBe('No token provided');

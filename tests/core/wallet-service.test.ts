@@ -1,6 +1,6 @@
 /**
  * Wallet Service Unit Tests
- * 
+ *
  * Tests for wallet management, balances, and transactions
  */
 
@@ -10,9 +10,11 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 vi.mock('../../server/db', () => ({
   default: {
     query: vi.fn(),
-    transaction: vi.fn((fn) => fn({
-      query: vi.fn(),
-    })),
+    transaction: vi.fn((fn) =>
+      fn({
+        query: vi.fn(),
+      }),
+    ),
   },
 }));
 
@@ -78,17 +80,23 @@ describe('Wallet Service', () => {
     it('should return all wallets for a user', async () => {
       const mockWallets = [
         { id: '1', user_id: 'alice', asset: 'BTC', balance: '1.5', available: '1.5', locked: '0' },
-        { id: '2', user_id: 'alice', asset: 'USD', balance: '10000', available: '10000', locked: '0' },
+        {
+          id: '2',
+          user_id: 'alice',
+          asset: 'USD',
+          balance: '10000',
+          available: '10000',
+          locked: '0',
+        },
       ];
       vi.mocked(db.query).mockResolvedValue({ rows: mockWallets } as any);
       vi.mocked(storage.getDefaultWallet).mockResolvedValue({ address: 'kx1alice123' } as any);
 
       const wallets = await walletService.getWallets('alice');
 
-      expect(db.query).toHaveBeenCalledWith(
-        expect.stringContaining('SELECT * FROM wallets'),
-        ['alice']
-      );
+      expect(db.query).toHaveBeenCalledWith(expect.stringContaining('SELECT * FROM wallets'), [
+        'alice',
+      ]);
       expect(wallets.length).toBe(2);
       expect(wallets[0]).toHaveProperty('address');
     });
@@ -122,10 +130,10 @@ describe('Wallet Service', () => {
 
       const wallet = await walletService.getWallet('alice', 'BTC');
 
-      expect(db.query).toHaveBeenCalledWith(
-        expect.stringContaining('SELECT * FROM wallets'),
-        ['alice', 'BTC']
-      );
+      expect(db.query).toHaveBeenCalledWith(expect.stringContaining('SELECT * FROM wallets'), [
+        'alice',
+        'BTC',
+      ]);
       expect(wallet?.balance).toBe('2.5');
     });
 
@@ -134,10 +142,7 @@ describe('Wallet Service', () => {
 
       await walletService.getWallet('alice', 'btc');
 
-      expect(db.query).toHaveBeenCalledWith(
-        expect.any(String),
-        ['alice', 'BTC']
-      );
+      expect(db.query).toHaveBeenCalledWith(expect.any(String), ['alice', 'BTC']);
     });
 
     it('should return null if wallet not found', async () => {
@@ -158,7 +163,7 @@ describe('Wallet Service', () => {
 
       expect(db.query).toHaveBeenCalledWith(
         expect.stringContaining('SELECT * FROM wallets WHERE id'),
-        ['wal_123']
+        ['wal_123'],
       );
       expect(wallet?.id).toBe('wal_123');
     });
@@ -174,8 +179,8 @@ describe('Wallet Service', () => {
 
   describe('getKXAddress', () => {
     it('should return kx1 address from storage', async () => {
-      vi.mocked(storage.getDefaultWallet).mockResolvedValue({ 
-        address: 'kx1testaddress12345' 
+      vi.mocked(storage.getDefaultWallet).mockResolvedValue({
+        address: 'kx1testaddress12345',
       } as any);
 
       const address = await walletService.getKXAddress('alice');

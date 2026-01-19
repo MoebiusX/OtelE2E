@@ -1,58 +1,63 @@
 /**
  * Authentication Routes
- * 
+ *
  * API endpoints for user registration, verification, and login.
  */
 
 import { Router, Request, Response, NextFunction } from 'express';
-import { authService, registerSchema, loginSchema, verifySchema, User } from './auth-service';
 import { ZodError } from 'zod';
+
 import { createLogger } from '../lib/logger';
 import { AuthenticationError, ValidationError, getErrorMessage } from '../lib/errors';
+
+import { authService, registerSchema, loginSchema, verifySchema, User } from './auth-service';
 
 const logger = createLogger('auth-routes');
 const router = Router();
 
 // Extend Express Request to include user
 declare global {
-    namespace Express {
-        interface Request {
-            user?: User;
-        }
+  namespace Express {
+    interface Request {
+      user?: User;
     }
+  }
 }
 
 /**
  * Middleware to authenticate requests
  */
 export const authenticate = async (req: Request, res: Response, next: NextFunction) => {
-    const authHeader = req.headers.authorization;
-    
-    logger.debug({
-        path: req.path,
-        hasAuth: !!authHeader
-    }, 'Authentication check');
+  const authHeader = req.headers.authorization;
 
-    if (!authHeader?.startsWith('Bearer ')) {
-        return res.status(401).json({ error: 'No token provided' });
-    }
+  logger.debug(
+    {
+      path: req.path,
+      hasAuth: !!authHeader,
+    },
+    'Authentication check',
+  );
 
-    const token = authHeader.slice(7);
-    const decoded = authService.verifyToken(token);
+  if (!authHeader?.startsWith('Bearer ')) {
+    return res.status(401).json({ error: 'No token provided' });
+  }
 
-    if (!decoded) {
-        logger.warn({ path: req.path }, 'Invalid or expired token');
-        return res.status(401).json({ error: 'Invalid or expired token' });
-    }
+  const token = authHeader.slice(7);
+  const decoded = authService.verifyToken(token);
 
-    const user = await authService.getUserById(decoded.userId);
-    if (!user) {
-        logger.warn({ userId: decoded.userId }, 'User not found for valid token');
-        return res.status(401).json({ error: 'User not found' });
-    }
+  if (!decoded) {
+    logger.warn({ path: req.path }, 'Invalid or expired token');
+    return res.status(401).json({ error: 'Invalid or expired token' });
+  }
 
-    req.user = user;
-    next();
+  const user = await authService.getUserById(decoded.userId);
+  if (!user) {
+    logger.warn({ userId: decoded.userId }, 'User not found for valid token');
+    return res.status(401).json({ error: 'User not found' });
+  }
+
+  req.user = user;
+  next();
 };
 
 /**
@@ -60,28 +65,28 @@ export const authenticate = async (req: Request, res: Response, next: NextFuncti
  * Register a new account
  */
 router.post('/register', async (req, res) => {
-    try {
-        const data = registerSchema.parse(req.body);
-        const result = await authService.register(data);
+  try {
+    const data = registerSchema.parse(req.body);
+    const result = await authService.register(data);
 
-        res.status(201).json({
-            success: true,
-            message: result.message,
-            user: {
-                id: result.user.id,
-                email: result.user.email,
-                status: result.user.status,
-            }
-        });
-    } catch (error: unknown) {
-        if (error instanceof ZodError) {
-            return res.status(400).json({
-                error: 'Validation failed',
-                details: error.errors.map(e => e.message),
-            });
-        }
-        res.status(400).json({ error: getErrorMessage(error) });
+    res.status(201).json({
+      success: true,
+      message: result.message,
+      user: {
+        id: result.user.id,
+        email: result.user.email,
+        status: result.user.status,
+      },
+    });
+  } catch (error: unknown) {
+    if (error instanceof ZodError) {
+      return res.status(400).json({
+        error: 'Validation failed',
+        details: error.errors.map((e) => e.message),
+      });
     }
+    res.status(400).json({ error: getErrorMessage(error) });
+  }
 });
 
 /**
@@ -89,29 +94,29 @@ router.post('/register', async (req, res) => {
  * Verify email with 6-digit code
  */
 router.post('/verify', async (req, res) => {
-    try {
-        const data = verifySchema.parse(req.body);
-        const result = await authService.verifyEmail(data);
+  try {
+    const data = verifySchema.parse(req.body);
+    const result = await authService.verifyEmail(data);
 
-        res.json({
-            success: true,
-            message: 'Email verified successfully',
-            user: {
-                id: result.user.id,
-                email: result.user.email,
-                status: result.user.status,
-            },
-            tokens: result.tokens,
-        });
-    } catch (error: unknown) {
-        if (error instanceof ZodError) {
-            return res.status(400).json({
-                error: 'Validation failed',
-                details: error.errors.map(e => e.message),
-            });
-        }
-        res.status(400).json({ error: getErrorMessage(error) });
+    res.json({
+      success: true,
+      message: 'Email verified successfully',
+      user: {
+        id: result.user.id,
+        email: result.user.email,
+        status: result.user.status,
+      },
+      tokens: result.tokens,
+    });
+  } catch (error: unknown) {
+    if (error instanceof ZodError) {
+      return res.status(400).json({
+        error: 'Validation failed',
+        details: error.errors.map((e) => e.message),
+      });
     }
+    res.status(400).json({ error: getErrorMessage(error) });
+  }
 });
 
 /**
@@ -119,17 +124,17 @@ router.post('/verify', async (req, res) => {
  * Resend verification code
  */
 router.post('/resend-code', async (req, res) => {
-    try {
-        const { email } = req.body;
-        if (!email) {
-            return res.status(400).json({ error: 'Email required' });
-        }
-
-        await authService.resendVerificationCode(email);
-        res.json({ success: true, message: 'Verification code sent' });
-    } catch (error: unknown) {
-        res.status(400).json({ error: getErrorMessage(error) });
+  try {
+    const { email } = req.body;
+    if (!email) {
+      return res.status(400).json({ error: 'Email required' });
     }
+
+    await authService.resendVerificationCode(email);
+    res.json({ success: true, message: 'Verification code sent' });
+  } catch (error: unknown) {
+    res.status(400).json({ error: getErrorMessage(error) });
+  }
 });
 
 /**
@@ -137,29 +142,29 @@ router.post('/resend-code', async (req, res) => {
  * Login with email and password
  */
 router.post('/login', async (req, res) => {
-    try {
-        const data = loginSchema.parse(req.body);
-        const result = await authService.login(data);
+  try {
+    const data = loginSchema.parse(req.body);
+    const result = await authService.login(data);
 
-        res.json({
-            success: true,
-            user: {
-                id: result.user.id,
-                email: result.user.email,
-                status: result.user.status,
-                kyc_level: result.user.kyc_level,
-            },
-            tokens: result.tokens,
-        });
-    } catch (error: unknown) {
-        if (error instanceof ZodError) {
-            return res.status(400).json({
-                error: 'Validation failed',
-                details: error.errors.map(e => e.message),
-            });
-        }
-        res.status(401).json({ error: getErrorMessage(error) });
+    res.json({
+      success: true,
+      user: {
+        id: result.user.id,
+        email: result.user.email,
+        status: result.user.status,
+        kyc_level: result.user.kyc_level,
+      },
+      tokens: result.tokens,
+    });
+  } catch (error: unknown) {
+    if (error instanceof ZodError) {
+      return res.status(400).json({
+        error: 'Validation failed',
+        details: error.errors.map((e) => e.message),
+      });
     }
+    res.status(401).json({ error: getErrorMessage(error) });
+  }
 });
 
 /**
@@ -167,17 +172,17 @@ router.post('/login', async (req, res) => {
  * Refresh access token
  */
 router.post('/refresh', async (req, res) => {
-    try {
-        const { refreshToken } = req.body;
-        if (!refreshToken) {
-            return res.status(400).json({ error: 'Refresh token required' });
-        }
-
-        const tokens = await authService.refreshToken(refreshToken);
-        res.json({ success: true, tokens });
-    } catch (error: unknown) {
-        res.status(401).json({ error: getErrorMessage(error) });
+  try {
+    const { refreshToken } = req.body;
+    if (!refreshToken) {
+      return res.status(400).json({ error: 'Refresh token required' });
     }
+
+    const tokens = await authService.refreshToken(refreshToken);
+    res.json({ success: true, tokens });
+  } catch (error: unknown) {
+    res.status(401).json({ error: getErrorMessage(error) });
+  }
 });
 
 /**
@@ -185,12 +190,12 @@ router.post('/refresh', async (req, res) => {
  * Logout and invalidate sessions
  */
 router.post('/logout', authenticate, async (req, res) => {
-    try {
-        await authService.logout(req.user!.id);
-        res.json({ success: true, message: 'Logged out' });
-    } catch (error: unknown) {
-        res.status(500).json({ error: getErrorMessage(error) });
-    }
+  try {
+    await authService.logout(req.user!.id);
+    res.json({ success: true, message: 'Logged out' });
+  } catch (error: unknown) {
+    res.status(500).json({ error: getErrorMessage(error) });
+  }
 });
 
 /**
@@ -198,16 +203,16 @@ router.post('/logout', authenticate, async (req, res) => {
  * Get current user info
  */
 router.get('/me', authenticate, async (req, res) => {
-    res.json({
-        user: {
-            id: req.user!.id,
-            email: req.user!.email,
-            phone: req.user!.phone,
-            status: req.user!.status,
-            kyc_level: req.user!.kyc_level,
-            created_at: req.user!.created_at,
-        }
-    });
+  res.json({
+    user: {
+      id: req.user!.id,
+      email: req.user!.email,
+      phone: req.user!.phone,
+      status: req.user!.status,
+      kyc_level: req.user!.kyc_level,
+      created_at: req.user!.created_at,
+    },
+  });
 });
 
 export default router;

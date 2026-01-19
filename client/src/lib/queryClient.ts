@@ -1,4 +1,4 @@
-import { QueryClient, QueryFunction } from "@tanstack/react-query";
+import { QueryClient, QueryFunction } from '@tanstack/react-query';
 
 async function throwIfResNotOk(res: Response) {
   if (!res.ok) {
@@ -14,7 +14,7 @@ export async function apiRequest(
   customHeaders?: Record<string, string>,
 ): Promise<Response> {
   const headers = {
-    ...(data ? { "Content-Type": "application/json" } : {}),
+    ...(data ? { 'Content-Type': 'application/json' } : {}),
     ...(customHeaders || {}),
   };
 
@@ -32,43 +32,41 @@ export async function apiRequest(
     method,
     headers,
     body: data ? JSON.stringify(data) : undefined,
-    credentials: "same-origin",
-    cache: "no-cache",
+    credentials: 'same-origin',
+    cache: 'no-cache',
   });
 
   await throwIfResNotOk(res);
   return res;
 }
 
-type UnauthorizedBehavior = "returnNull" | "throw";
-export const getQueryFn: <T>(options: {
-  on401: UnauthorizedBehavior;
-}) => QueryFunction<T> =
+type UnauthorizedBehavior = 'returnNull' | 'throw';
+export const getQueryFn: <T>(options: { on401: UnauthorizedBehavior }) => QueryFunction<T> =
   ({ on401: unauthorizedBehavior }) =>
-    async ({ queryKey }) => {
-      const url = queryKey[0] as string;
+  async ({ queryKey }) => {
+    const url = queryKey[0] as string;
 
-      // Route all /api requests through Kong Gateway
-      const KONG_URL = 'http://localhost:8000';
-      const targetUrl = url.startsWith('/api') ? `${KONG_URL}${url}` : url;
+    // Route all /api requests through Kong Gateway
+    const KONG_URL = 'http://localhost:8000';
+    const targetUrl = url.startsWith('/api') ? `${KONG_URL}${url}` : url;
 
-      const res = await fetch(targetUrl, {
-        credentials: "same-origin",
-        cache: "no-cache",
-      });
+    const res = await fetch(targetUrl, {
+      credentials: 'same-origin',
+      cache: 'no-cache',
+    });
 
-      if (unauthorizedBehavior === "returnNull" && res.status === 401) {
-        return null;
-      }
+    if (unauthorizedBehavior === 'returnNull' && res.status === 401) {
+      return null;
+    }
 
-      await throwIfResNotOk(res);
-      return await res.json();
-    };
+    await throwIfResNotOk(res);
+    return await res.json();
+  };
 
 export const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
-      queryFn: getQueryFn({ on401: "throw" }),
+      queryFn: getQueryFn({ on401: 'throw' }),
       refetchInterval: false,
       refetchOnWindowFocus: false,
       staleTime: Infinity,

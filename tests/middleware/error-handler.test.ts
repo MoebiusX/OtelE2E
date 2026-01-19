@@ -1,6 +1,6 @@
 /**
  * Error Handler Middleware Tests
- * 
+ *
  * Tests for global error handling middleware
  */
 
@@ -21,13 +21,13 @@ vi.mock('../../server/lib/logger', () => ({
 }));
 
 import { errorHandler, notFoundHandler } from '../../server/middleware/error-handler';
-import { 
-  AppError, 
-  ValidationError, 
-  NotFoundError, 
+import {
+  AppError,
+  ValidationError,
+  NotFoundError,
   AuthenticationError,
   InternalServerError,
-  ConflictError 
+  ConflictError,
 } from '../../server/lib/errors';
 
 // Helper to create mock request
@@ -48,11 +48,11 @@ function createMockResponse(): Response & { _json: any; _status: number } {
     _json: null,
     _status: 200,
     headersSent: false,
-    status: vi.fn().mockImplementation(function(code: number) {
+    status: vi.fn().mockImplementation(function (code: number) {
       res._status = code;
       return res;
     }),
-    json: vi.fn().mockImplementation(function(data: any) {
+    json: vi.fn().mockImplementation(function (data: any) {
       res._json = data;
       return res;
     }),

@@ -1,26 +1,27 @@
 /**
  * Trade Trace Timeline - Visual distributed trace viewer for transparency
  * Shows how a single trade flows through the entire system
- * 
+ *
  * IMPORTANT: This component ONLY displays real trace data from the API.
  * No mock/fake data is ever shown. Empty state is preferred over fake data.
  */
 
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import { 
-  Activity, 
-  CheckCircle2, 
-  Clock, 
-  ExternalLink, 
+import {
+  Activity,
+  CheckCircle2,
+  Clock,
+  ExternalLink,
   Shield,
   Zap,
   Database,
   Server,
-  AlertCircle
-} from "lucide-react";
-import { useState, useEffect } from "react";
+  AlertCircle,
+} from 'lucide-react';
+import { useState, useEffect } from 'react';
+
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
 
 interface TraceSpan {
   spanId: string;
@@ -47,25 +48,25 @@ interface TradeTraceTimelineProps {
 
 const SERVICE_ICONS: Record<string, any> = {
   'api-gateway': Server,
-  'kong': Shield,
+  kong: Shield,
   'kx-exchange': Activity,
-  'exchange-api': Activity,  // Legacy fallback
+  'exchange-api': Activity, // Legacy fallback
   'kx-matcher': Zap,
-  'order-matcher': Zap,  // Legacy fallback
+  'order-matcher': Zap, // Legacy fallback
   'kx-wallet': Database,
-  'wallet-service': Database,  // Legacy fallback
+  'wallet-service': Database, // Legacy fallback
   default: Activity,
 };
 
 const SERVICE_COLORS: Record<string, string> = {
   'api-gateway': 'bg-blue-500',
-  'kong': 'bg-purple-500',
+  kong: 'bg-purple-500',
   'kx-exchange': 'bg-emerald-500',
-  'exchange-api': 'bg-emerald-500',  // Legacy fallback
+  'exchange-api': 'bg-emerald-500', // Legacy fallback
   'kx-matcher': 'bg-orange-500',
-  'order-matcher': 'bg-orange-500',  // Legacy fallback
+  'order-matcher': 'bg-orange-500', // Legacy fallback
   'kx-wallet': 'bg-cyan-500',
-  'wallet-service': 'bg-cyan-500',  // Legacy fallback
+  'wallet-service': 'bg-cyan-500', // Legacy fallback
   default: 'bg-slate-500',
 };
 
@@ -83,14 +84,14 @@ export function TradeTraceTimeline({ traceId, className }: TradeTraceTimelinePro
     const fetchTrace = async () => {
       setLoading(true);
       setError(null);
-      
+
       try {
         const response = await fetch(`/api/public/trace/${traceId}`);
-        
+
         if (!response.ok) {
           throw new Error(`Failed to fetch trace: ${response.statusText}`);
         }
-        
+
         const data = await response.json();
         setTrace(data);
       } catch (err: any) {
@@ -157,7 +158,7 @@ export function TradeTraceTimeline({ traceId, className }: TradeTraceTimelinePro
   }
 
   // ONLY show real data below this point
-  const maxDuration = Math.max(...trace.spans.map(s => s.startOffset + s.duration));
+  const maxDuration = Math.max(...trace.spans.map((s) => s.startOffset + s.duration));
 
   const getServiceIcon = (service: string) => {
     const Icon = SERVICE_ICONS[service] || SERVICE_ICONS.default;
@@ -189,7 +190,10 @@ export function TradeTraceTimeline({ traceId, className }: TradeTraceTimelinePro
                   {trace.duration}ms
                 </div>
               </div>
-              <Badge variant="outline" className="bg-emerald-500/10 text-emerald-400 border-emerald-500/30">
+              <Badge
+                variant="outline"
+                className="bg-emerald-500/10 text-emerald-400 border-emerald-500/30"
+              >
                 <CheckCircle2 className="w-3 h-3 mr-1" />
                 {trace.status}
               </Badge>
@@ -229,7 +233,9 @@ export function TradeTraceTimeline({ traceId, className }: TradeTraceTimelinePro
           <div className="space-y-3">
             <div className="flex items-center gap-2 mb-4">
               <Clock className="w-4 h-4 text-cyan-400" />
-              <span className="text-xs sm:text-sm text-cyan-100/80">Service Execution Flow ({trace.spans.length} spans, {trace.duration}ms total)</span>
+              <span className="text-xs sm:text-sm text-cyan-100/80">
+                Service Execution Flow ({trace.spans.length} spans, {trace.duration}ms total)
+              </span>
             </div>
 
             {trace.spans.map((span, index) => {
@@ -241,7 +247,9 @@ export function TradeTraceTimeline({ traceId, className }: TradeTraceTimelinePro
                 <div key={span.spanId} className="space-y-1">
                   {/* Span Label */}
                   <div className="flex flex-wrap sm:flex-nowrap items-center gap-2 text-xs sm:text-sm">
-                    <div className={`flex items-center gap-1.5 sm:gap-2 ${getServiceColor(span.service)} text-white px-2 py-1 rounded shadow-lg text-xs sm:text-sm`}>
+                    <div
+                      className={`flex items-center gap-1.5 sm:gap-2 ${getServiceColor(span.service)} text-white px-2 py-1 rounded shadow-lg text-xs sm:text-sm`}
+                    >
                       {getServiceIcon(span.service)}
                       <span className="font-medium whitespace-nowrap">{span.service}</span>
                     </div>
@@ -289,16 +297,21 @@ export function TradeTraceTimeline({ traceId, className }: TradeTraceTimelinePro
               <CardContent className="pt-4 space-y-2">
                 <div className="flex items-center justify-between mb-3">
                   <div className="flex items-center gap-2">
-                    <div className={`flex items-center gap-2 ${getServiceColor(selectedSpan.service)} text-white px-2 py-1 rounded shadow-lg`}>
+                    <div
+                      className={`flex items-center gap-2 ${getServiceColor(selectedSpan.service)} text-white px-2 py-1 rounded shadow-lg`}
+                    >
                       {getServiceIcon(selectedSpan.service)}
                       <span className="font-medium">{selectedSpan.service}</span>
                     </div>
                   </div>
-                  <Badge variant="outline" className="text-emerald-400 border-emerald-500/30 bg-emerald-500/10">
+                  <Badge
+                    variant="outline"
+                    className="text-emerald-400 border-emerald-500/30 bg-emerald-500/10"
+                  >
                     {selectedSpan.status}
                   </Badge>
                 </div>
-                
+
                 <div className="grid grid-cols-2 gap-3 text-sm">
                   <div>
                     <span className="text-cyan-100/60">Operation</span>
@@ -314,9 +327,7 @@ export function TradeTraceTimeline({ traceId, className }: TradeTraceTimelinePro
                   </div>
                   <div>
                     <span className="text-cyan-100/60">Start Offset</span>
-                    <div className="text-cyan-100 mt-1">
-                      +{selectedSpan.startOffset}ms
-                    </div>
+                    <div className="text-cyan-100 mt-1">+{selectedSpan.startOffset}ms</div>
                   </div>
                   <div>
                     <span className="text-cyan-100/60">Span ID</span>

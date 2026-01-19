@@ -1,11 +1,12 @@
 /**
  * Health Check Routes
- * 
+ *
  * Provides /health (liveness) and /ready (readiness) endpoints
  * for container orchestration and load balancers.
  */
 
 import { Router, Request, Response } from 'express';
+
 import db from '../db';
 import { rabbitMQClient } from '../services/rabbitmq-client';
 import { createLogger } from '../lib/logger';
@@ -29,7 +30,7 @@ interface HealthStatus {
 
 /**
  * GET /health
- * 
+ *
  * Liveness probe - returns 200 if the server is running.
  * Use this for container health checks.
  * Does NOT check external dependencies.
@@ -47,7 +48,7 @@ router.get('/health', (req: Request, res: Response) => {
 
 /**
  * GET /ready
- * 
+ *
  * Readiness probe - returns 200 if the server can handle requests.
  * Checks database connectivity and other critical dependencies.
  * Use this for load balancer health checks.
@@ -61,12 +62,12 @@ router.get('/ready', async (req: Request, res: Response) => {
     const dbStart = Date.now();
     await db.query('SELECT 1');
     const dbLatency = Date.now() - dbStart;
-    
+
     checks.database = {
       status: 'connected',
       latencyMs: dbLatency,
     };
-    
+
     // Warn if database is slow
     if (dbLatency > 1000) {
       logger.warn({ latencyMs: dbLatency }, 'Database response slow');
@@ -106,7 +107,7 @@ router.get('/ready', async (req: Request, res: Response) => {
 
 /**
  * GET /metrics/health
- * 
+ *
  * Detailed health metrics for monitoring dashboards.
  * Returns more information than /ready.
  */
@@ -123,7 +124,7 @@ router.get('/metrics/health', async (req: Request, res: Response) => {
         (SELECT count(*) FROM wallets) as wallet_count
     `);
     const dbLatency = Date.now() - dbStart;
-    
+
     checks.database = {
       status: 'connected',
       latencyMs: dbLatency,

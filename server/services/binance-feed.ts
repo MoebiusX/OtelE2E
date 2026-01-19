@@ -1,15 +1,17 @@
 /**
  * Binance Price Feed
- * 
+ *
  * Connects to Binance public WebSocket API for real-time prices.
  * No API key required - uses public market data streams.
- * 
+ *
  * Docs: https://binance-docs.github.io/apidocs/spot/en/#websocket-market-streams
  */
 
 import WebSocket from 'ws';
-import { priceService } from './price-service';
+
 import { createLogger } from '../lib/logger';
+
+import { priceService } from './price-service';
 
 const logger = createLogger('binance-feed');
 
@@ -41,7 +43,7 @@ export const binanceFeed = {
       logger.warn('Binance feed already running');
       return;
     }
-    
+
     isRunning = true;
     this.connect();
     logger.info('Binance price feed started');
@@ -52,17 +54,17 @@ export const binanceFeed = {
    */
   stop(): void {
     isRunning = false;
-    
+
     if (reconnectTimer) {
       clearTimeout(reconnectTimer);
       reconnectTimer = null;
     }
-    
+
     if (ws) {
       ws.close();
       ws = null;
     }
-    
+
     priceService.setConnected(false, 'binance');
     logger.info('Binance price feed stopped');
   },
@@ -72,19 +74,19 @@ export const binanceFeed = {
    */
   connect(): void {
     if (!isRunning) return;
-    
+
     try {
       // Subscribe to mini ticker streams for all symbols
-      const streams = SYMBOLS.map(s => `${s}@miniTicker`).join('/');
+      const streams = SYMBOLS.map((s) => `${s}@miniTicker`).join('/');
       const url = `${BINANCE_WS_URL}/${streams}`;
-      
+
       ws = new WebSocket(url);
-      
+
       ws.on('open', () => {
         logger.info('Connected to Binance WebSocket');
         priceService.setConnected(true, 'binance');
       });
-      
+
       ws.on('message', (data: Buffer) => {
         try {
           const message = JSON.parse(data.toString());
@@ -93,18 +95,17 @@ export const binanceFeed = {
           logger.error({ err }, 'Failed to parse Binance message');
         }
       });
-      
+
       ws.on('close', () => {
         logger.warn('Binance WebSocket closed');
         priceService.setConnected(false, 'binance');
         this.scheduleReconnect();
       });
-      
+
       ws.on('error', (err) => {
         logger.error({ err }, 'Binance WebSocket error');
         priceService.setConnected(false, 'binance');
       });
-      
     } catch (err) {
       logger.error({ err }, 'Failed to connect to Binance');
       this.scheduleReconnect();
@@ -119,7 +120,7 @@ export const binanceFeed = {
     if (message.e === '24hrMiniTicker') {
       const symbol = message.s?.toLowerCase();
       const price = parseFloat(message.c);
-      
+
       if (symbol && !isNaN(price) && SYMBOL_MAP[symbol]) {
         priceService.updatePrice(SYMBOL_MAP[symbol], price, 'binance');
       }
@@ -131,11 +132,11 @@ export const binanceFeed = {
    */
   scheduleReconnect(): void {
     if (!isRunning) return;
-    
+
     if (reconnectTimer) {
       clearTimeout(reconnectTimer);
     }
-    
+
     // Reconnect after 5 seconds
     reconnectTimer = setTimeout(() => {
       logger.info('Attempting to reconnect to Binance...');

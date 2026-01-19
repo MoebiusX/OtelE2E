@@ -187,7 +187,7 @@ describe('Trade Value Calculations', () => {
   it('should calculate BTC trade value in USD', () => {
     const btcAmount = toSmallestUnit(0.5, 'BTC');
     const pricePerBTC = toSmallestUnit(50000, 'USD');
-    
+
     // Value = (btcAmount * pricePerBTC) / 10^8 (to normalize BTC decimals)
     const value = (btcAmount * pricePerBTC) / 100000000n;
     const usdValue = fromSmallestUnit(value, 'USD');
@@ -197,7 +197,7 @@ describe('Trade Value Calculations', () => {
   it('should calculate small trade value correctly', () => {
     const btcAmount = toSmallestUnit(0.001, 'BTC'); // 100000 satoshis
     const pricePerBTC = toSmallestUnit(50000, 'USD'); // 5000000 cents
-    
+
     const value = (btcAmount * pricePerBTC) / 100000000n;
     const usdValue = fromSmallestUnit(value, 'USD');
     expect(usdValue).toBe(50);
@@ -206,11 +206,11 @@ describe('Trade Value Calculations', () => {
   it('should avoid floating point precision loss', () => {
     // This test ensures we don't have issues like:
     // 0.1 + 0.2 = 0.30000000000000004 in JavaScript
-    
+
     const amounts = [0.1, 0.2, 0.3];
-    const satoshis = amounts.map(a => toSmallestUnit(a, 'BTC'));
+    const satoshis = amounts.map((a) => toSmallestUnit(a, 'BTC'));
     const total = satoshis.reduce((a, b) => a + b, 0n);
-    
+
     expect(total).toBe(60000000n); // 0.6 BTC exactly
     expect(fromSmallestUnit(total, 'BTC')).toBe(0.6);
   });

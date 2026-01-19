@@ -1,42 +1,44 @@
-import { Switch, Route } from "wouter";
-import { queryClient } from "./lib/queryClient";
-import { QueryClientProvider } from "@tanstack/react-query";
-import { Toaster } from "@/components/ui/toaster";
-import { TooltipProvider } from "@/components/ui/tooltip";
-import Dashboard from "@/pages/dashboard";
-import Monitor from "@/pages/monitor";
-import Register from "@/pages/register";
-import Login from "@/pages/login";
-import Portfolio from "@/pages/portfolio";
-import Convert from "@/pages/convert";
-import Activity from "@/pages/activity";
-import TransparencyPage from "@/pages/transparency";
-import NotFound from "@/pages/not-found";
-import { TransparencyDashboard } from "@/components/transparency-dashboard";
+import { Switch, Route } from 'wouter';
+import { QueryClientProvider } from '@tanstack/react-query';
+
+import { queryClient } from './lib/queryClient';
+
+import { Toaster } from '@/components/ui/toaster';
+import { TooltipProvider } from '@/components/ui/tooltip';
+import Dashboard from '@/pages/dashboard';
+import Monitor from '@/pages/monitor';
+import Register from '@/pages/register';
+import Login from '@/pages/login';
+import Portfolio from '@/pages/portfolio';
+import Convert from '@/pages/convert';
+import Activity from '@/pages/activity';
+import TransparencyPage from '@/pages/transparency';
+import NotFound from '@/pages/not-found';
+import { TransparencyDashboard } from '@/components/transparency-dashboard';
 
 function Router() {
   return (
     <Switch>
       {/* Public transparency landing page */}
       <Route path="/" component={TransparencyDashboard} />
-      
+
       {/* Auth */}
       <Route path="/register" component={Register} />
       <Route path="/login" component={Login} />
-      
+
       {/* Main App - requires auth */}
       <Route path="/portfolio" component={Portfolio} />
       <Route path="/trade" component={Dashboard} />
       <Route path="/convert" component={Convert} />
       <Route path="/activity" component={Activity} />
       <Route path="/transparency" component={TransparencyPage} />
-      
+
       {/* Advanced monitoring (for power users/devs) */}
       <Route path="/monitor" component={Monitor} />
-      
+
       {/* Legacy redirect */}
       <Route path="/trading" component={Dashboard} />
-      
+
       <Route component={NotFound} />
     </Switch>
   );

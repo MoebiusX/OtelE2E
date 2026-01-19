@@ -16,82 +16,82 @@ let otelEnabled = false;
 let provider: WebTracerProvider | null = null;
 
 export function initBrowserOtel(): void {
-    if (provider) {
-        console.log('[OTEL] Browser instrumentation already initialized');
-        return;
-    }
+  if (provider) {
+    console.log('[OTEL] Browser instrumentation already initialized');
+    return;
+  }
 
-    console.log('[OTEL] Initializing browser OpenTelemetry...');
+  console.log('[OTEL] Initializing browser OpenTelemetry...');
 
-    // Create resource with service name using OTEL v2 API
-    const resource = resourceFromAttributes({
-        [SemanticResourceAttributes.SERVICE_NAME]: 'kx-wallet',
-        [SemanticResourceAttributes.SERVICE_NAMESPACE]: 'web',
-        [SemanticResourceAttributes.SERVICE_VERSION]: '1.0.0',
-    });
+  // Create resource with service name using OTEL v2 API
+  const resource = resourceFromAttributes({
+    [SemanticResourceAttributes.SERVICE_NAME]: 'kx-wallet',
+    [SemanticResourceAttributes.SERVICE_NAMESPACE]: 'web',
+    [SemanticResourceAttributes.SERVICE_VERSION]: '1.0.0',
+  });
 
-    // Configure OTLP exporter to send traces to the OTEL collector (with CORS)
-    const exporter = new OTLPTraceExporter({
-        url: 'http://localhost:4319/v1/traces',
-        headers: {},
-    });
+  // Configure OTLP exporter to send traces to the OTEL collector (with CORS)
+  const exporter = new OTLPTraceExporter({
+    url: 'http://localhost:4319/v1/traces',
+    headers: {},
+  });
 
-    // Create the tracer provider with resource and span processors (OTEL v2 API)
-    provider = new WebTracerProvider({
-        resource,
-        spanProcessors: [new SimpleSpanProcessor(exporter)],
-    });
+  // Create the tracer provider with resource and span processors (OTEL v2 API)
+  provider = new WebTracerProvider({
+    resource,
+    spanProcessors: [new SimpleSpanProcessor(exporter)],
+  });
 
-    // Register the provider globally with zone context manager
-    // This makes trace.getTracer() from @opentelemetry/api use this provider
-    provider.register({
-        contextManager: new ZoneContextManager(),
-    });
+  // Register the provider globally with zone context manager
+  // This makes trace.getTracer() from @opentelemetry/api use this provider
+  provider.register({
+    contextManager: new ZoneContextManager(),
+  });
 
-    // Verify the global trace API is using our provider
-    const testTracer = trace.getTracer('test-tracer');
-    console.log('[OTEL] Global tracer registered:', !!testTracer);
+  // Verify the global trace API is using our provider
+  const testTracer = trace.getTracer('test-tracer');
+  console.log('[OTEL] Global tracer registered:', !!testTracer);
 
-    // Register fetch instrumentation
-    registerInstrumentations({
-        instrumentations: [
-            new FetchInstrumentation({
-                // Only instrument API calls, not static assets
-                ignoreUrls: [
-                    /\/assets\//,
-                    /\.(js|css|png|jpg|svg|ico|woff|woff2)$/,
-                    /localhost:16686/,  // Don't trace Jaeger UI requests
-                    /localhost:3000/,   // Don't trace Grafana
-                    /localhost:4319/,   // Don't trace OTEL collector
-                ],
-                // Propagate trace context to ALL API origins including same-origin (Vite proxy)
-                propagateTraceHeaderCorsUrls: [
-                    /localhost:5173/,   // Vite dev server (same-origin proxy)
-                    /localhost:8000/,   // Kong Gateway
-                    /localhost:5000/,   // Payment API direct
-                    /^\/api\//,         // Relative /api paths
-                ],
-                // Add useful attributes to spans
-                applyCustomAttributesOnSpan: (span, request, _result) => {
-                    if (request instanceof Request) {
-                        span.setAttribute('http.url', request.url || '');
-                    }
-                },
-            }),
+  // Register fetch instrumentation
+  registerInstrumentations({
+    instrumentations: [
+      new FetchInstrumentation({
+        // Only instrument API calls, not static assets
+        ignoreUrls: [
+          /\/assets\//,
+          /\.(js|css|png|jpg|svg|ico|woff|woff2)$/,
+          /localhost:16686/, // Don't trace Jaeger UI requests
+          /localhost:3000/, // Don't trace Grafana
+          /localhost:4319/, // Don't trace OTEL collector
         ],
-    });
+        // Propagate trace context to ALL API origins including same-origin (Vite proxy)
+        propagateTraceHeaderCorsUrls: [
+          /localhost:5173/, // Vite dev server (same-origin proxy)
+          /localhost:8000/, // Kong Gateway
+          /localhost:5000/, // Payment API direct
+          /^\/api\//, // Relative /api paths
+        ],
+        // Add useful attributes to spans
+        applyCustomAttributesOnSpan: (span, request, _result) => {
+          if (request instanceof Request) {
+            span.setAttribute('http.url', request.url || '');
+          }
+        },
+      }),
+    ],
+  });
 
-    otelEnabled = true;
-    console.log('[OTEL] Browser instrumentation initialized - service.name: react-client');
+  otelEnabled = true;
+  console.log('[OTEL] Browser instrumentation initialized - service.name: react-client');
 }
 
 export function isOtelEnabled(): boolean {
-    return otelEnabled;
+  return otelEnabled;
 }
 
 export function getTracer() {
-    if (!provider) {
-        throw new Error('OTEL not initialized - call initBrowserOtel() first');
-    }
-    return provider.getTracer('react-client');
+  if (!provider) {
+    throw new Error('OTEL not initialized - call initBrowserOtel() first');
+  }
+  return provider.getTracer('react-client');
 }

@@ -1,6 +1,6 @@
 /**
  * Security Middleware Tests
- * 
+ *
  * Tests for rate limiting, CORS, and security headers
  */
 
@@ -38,8 +38,8 @@ function createMockRequest(overrides: Partial<Request> = {}): Request {
 }
 
 // Helper to create mock response
-function createMockResponse(): Response & { 
-  _headers: Record<string, string>; 
+function createMockResponse(): Response & {
+  _headers: Record<string, string>;
   _status: number;
   _sent: boolean;
 } {
@@ -48,26 +48,26 @@ function createMockResponse(): Response & {
     _status: 200,
     _sent: false,
     headersSent: false,
-    header: vi.fn().mockImplementation(function(name: string, value: string) {
+    header: vi.fn().mockImplementation(function (name: string, value: string) {
       res._headers[name] = value;
       return res;
     }),
-    status: vi.fn().mockImplementation(function(code: number) {
+    status: vi.fn().mockImplementation(function (code: number) {
       res._status = code;
       return res;
     }),
-    json: vi.fn().mockImplementation(function(data: any) {
+    json: vi.fn().mockImplementation(function (data: any) {
       res._sent = true;
       return res;
     }),
-    sendStatus: vi.fn().mockImplementation(function(code: number) {
+    sendStatus: vi.fn().mockImplementation(function (code: number) {
       res._status = code;
       res._sent = true;
       return res;
     }),
     setTimeout: vi.fn(),
-  } as unknown as Response & { 
-    _headers: Record<string, string>; 
+  } as unknown as Response & {
+    _headers: Record<string, string>;
     _status: number;
     _sent: boolean;
   };
@@ -100,7 +100,7 @@ describe('Security Middleware', () => {
 
       expect(mockRes.header).toHaveBeenCalledWith(
         'Access-Control-Allow-Origin',
-        'http://localhost:5173'
+        'http://localhost:5173',
       );
       expect(mockNext).toHaveBeenCalled();
     });
@@ -114,7 +114,7 @@ describe('Security Middleware', () => {
 
       expect(mockRes.header).toHaveBeenCalledWith(
         'Access-Control-Allow-Origin',
-        'http://127.0.0.1:5000'
+        'http://127.0.0.1:5000',
       );
     });
 
@@ -127,16 +127,13 @@ describe('Security Middleware', () => {
 
       expect(mockRes.header).toHaveBeenCalledWith(
         'Access-Control-Allow-Methods',
-        expect.stringContaining('GET')
+        expect.stringContaining('GET'),
       );
       expect(mockRes.header).toHaveBeenCalledWith(
         'Access-Control-Allow-Headers',
-        expect.stringContaining('Authorization')
+        expect.stringContaining('Authorization'),
       );
-      expect(mockRes.header).toHaveBeenCalledWith(
-        'Access-Control-Allow-Credentials',
-        'true'
-      );
+      expect(mockRes.header).toHaveBeenCalledWith('Access-Control-Allow-Credentials', 'true');
     });
 
     it('should handle OPTIONS preflight request', () => {
@@ -171,7 +168,7 @@ describe('Security Middleware', () => {
 
       expect(mockRes.header).toHaveBeenCalledWith(
         'Access-Control-Allow-Headers',
-        expect.stringContaining('traceparent')
+        expect.stringContaining('traceparent'),
       );
     });
 
@@ -182,10 +179,7 @@ describe('Security Middleware', () => {
 
       corsMiddleware(mockReq, mockRes, mockNext);
 
-      expect(mockRes.header).toHaveBeenCalledWith(
-        'Access-Control-Max-Age',
-        '86400'
-      );
+      expect(mockRes.header).toHaveBeenCalledWith('Access-Control-Max-Age', '86400');
     });
   });
 
@@ -209,7 +203,7 @@ describe('Security Middleware', () => {
 
     it('should return 408 on timeout', () => {
       const middleware = requestTimeout(1000);
-      
+
       middleware(mockReq, mockRes, mockNext);
 
       // Get the timeout callback and invoke it
@@ -222,7 +216,7 @@ describe('Security Middleware', () => {
     it('should not send response if headers already sent', () => {
       const middleware = requestTimeout(1000);
       mockRes.headersSent = true;
-      
+
       middleware(mockReq, mockRes, mockNext);
 
       // Get the timeout callback and invoke it

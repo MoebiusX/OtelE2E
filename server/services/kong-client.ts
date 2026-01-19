@@ -1,6 +1,8 @@
+import * as http from 'http';
+
 import { Request, Response, NextFunction } from 'express';
 import { createProxyMiddleware } from 'http-proxy-middleware';
-import * as http from 'http';
+
 import { config } from '../config';
 import { createLogger } from '../lib/logger';
 import { ExternalServiceError } from '../lib/errors';
@@ -28,40 +30,49 @@ export class KongClient {
         // Add OpenTelemetry trace headers
         const traceId = req.headers['x-trace-id'] as string;
         const spanId = req.headers['x-span-id'] as string;
-        
+
         if (traceId) proxyReq.setHeader('x-trace-id', traceId);
         if (spanId) proxyReq.setHeader('x-parent-span-id', spanId);
-        
-        logger.debug({
-          method: req.method,
-          path: req.path,
-          traceId: traceId?.slice(0, 8),
-        }, 'Proxying request to Kong Gateway');
+
+        logger.debug(
+          {
+            method: req.method,
+            path: req.path,
+            traceId: traceId?.slice(0, 8),
+          },
+          'Proxying request to Kong Gateway',
+        );
       },
       onProxyRes: (proxyRes: any, req: any, res: any) => {
-        logger.debug({
-          method: req.method,
-          path: req.path,
-          statusCode: proxyRes.statusCode,
-        }, 'Received response from Kong');
+        logger.debug(
+          {
+            method: req.method,
+            path: req.path,
+            statusCode: proxyRes.statusCode,
+          },
+          'Received response from Kong',
+        );
       },
       onError: (err: any, req: any, res: any) => {
-        logger.error({
-          err: {
-            message: err.message,
-            code: err.code,
+        logger.error(
+          {
+            err: {
+              message: err.message,
+              code: err.code,
+            },
+            method: req.method,
+            path: req.path,
           },
-          method: req.method,
-          path: req.path,
-        }, 'Kong proxy error');
-        
+          'Kong proxy error',
+        );
+
         res.status(502).json({
           error: 'Bad Gateway',
-          message: 'Kong Gateway is unavailable'
+          message: 'Kong Gateway is unavailable',
         });
-      }
+      },
     };
-    
+
     return createProxyMiddleware(options);
   }
 
@@ -69,19 +80,22 @@ export class KongClient {
     try {
       const response = await fetch(`${this.adminUrl}/status`);
       const healthy = response.ok;
-      
+
       if (healthy) {
         logger.info({ adminUrl: this.adminUrl }, 'Kong Gateway is healthy');
       } else {
         logger.warn({ adminUrl: this.adminUrl, status: response.status }, 'Kong Gateway unhealthy');
       }
-      
+
       return healthy;
     } catch (error) {
-      logger.warn({
-        err: error,
-        adminUrl: this.adminUrl,
-      }, 'Kong Gateway not available');
+      logger.warn(
+        {
+          err: error,
+          adminUrl: this.adminUrl,
+        },
+        'Kong Gateway not available',
+      );
       return false;
     }
   }
@@ -92,13 +106,13 @@ export class KongClient {
       // Create service
       const serviceConfig = {
         name: 'payment-api',
-        url: 'http://host.docker.internal:5000'
+        url: 'http://host.docker.internal:5000',
       };
 
       let response = await fetch(`${this.adminUrl}/services`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-        body: new URLSearchParams(serviceConfig)
+        body: new URLSearchParams(serviceConfig),
       });
 
       if (response.status === 409) {
@@ -113,13 +127,13 @@ export class KongClient {
       const routeConfig = {
         'paths[]': '/api',
         strip_path: 'false',
-        preserve_host: 'false'
+        preserve_host: 'false',
       };
 
       response = await fetch(`${this.adminUrl}/services/payment-api/routes`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-        body: new URLSearchParams(routeConfig)
+        body: new URLSearchParams(routeConfig),
       });
 
       if (response.status === 409) {

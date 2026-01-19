@@ -1,6 +1,6 @@
 /**
  * Payment Service Unit Tests
- * 
+ *
  * Tests for legacy payment processing service
  */
 
@@ -111,16 +111,14 @@ describe('Payment Service', () => {
             amount: 100,
             currency: 'USD',
           }),
-          5000
+          5000,
         );
         expect(result.processorResponse).toBeDefined();
         expect(result.processorResponse?.status).toBe('completed');
       });
 
       it('should handle RabbitMQ timeout', async () => {
-        vi.mocked(rabbitMQClient.publishPaymentAndWait).mockRejectedValue(
-          new Error('Timeout')
-        );
+        vi.mocked(rabbitMQClient.publishPaymentAndWait).mockRejectedValue(new Error('Timeout'));
 
         const result = await paymentService.processPayment(testPayment);
 
@@ -130,7 +128,7 @@ describe('Payment Service', () => {
 
       it('should handle RabbitMQ error gracefully', async () => {
         vi.mocked(rabbitMQClient.publishPaymentAndWait).mockRejectedValue(
-          new Error('Connection lost')
+          new Error('Connection lost'),
         );
 
         const result = await paymentService.processPayment(testPayment);
@@ -336,7 +334,7 @@ describe('Payment Service', () => {
 
     it('should have all required methods', () => {
       const service = new PaymentService();
-      
+
       expect(typeof service.processPayment).toBe('function');
       expect(typeof service.getPayments).toBe('function');
       expect(typeof service.getPayment).toBe('function');

@@ -1,6 +1,6 @@
 /**
  * Price Service Unit Tests
- * 
+ *
  * Tests for price service functionality
  */
 
@@ -35,7 +35,7 @@ describe('Price Service', () => {
         const result = priceService.getPrice('USDT');
 
         expect(result).not.toBeNull();
-        expect(result!.price).toBe(1.00);
+        expect(result!.price).toBe(1.0);
         expect(result!.symbol).toBe('USDT');
         expect(result!.source).toBe('stable-peg');
       });
@@ -44,7 +44,7 @@ describe('Price Service', () => {
         const result = priceService.getPrice('USDC');
 
         expect(result).not.toBeNull();
-        expect(result!.price).toBe(1.00);
+        expect(result!.price).toBe(1.0);
         expect(result!.symbol).toBe('USDC');
       });
 
@@ -52,7 +52,7 @@ describe('Price Service', () => {
         const result = priceService.getPrice('USD');
 
         expect(result).not.toBeNull();
-        expect(result!.price).toBe(1.00);
+        expect(result!.price).toBe(1.0);
       });
 
       it('should handle lowercase symbols', () => {
@@ -115,7 +115,7 @@ describe('Price Service', () => {
       const rate = priceService.getRate('USDT', 'BTC');
 
       expect(rate).not.toBeNull();
-      expect(rate).toBeCloseTo(1/45000, 10);
+      expect(rate).toBeCloseTo(1 / 45000, 10);
     });
 
     it('should return null if from asset unavailable', () => {
@@ -226,10 +226,10 @@ describe('Price Service', () => {
       // but the status object is shared internally
       priceService.setConnected(true, 'test-source');
       const status = priceService.getStatus();
-      
+
       expect(status.connected).toBe(true);
       expect(status.source).toBe('test-source');
-      
+
       // Reset for other tests
       priceService.setConnected(false, 'none');
     });
@@ -283,7 +283,7 @@ describe('Price Service', () => {
     it('should include stable coins', () => {
       const prices = priceService.getAllPrices();
 
-      const symbols = prices.map(p => p.symbol);
+      const symbols = prices.map((p) => p.symbol);
       expect(symbols).toContain('USDT');
       expect(symbols).toContain('USDC');
       expect(symbols).toContain('USD');
@@ -295,7 +295,7 @@ describe('Price Service', () => {
 
       const prices = priceService.getAllPrices();
 
-      const symbols = prices.map(p => p.symbol);
+      const symbols = prices.map((p) => p.symbol);
       expect(symbols).toContain('BTC');
       expect(symbols).toContain('ETH');
     });
@@ -304,7 +304,7 @@ describe('Price Service', () => {
       priceService.updatePrice('BTC', 45000, 'binance');
 
       const prices = priceService.getAllPrices();
-      const btcPrice = prices.find(p => p.symbol === 'BTC');
+      const btcPrice = prices.find((p) => p.symbol === 'BTC');
 
       expect(btcPrice).toBeDefined();
       expect(btcPrice!.price).toBe(45000);

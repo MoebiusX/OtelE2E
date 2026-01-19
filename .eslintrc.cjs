@@ -1,5 +1,14 @@
 module.exports = {
   root: true,
+  ignorePatterns: [
+    'scripts/**',
+    'tests/**',
+    'payment-processor/**',
+    'tailwind.config.ts',
+    'postcss.config.js',
+    'vite.config.ts',
+    'vitest.config.ts',
+  ],
   env: {
     node: true,
     es2021: true,

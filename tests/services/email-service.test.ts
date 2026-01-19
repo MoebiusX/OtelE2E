@@ -1,6 +1,6 @@
 /**
  * Email Service Unit Tests
- * 
+ *
  * Tests for email sending functionality
  */
 
@@ -79,7 +79,7 @@ describe('Email Service', () => {
           subject: 'Test Subject',
           text: 'Test body',
           html: '<p>Test body</p>',
-        })
+        }),
       );
     });
 
@@ -107,7 +107,7 @@ describe('Email Service', () => {
       expect(mockSendMail).toHaveBeenCalledWith(
         expect.objectContaining({
           from: expect.stringContaining('Krystaline'),
-        })
+        }),
       );
     });
   });
@@ -123,7 +123,7 @@ describe('Email Service', () => {
         expect.objectContaining({
           to: 'user@example.com',
           subject: expect.stringContaining('Verify'),
-        })
+        }),
       );
     });
 
@@ -158,7 +158,7 @@ describe('Email Service', () => {
         expect.objectContaining({
           to: 'user@example.com',
           subject: expect.stringContaining('Password Reset'),
-        })
+        }),
       );
     });
 
@@ -184,7 +184,7 @@ describe('Email Service', () => {
         expect.objectContaining({
           to: 'newuser@example.com',
           subject: expect.stringContaining('Welcome'),
-        })
+        }),
       );
     });
 

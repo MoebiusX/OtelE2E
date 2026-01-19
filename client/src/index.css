@@ -23,7 +23,7 @@
   --destructive-foreground: hsl(60, 9.1%, 97.8%);
   --ring: hsl(20, 14.3%, 4.1%);
   --radius: 0.5rem;
-  
+
   /* Professional color palette */
   --otel-blue: hsl(215, 20%, 30%);
   --otel-green: hsl(160, 25%, 40%);
@@ -52,7 +52,7 @@
   --destructive-foreground: hsl(0, 0%, 98%);
   --ring: hsl(240, 4.9%, 83.9%);
   --radius: 0.5rem;
-  
+
   /* Professional colors for dark mode */
   --otel-blue: hsl(215, 30%, 60%);
   --otel-green: hsl(160, 35%, 55%);
@@ -80,7 +80,7 @@
 
   /* Exception: Badges can stay smaller */
   .badge .text-xs,
-  [class*="Badge"] .text-xs {
+  [class*='Badge'] .text-xs {
     font-size: 0.75rem; /* Keep 12px for badges */
   }
 }
@@ -89,46 +89,47 @@
   .bg-otel-blue {
     background-color: var(--otel-blue);
   }
-  
+
   .bg-otel-green {
     background-color: var(--otel-green);
   }
-  
+
   .bg-otel-amber {
     background-color: var(--otel-amber);
   }
-  
+
   .bg-trace-bg {
     background-color: var(--trace-bg);
   }
-  
+
   .text-otel-blue {
     color: var(--otel-blue);
   }
-  
+
   .text-otel-green {
     color: var(--otel-green);
   }
-  
+
   .text-otel-amber {
     color: var(--otel-amber);
   }
-  
+
   .border-otel-blue {
     border-color: var(--otel-blue);
   }
-  
+
   .border-otel-green {
     border-color: var(--otel-green);
   }
-  
+
   .border-otel-amber {
     border-color: var(--otel-amber);
   }
 
   /* Custom animations for hero section */
   @keyframes pulse-slow {
-    0%, 100% {
+    0%,
+    100% {
       opacity: 1;
     }
     50% {

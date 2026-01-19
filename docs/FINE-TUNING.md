@@ -26,11 +26,13 @@ wc -l training-data.jsonl
 ## Step 2: Prepare Data Format
 
 Axolotl expects this format:
+
 ```json
-{"instruction": "...", "input": "", "output": "..."}
+{ "instruction": "...", "input": "", "output": "..." }
 ```
 
 Convert with this script:
+
 ```bash
 node scripts/convert-training-data.js
 ```

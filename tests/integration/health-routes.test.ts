@@ -1,6 +1,6 @@
 /**
  * Health Routes Integration Tests
- * 
+ *
  * Tests for /health and /ready endpoints
  */
 

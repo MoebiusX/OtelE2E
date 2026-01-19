@@ -5,11 +5,12 @@ import { SimpleSpanProcessor, SpanExporter } from '@opentelemetry/sdk-trace-node
 import { ExportResult, ExportResultCode } from '@opentelemetry/core';
 import { ReadableSpan } from '@opentelemetry/sdk-trace-base';
 import { OTLPTraceExporter } from '@opentelemetry/exporter-trace-otlp-http';
+
 import { createLogger } from './lib/logger';
 const logger = createLogger('otel');
 
 // Store traces for local visualization
-export const traces: any[] = []; 
+export const traces: any[] = [];
 // Clear traces function for proper isolation
 export function clearTraces() {
   traces.length = 0;
@@ -18,7 +19,7 @@ export function clearTraces() {
 // Custom trace collector for demo visualization
 class TraceCollector implements SpanExporter {
   export(spans: ReadableSpan[], resultCallback: (result: ExportResult) => void): void {
-    spans.forEach(span => {
+    spans.forEach((span) => {
       // Show only business-critical spans (authentic OpenTelemetry data)
       const httpMethod = span.attributes?.['http.method'];
       const spanName = span.name || '';
@@ -30,7 +31,9 @@ class TraceCollector implements SpanExporter {
       }
 
       // Only show business operations: POST/DELETE requests, Kong Gateway, AMQP operations
-      const isBusinessSpan = httpMethod === 'POST' || httpMethod === 'DELETE' ||
+      const isBusinessSpan =
+        httpMethod === 'POST' ||
+        httpMethod === 'DELETE' ||
         component === 'api-gateway' ||
         spanName.includes('kong') ||
         spanName.includes('amqp') ||
@@ -38,7 +41,7 @@ class TraceCollector implements SpanExporter {
         span.attributes?.['messaging.system'] === 'rabbitmq' ||
         span.attributes?.['http.url']?.toString().includes(':8000') || // Kong Gateway requests
         span.kind === 3 || // Client spans (outgoing requests)
-        span.kind === 4;   // Producer spans (message publishing)
+        span.kind === 4; // Producer spans (message publishing)
 
       if (!isBusinessSpan) {
         return;
@@ -46,11 +49,33 @@ class TraceCollector implements SpanExporter {
 
       // Debug logging to see what spans are being captured
       const operation = span.attributes?.['messaging.operation'] || httpMethod || spanName;
-      logger.debug({ operation, spanName, traceId: span.spanContext().traceId, service: span.attributes?.['service.name'] }, `Capturing span`);
+      logger.debug(
+        {
+          operation,
+          spanName,
+          traceId: span.spanContext().traceId,
+          service: span.attributes?.['service.name'],
+        },
+        `Capturing span`,
+      );
 
       // Show attributes for debugging span capture
-      if (span.attributes?.['messaging.system'] || spanName.includes('amqp') || spanName.includes('rabbitmq')) {
-        logger.debug({ name: span.name, messaging: { system: span.attributes?.['messaging.system'], operation: span.attributes?.['messaging.operation'], destination: span.attributes?.['messaging.destination'] } }, 'RabbitMQ span captured');
+      if (
+        span.attributes?.['messaging.system'] ||
+        spanName.includes('amqp') ||
+        spanName.includes('rabbitmq')
+      ) {
+        logger.debug(
+          {
+            name: span.name,
+            messaging: {
+              system: span.attributes?.['messaging.system'],
+              operation: span.attributes?.['messaging.operation'],
+              destination: span.attributes?.['messaging.destination'],
+            },
+          },
+          'RabbitMQ span captured',
+        );
       }
 
       const traceData = {
@@ -62,18 +87,27 @@ class TraceCollector implements SpanExporter {
         status: span.status,
         startTime: new Date(span.startTime[0] * 1000 + span.startTime[1] / 1000000),
         endTime: span.endTime ? new Date(span.endTime[0] * 1000 + span.endTime[1] / 1000000) : null,
-        duration: span.endTime ? (span.endTime[0] - span.startTime[0]) * 1000 + (span.endTime[1] - span.startTime[1]) / 1000000 : null,
+        duration: span.endTime
+          ? (span.endTime[0] - span.startTime[0]) * 1000 +
+            (span.endTime[1] - span.startTime[1]) / 1000000
+          : null,
         attributes: span.attributes,
-        serviceName: span.resource?.attributes?.[SemanticResourceAttributes.SERVICE_NAME] || 'payment-api',
-        events: span.events || []
+        serviceName:
+          span.resource?.attributes?.[SemanticResourceAttributes.SERVICE_NAME] || 'payment-api',
+        events: span.events || [],
       };
 
       // Only add if this span doesn't already exist to prevent duplicates
-      const existingSpan = traces.find(t => t.traceId === traceData.traceId && t.spanId === traceData.spanId);
+      const existingSpan = traces.find(
+        (t) => t.traceId === traceData.traceId && t.spanId === traceData.spanId,
+      );
       if (!existingSpan) {
         traces.push(traceData);
         logger.debug({ tracesCount: traces.length }, 'Stored trace');
-        logger.debug({ traces: traces.map(t => ({ name: t.name, traceId: t.traceId.slice(0, 8) })) }, 'All traces now');
+        logger.debug(
+          { traces: traces.map((t) => ({ name: t.name, traceId: t.traceId.slice(0, 8) })) },
+          'All traces now',
+        );
       }
 
       // Keep only last 100 traces
@@ -102,23 +136,25 @@ const jaegerExporter = new OTLPTraceExporter({
 const sdk = new NodeSDK({
   serviceName: 'kx-exchange',
   spanProcessors: [
-    new SimpleSpanProcessor(traceCollector),     // For local UI
-    new SimpleSpanProcessor(jaegerExporter)      // For Jaeger (immediate export)
+    new SimpleSpanProcessor(traceCollector), // For local UI
+    new SimpleSpanProcessor(jaegerExporter), // For Jaeger (immediate export)
   ],
-  instrumentations: [getNodeAutoInstrumentations({
-    // Disable fs instrumentation to reduce noise
-    '@opentelemetry/instrumentation-fs': {
-      enabled: false,
-    },
-    // Enable AMQP instrumentation for RabbitMQ spans
-    '@opentelemetry/instrumentation-amqplib': {
-      enabled: true,
-    },
-    // Enable HTTP instrumentation for Kong proxy spans
-    '@opentelemetry/instrumentation-http': {
-      enabled: true,
-    },
-  })],
+  instrumentations: [
+    getNodeAutoInstrumentations({
+      // Disable fs instrumentation to reduce noise
+      '@opentelemetry/instrumentation-fs': {
+        enabled: false,
+      },
+      // Enable AMQP instrumentation for RabbitMQ spans
+      '@opentelemetry/instrumentation-amqplib': {
+        enabled: true,
+      },
+      // Enable HTTP instrumentation for Kong proxy spans
+      '@opentelemetry/instrumentation-http': {
+        enabled: true,
+      },
+    }),
+  ],
 });
 
 // Start the SDK

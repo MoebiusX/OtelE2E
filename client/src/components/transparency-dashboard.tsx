@@ -1,23 +1,25 @@
 /**
  * Public Transparency Dashboard
- * 
+ *
  * Krystaline's "Proof of Observability" - Live system metrics
- * 
+ *
  * CRITICAL: This component displays ONLY real data from live APIs.
  * - System status: /api/public/status (refreshes every 5s)
  * - Trade feed: /api/public/trades (real database queries)
  * - Trace timeline: Real OTEL traces via /api/public/trace/:id
- * 
+ *
  * NO mock/fake/placeholder data is ever shown. Empty states are preferred.
  * This is fundamental to our value proposition of transparency and honesty.
  */
 
 import { useEffect, useState } from 'react';
+import { Activity, TrendingUp, Shield, Zap, Users, Eye } from 'lucide-react';
+import { useLocation } from 'wouter';
+
+import { TradeTraceTimeline } from './trade-trace-timeline';
+
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Activity, TrendingUp, Shield, Zap, Users, Eye } from 'lucide-react';
-import { TradeTraceTimeline } from './trade-trace-timeline';
-import { useLocation } from 'wouter';
 
 interface SystemStatus {
   status: string;
@@ -68,7 +70,7 @@ export function TransparencyDashboard() {
   useEffect(() => {
     // Check if user is logged in
     fetch('/api/user')
-      .then(res => {
+      .then((res) => {
         setIsLoggedIn(res.ok);
       })
       .catch(() => setIsLoggedIn(false));
@@ -94,7 +96,10 @@ export function TransparencyDashboard() {
       ]);
 
       if (!statusRes.ok || !tradesRes.ok) {
-        console.error('Failed to fetch data:', { statusRes: statusRes.status, tradesRes: tradesRes.status });
+        console.error('Failed to fetch data:', {
+          statusRes: statusRes.status,
+          tradesRes: tradesRes.status,
+        });
         setLoading(false);
         return;
       }
@@ -134,10 +139,30 @@ export function TransparencyDashboard() {
     );
   }
 
-  const statusColor = status.status === 'operational' ? 'bg-emerald-500' : status.status === 'degraded' ? 'bg-amber-500' : 'bg-red-500';
-  const statusBgClass = status.status === 'operational' ? 'bg-emerald-500/10 border-emerald-500/20' : status.status === 'degraded' ? 'bg-amber-500/10 border-amber-500/20' : 'bg-red-500/10 border-red-500/20';
-  const statusTextClass = status.status === 'operational' ? 'text-emerald-400' : status.status === 'degraded' ? 'text-amber-400' : 'text-red-400';
-  const statusText = status.status === 'operational' ? 'All Systems Operational' : status.status === 'degraded' ? 'Partial Degradation' : 'Service Maintenance';
+  const statusColor =
+    status.status === 'operational'
+      ? 'bg-emerald-500'
+      : status.status === 'degraded'
+        ? 'bg-amber-500'
+        : 'bg-red-500';
+  const statusBgClass =
+    status.status === 'operational'
+      ? 'bg-emerald-500/10 border-emerald-500/20'
+      : status.status === 'degraded'
+        ? 'bg-amber-500/10 border-amber-500/20'
+        : 'bg-red-500/10 border-red-500/20';
+  const statusTextClass =
+    status.status === 'operational'
+      ? 'text-emerald-400'
+      : status.status === 'degraded'
+        ? 'text-amber-400'
+        : 'text-red-400';
+  const statusText =
+    status.status === 'operational'
+      ? 'All Systems Operational'
+      : status.status === 'degraded'
+        ? 'Partial Degradation'
+        : 'Service Maintenance';
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-950 via-blue-950 to-slate-900">
@@ -145,10 +170,18 @@ export function TransparencyDashboard() {
         {/* Hero Section */}
         <div className="text-center space-y-8 py-8 sm:py-16 animate-in fade-in slide-in-from-top-4 duration-700">
           {/* Live Status Badge - Prominent */}
-          <div className={`flex items-center justify-center gap-3 ${statusBgClass} rounded-full px-5 sm:px-8 py-3 sm:py-4 backdrop-blur-sm inline-flex`}>
-            <div className={`h-3 w-3 sm:h-4 sm:w-4 rounded-full ${statusColor} animate-pulse shadow-lg shadow-emerald-500/50`} />
-            <span className={`text-sm sm:text-base font-semibold ${statusTextClass}`}>Live Now — {statusText}</span>
-            <span className={`text-sm ${statusTextClass}/60 hidden sm:inline`}>• Updated {secondsAgo}s ago</span>
+          <div
+            className={`flex items-center justify-center gap-3 ${statusBgClass} rounded-full px-5 sm:px-8 py-3 sm:py-4 backdrop-blur-sm inline-flex`}
+          >
+            <div
+              className={`h-3 w-3 sm:h-4 sm:w-4 rounded-full ${statusColor} animate-pulse shadow-lg shadow-emerald-500/50`}
+            />
+            <span className={`text-sm sm:text-base font-semibold ${statusTextClass}`}>
+              Live Now — {statusText}
+            </span>
+            <span className={`text-sm ${statusTextClass}/60 hidden sm:inline`}>
+              • Updated {secondsAgo}s ago
+            </span>
           </div>
 
           {/* Main Headline - More Impactful */}
@@ -162,22 +195,24 @@ export function TransparencyDashboard() {
                 Verify.
               </span>
             </h1>
-            
+
             <div className="flex items-center justify-center gap-3 mb-4">
               <Shield className="h-6 w-6 sm:h-7 sm:w-7 text-cyan-400" />
               <h2 className="text-2xl sm:text-3xl md:text-4xl font-bold bg-gradient-to-r from-cyan-300 to-blue-300 bg-clip-text text-transparent">
                 Proof of Observability™
               </h2>
             </div>
-            
+
             <p className="text-lg sm:text-xl md:text-2xl text-cyan-100/80 max-w-4xl mx-auto leading-relaxed px-4 font-light">
-              The first crypto exchange where <span className="text-cyan-400 font-medium">every trade is traced</span>, 
-              <span className="text-emerald-400 font-medium"> verified</span>, and 
+              The first crypto exchange where{' '}
+              <span className="text-cyan-400 font-medium">every trade is traced</span>,
+              <span className="text-emerald-400 font-medium"> verified</span>, and
               <span className="text-blue-400 font-medium"> auditable</span> — in real-time.
             </p>
-            
+
             <p className="text-base sm:text-lg text-cyan-100/60 max-w-2xl mx-auto">
-              See exactly how your transactions flow through our system. No black boxes. No trust required.
+              See exactly how your transactions flow through our system. No black boxes. No trust
+              required.
             </p>
           </div>
 
@@ -191,7 +226,9 @@ export function TransparencyDashboard() {
               <div className="text-4xl sm:text-5xl md:text-6xl font-bold bg-gradient-to-r from-emerald-300 to-cyan-300 bg-clip-text text-transparent mb-3">
                 {status.uptime.toFixed(1)}%
               </div>
-              <div className="text-sm sm:text-base text-emerald-100/70 font-medium">System Uptime</div>
+              <div className="text-sm sm:text-base text-emerald-100/70 font-medium">
+                System Uptime
+              </div>
               <div className="mt-2 text-sm text-emerald-300/60">Continuous since launch</div>
             </div>
             <div className="group relative bg-gradient-to-br from-blue-900/30 via-slate-800/60 to-slate-900/60 backdrop-blur-xl border-2 border-blue-500/30 rounded-2xl p-6 sm:p-8 hover:border-blue-400/50 transition-all duration-300 hover:shadow-2xl hover:shadow-blue-500/20 hover:-translate-y-2 cursor-default">
@@ -211,9 +248,12 @@ export function TransparencyDashboard() {
                 <span className="text-xs text-amber-400/70 font-medium">LIVE</span>
               </div>
               <div className="text-4xl sm:text-5xl md:text-6xl font-bold bg-gradient-to-r from-amber-300 to-yellow-300 bg-clip-text text-transparent mb-3">
-                {status.metrics.avgExecutionMs === 0 ? '< 1' : status.metrics.avgExecutionMs}<span className="text-3xl sm:text-4xl">ms</span>
+                {status.metrics.avgExecutionMs === 0 ? '< 1' : status.metrics.avgExecutionMs}
+                <span className="text-3xl sm:text-4xl">ms</span>
               </div>
-              <div className="text-sm sm:text-base text-amber-100/70 font-medium">Avg Execution</div>
+              <div className="text-sm sm:text-base text-amber-100/70 font-medium">
+                Avg Execution
+              </div>
               <div className="mt-2 text-sm text-amber-300/60">Verified by OpenTelemetry</div>
             </div>
           </div>
@@ -302,21 +342,23 @@ export function TransparencyDashboard() {
               <div className="text-4xl font-bold bg-gradient-to-r from-amber-400 to-yellow-400 bg-clip-text text-transparent">
                 {status.metrics.avgExecutionMs}ms
               </div>
-              <p className="text-sm text-cyan-100/60 mt-2">P99: {status.performance.p99ResponseMs}ms</p>
+              <p className="text-sm text-cyan-100/60 mt-2">
+                P99: {status.performance.p99ResponseMs}ms
+              </p>
             </CardContent>
           </Card>
 
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">AI Monitoring</CardTitle>
-            <Shield className="h-4 w-4 text-purple-500" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-3xl font-bold">{status.metrics?.anomaliesResolved || '0'}</div>
-            <p className="text-sm text-muted-foreground mt-1">Anomalies resolved</p>
-          </CardContent>
-        </Card>
-      </div>
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">AI Monitoring</CardTitle>
+              <Shield className="h-4 w-4 text-purple-500" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-3xl font-bold">{status.metrics?.anomaliesResolved || '0'}</div>
+              <p className="text-sm text-muted-foreground mt-1">Anomalies resolved</p>
+            </CardContent>
+          </Card>
+        </div>
 
         {/* Service Status */}
         <Card className="bg-gradient-to-br from-slate-900/90 to-slate-800/90 border-cyan-500/20 backdrop-blur-xl animate-in fade-in slide-in-from-bottom-4 duration-700 delay-300">
@@ -328,21 +370,31 @@ export function TransparencyDashboard() {
                 Real-time
               </Badge>
             </CardTitle>
-            <CardDescription className="text-cyan-100/60">Every service traced and monitored with OpenTelemetry</CardDescription>
+            <CardDescription className="text-cyan-100/60">
+              Every service traced and monitored with OpenTelemetry
+            </CardDescription>
           </CardHeader>
           <CardContent>
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
-              {status.services && Object.entries(status.services).map(([service, state]) => (
-                <div key={service} className="flex items-center justify-between p-4 rounded-lg bg-slate-800/50 border border-slate-700/50 hover:border-cyan-500/30 transition-all duration-300 hover:shadow-lg hover:shadow-cyan-500/5">
-                  <span className="font-medium capitalize text-cyan-100">{service}</span>
-                  <Badge 
-                    variant={state === 'operational' ? 'default' : 'destructive'} 
-                    className={state === 'operational' ? 'bg-emerald-500/20 text-emerald-400 border-emerald-500/30 hover:bg-emerald-500/30' : ''}
+              {status.services &&
+                Object.entries(status.services).map(([service, state]) => (
+                  <div
+                    key={service}
+                    className="flex items-center justify-between p-4 rounded-lg bg-slate-800/50 border border-slate-700/50 hover:border-cyan-500/30 transition-all duration-300 hover:shadow-lg hover:shadow-cyan-500/5"
                   >
-                    {state}
-                  </Badge>
-                </div>
-              ))}
+                    <span className="font-medium capitalize text-cyan-100">{service}</span>
+                    <Badge
+                      variant={state === 'operational' ? 'default' : 'destructive'}
+                      className={
+                        state === 'operational'
+                          ? 'bg-emerald-500/20 text-emerald-400 border-emerald-500/30 hover:bg-emerald-500/30'
+                          : ''
+                      }
+                    >
+                      {state}
+                    </Badge>
+                  </div>
+                ))}
             </div>
           </CardContent>
         </Card>
@@ -390,8 +442,9 @@ export function TransparencyDashboard() {
               </div>
             </div>
             <p className="text-lg text-cyan-100/80 leading-relaxed pt-4">
-              With <span className="font-semibold text-cyan-400">Proof of Observability™</span>, every transaction is traceable end-to-end. 
-              Users can verify execution paths, developers can diagnose issues in seconds, and regulators can audit with confidence.
+              With <span className="font-semibold text-cyan-400">Proof of Observability™</span>,
+              every transaction is traceable end-to-end. Users can verify execution paths,
+              developers can diagnose issues in seconds, and regulators can audit with confidence.
             </p>
           </div>
         </div>
@@ -407,7 +460,8 @@ export function TransparencyDashboard() {
               </Badge>
             </CardTitle>
             <CardDescription className="text-cyan-100/60">
-              Recent transactions with full distributed trace visibility • Click any trade to explore its execution path
+              Recent transactions with full distributed trace visibility • Click any trade to
+              explore its execution path
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -417,12 +471,18 @@ export function TransparencyDashboard() {
                   key={trade.tradeId}
                   className="flex items-center justify-between p-4 rounded-lg bg-slate-800/50 border border-slate-700/50 hover:border-blue-500/30 transition-all duration-300 hover:shadow-lg hover:shadow-blue-500/5 animate-in fade-in slide-in-from-left duration-500 cursor-pointer group"
                   style={{ animationDelay: `${index * 50}ms` }}
-                  onClick={() => window.open(`http://localhost:16686/trace/${trade.tradeId}`, '_blank')}
+                  onClick={() =>
+                    window.open(`http://localhost:16686/trace/${trade.tradeId}`, '_blank')
+                  }
                 >
                   <div className="flex items-center gap-4">
-                    <Badge 
+                    <Badge
                       variant={trade.type === 'BUY' ? 'default' : 'secondary'}
-                      className={trade.type === 'BUY' ? 'bg-emerald-500/20 text-emerald-400 border-emerald-500/30' : 'bg-rose-500/20 text-rose-400 border-rose-500/30'}
+                      className={
+                        trade.type === 'BUY'
+                          ? 'bg-emerald-500/20 text-emerald-400 border-emerald-500/30'
+                          : 'bg-rose-500/20 text-rose-400 border-rose-500/30'
+                      }
                     >
                       {trade.type}
                     </Badge>
@@ -436,10 +496,14 @@ export function TransparencyDashboard() {
                     </div>
                   </div>
                   <div className="text-right">
-                    <div className="text-sm font-semibold text-amber-400">{trade.executionTimeMs}ms</div>
+                    <div className="text-sm font-semibold text-amber-400">
+                      {trade.executionTimeMs}ms
+                    </div>
                     <div className="text-sm text-cyan-100/60 flex items-center gap-1 justify-end">
                       {trade.aiVerified && <Shield className="h-3 w-3 text-emerald-400" />}
-                      <span className="group-hover:text-cyan-400 transition-colors">View Trace →</span>
+                      <span className="group-hover:text-cyan-400 transition-colors">
+                        View Trace →
+                      </span>
                     </div>
                   </div>
                 </div>
@@ -455,7 +519,8 @@ export function TransparencyDashboard() {
                 </div>
                 <h4 className="text-lg font-medium text-cyan-100 mb-2">Waiting for Live Trades</h4>
                 <p className="text-cyan-100/50 text-sm max-w-md mx-auto mb-4">
-                  Real trade data will stream here as users execute transactions. Each trade shows execution time, AI verification status, and links to full OpenTelemetry traces.
+                  Real trade data will stream here as users execute transactions. Each trade shows
+                  execution time, AI verification status, and links to full OpenTelemetry traces.
                 </p>
                 <div className="flex items-center justify-center gap-4 text-xs text-cyan-100/40">
                   <span className="flex items-center gap-1">
@@ -481,32 +546,55 @@ export function TransparencyDashboard() {
                 <Zap className="h-5 w-5 text-amber-400" />
                 Performance Transparency
               </CardTitle>
-              <CardDescription className="text-cyan-100/60">Real metrics, not marketing promises</CardDescription>
+              <CardDescription className="text-cyan-100/60">
+                Real metrics, not marketing promises
+              </CardDescription>
             </CardHeader>
             <CardContent>
               <div className="space-y-4">
                 <div className="flex items-center justify-between">
                   <span className="text-sm text-cyan-100/70">P50 Response Time</span>
-                  <span className="font-bold text-lg text-cyan-100">{status.performance.p50ResponseMs}ms</span>
+                  <span className="font-bold text-lg text-cyan-100">
+                    {status.performance.p50ResponseMs}ms
+                  </span>
                 </div>
                 <div className="w-full bg-slate-800 rounded-full h-2">
-                  <div className="bg-gradient-to-r from-emerald-500 to-cyan-500 h-2 rounded-full" style={{ width: `${Math.min((status.performance.p50ResponseMs / 100) * 100, 100)}%` }}></div>
+                  <div
+                    className="bg-gradient-to-r from-emerald-500 to-cyan-500 h-2 rounded-full"
+                    style={{
+                      width: `${Math.min((status.performance.p50ResponseMs / 100) * 100, 100)}%`,
+                    }}
+                  ></div>
                 </div>
-                
+
                 <div className="flex items-center justify-between">
                   <span className="text-sm text-cyan-100/70">P95 Response Time</span>
-                  <span className="font-bold text-lg text-cyan-100">{status.performance.p95ResponseMs}ms</span>
+                  <span className="font-bold text-lg text-cyan-100">
+                    {status.performance.p95ResponseMs}ms
+                  </span>
                 </div>
                 <div className="w-full bg-slate-800 rounded-full h-2">
-                  <div className="bg-gradient-to-r from-blue-500 to-cyan-500 h-2 rounded-full" style={{ width: `${Math.min((status.performance.p95ResponseMs / 200) * 100, 100)}%` }}></div>
+                  <div
+                    className="bg-gradient-to-r from-blue-500 to-cyan-500 h-2 rounded-full"
+                    style={{
+                      width: `${Math.min((status.performance.p95ResponseMs / 200) * 100, 100)}%`,
+                    }}
+                  ></div>
                 </div>
-                
+
                 <div className="flex items-center justify-between">
                   <span className="text-sm text-cyan-100/70">P99 Response Time</span>
-                  <span className="font-bold text-lg text-amber-400">{status.performance.p99ResponseMs}ms</span>
+                  <span className="font-bold text-lg text-amber-400">
+                    {status.performance.p99ResponseMs}ms
+                  </span>
                 </div>
                 <div className="w-full bg-slate-800 rounded-full h-2">
-                  <div className="bg-gradient-to-r from-amber-500 to-yellow-500 h-2 rounded-full" style={{ width: `${Math.min((status.performance.p99ResponseMs / 300) * 100, 100)}%` }}></div>
+                  <div
+                    className="bg-gradient-to-r from-amber-500 to-yellow-500 h-2 rounded-full"
+                    style={{
+                      width: `${Math.min((status.performance.p99ResponseMs / 300) * 100, 100)}%`,
+                    }}
+                  ></div>
                 </div>
 
                 <div className="pt-3 border-t border-slate-700/50">
@@ -524,7 +612,9 @@ export function TransparencyDashboard() {
                 <Shield className="h-5 w-5 text-purple-400" />
                 Observability Score
               </CardTitle>
-              <CardDescription className="text-cyan-100/60">Industry-leading trace coverage</CardDescription>
+              <CardDescription className="text-cyan-100/60">
+                Industry-leading trace coverage
+              </CardDescription>
             </CardHeader>
             <CardContent>
               <div className="space-y-4">
@@ -552,7 +642,8 @@ export function TransparencyDashboard() {
 
                 <div className="pt-3 border-t border-slate-700/50">
                   <p className="text-xs text-cyan-100/60 leading-relaxed">
-                    Every microservice instrumented. Every database call traced. Every API request monitored.
+                    Every microservice instrumented. Every database call traced. Every API request
+                    monitored.
                   </p>
                 </div>
               </div>
@@ -607,7 +698,9 @@ export function TransparencyDashboard() {
 
         {/* Footer */}
         <div className="text-center text-sm text-cyan-100/60 pt-8 space-y-3 animate-in fade-in duration-1000 delay-1000">
-          <p className="font-mono">Last updated: {status.timestamp ? new Date(status.timestamp).toLocaleString() : 'N/A'}</p>
+          <p className="font-mono">
+            Last updated: {status.timestamp ? new Date(status.timestamp).toLocaleString() : 'N/A'}
+          </p>
           <div className="flex items-center justify-center gap-2">
             <Shield className="h-4 w-4 text-cyan-400" />
             <p className="text-cyan-100/80">

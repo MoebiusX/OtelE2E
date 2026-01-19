@@ -3,11 +3,7 @@
  * Tests for kx1 address generation and storage operations
  */
 import { describe, it, expect, beforeEach } from 'vitest';
-import {
-  generateWalletAddress,
-  generateWalletId,
-  DEMO_WALLETS,
-} from '../server/storage';
+import { generateWalletAddress, generateWalletId, DEMO_WALLETS } from '../server/storage';
 
 describe('generateWalletAddress', () => {
   it('should generate address with kx1 prefix', () => {
@@ -151,7 +147,7 @@ describe('Address Format Validation', () => {
     const addr1 = generateWalletAddress('user1');
     const addr2 = generateWalletAddress('user2');
     const addr3 = generateWalletAddress('user11');
-    
+
     expect(addr1).not.toBe(addr2);
     expect(addr1).not.toBe(addr3);
     expect(addr2).not.toBe(addr3);

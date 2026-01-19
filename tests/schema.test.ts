@@ -108,9 +108,7 @@ describe('KX Wallet Schema', () => {
   });
 
   it('should reject wallet with invalid address format', () => {
-    expect(() =>
-      kxWalletSchema.parse({ ...validWallet, address: 'invalid_address' })
-    ).toThrow();
+    expect(() => kxWalletSchema.parse({ ...validWallet, address: 'invalid_address' })).toThrow();
   });
 });
 
@@ -157,9 +155,7 @@ describe('Wallet Balance Schema', () => {
   });
 
   it('should reject non-integer balance', () => {
-    expect(() =>
-      walletBalanceSchema.parse({ ...validBalance, balance: 100.5 })
-    ).toThrow();
+    expect(() => walletBalanceSchema.parse({ ...validBalance, balance: 100.5 })).toThrow();
   });
 
   it('should reject missing asset', () => {
@@ -212,24 +208,22 @@ describe('Insert Transfer Schema', () => {
 
   it('should accept transfer with legacy userId fields', () => {
     expect(() =>
-      insertTransferSchema.parse({ 
-        ...validTransfer, 
+      insertTransferSchema.parse({
+        ...validTransfer,
         fromUserId: 'alice@demo.com',
-        toUserId: 'bob@demo.com' 
-      })
+        toUserId: 'bob@demo.com',
+      }),
     ).not.toThrow();
   });
 
   it('should reject transfer with invalid fromAddress', () => {
     expect(() =>
-      insertTransferSchema.parse({ ...validTransfer, fromAddress: 'invalid' })
+      insertTransferSchema.parse({ ...validTransfer, fromAddress: 'invalid' }),
     ).toThrow();
   });
 
   it('should reject transfer with invalid toAddress', () => {
-    expect(() =>
-      insertTransferSchema.parse({ ...validTransfer, toAddress: 'invalid' })
-    ).toThrow();
+    expect(() => insertTransferSchema.parse({ ...validTransfer, toAddress: 'invalid' })).toThrow();
   });
 
   it('should reject transfer with zero amount', () => {
@@ -259,23 +253,23 @@ describe('Full Transfer Schema', () => {
 
   it('should accept transfer with legacy userId fields', () => {
     expect(() =>
-      transferSchema.parse({ 
-        ...validFullTransfer, 
+      transferSchema.parse({
+        ...validFullTransfer,
         fromUserId: 'alice@demo.com',
-        toUserId: 'bob@demo.com' 
-      })
+        toUserId: 'bob@demo.com',
+      }),
     ).not.toThrow();
   });
 
   it('should accept pending transfer', () => {
     expect(() =>
-      transferSchema.parse({ ...validFullTransfer, status: 'PENDING' as const })
+      transferSchema.parse({ ...validFullTransfer, status: 'PENDING' as const }),
     ).not.toThrow();
   });
 
   it('should accept failed transfer', () => {
     expect(() =>
-      transferSchema.parse({ ...validFullTransfer, status: 'FAILED' as const })
+      transferSchema.parse({ ...validFullTransfer, status: 'FAILED' as const }),
     ).not.toThrow();
   });
 

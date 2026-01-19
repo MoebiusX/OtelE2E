@@ -1,19 +1,42 @@
-import { useState } from "react";
-import { useForm } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { insertPaymentSchema } from "@shared/schema";
-import { apiRequest } from "@/lib/queryClient";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
-import { Input } from "@/components/ui/input";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Badge } from "@/components/ui/badge";
-import { Switch } from "@/components/ui/switch";
-import { useToast } from "@/hooks/use-toast";
-import { DollarSign, User, MessageSquare, Coins, Route, Send, CheckCircle, Loader2 } from "lucide-react";
-import type { z } from "zod";
+import { useState } from 'react';
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
+import {
+  DollarSign,
+  User,
+  MessageSquare,
+  Coins,
+  Route,
+  Send,
+  CheckCircle,
+  Loader2,
+} from 'lucide-react';
+import type { z } from 'zod';
+
+import { insertPaymentSchema } from '@shared/schema';
+import { apiRequest } from '@/lib/queryClient';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import {
+  Form,
+  FormControl,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from '@/components/ui/form';
+import { Input } from '@/components/ui/input';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+import { Badge } from '@/components/ui/badge';
+import { Switch } from '@/components/ui/switch';
+import { useToast } from '@/hooks/use-toast';
 
 type PaymentFormData = z.infer<typeof insertPaymentSchema>;
 
@@ -28,9 +51,9 @@ export function PaymentForm() {
     resolver: zodResolver(insertPaymentSchema),
     defaultValues: {
       amount: 1000,
-      currency: "USD",
-      recipient: "john.doe@example.com",
-      description: "Payment for services",
+      currency: 'USD',
+      recipient: 'john.doe@example.com',
+      description: 'Payment for services',
     },
   });
 
@@ -59,7 +82,7 @@ export function PaymentForm() {
       }
 
       // Normal path: OTEL auto-injects traceparent header
-      const response = await apiRequest("POST", "/api/payments", data);
+      const response = await apiRequest('POST', '/api/payments', data);
       return response.json();
     },
     onSuccess: (data) => {
@@ -69,11 +92,17 @@ export function PaymentForm() {
       const processorId = data.processorResponse?.processorId || 'N/A';
 
       toast({
-        title: "Payment Processed",
+        title: 'Payment Processed',
         description: (
           <div className="space-y-1">
-            <p>Trace ID: <code className="bg-slate-100 px-1 rounded">{realTraceId.substring(0, 16)}...</code></p>
-            <p>Processor: <span className="font-medium">{processorStatus}</span> ({processorId.split('-')[0]})</p>
+            <p>
+              Trace ID:{' '}
+              <code className="bg-slate-100 px-1 rounded">{realTraceId.substring(0, 16)}...</code>
+            </p>
+            <p>
+              Processor: <span className="font-medium">{processorStatus}</span> (
+              {processorId.split('-')[0]})
+            </p>
             <a
               href={`http://localhost:16686/trace/${realTraceId}`}
               target="_blank"
@@ -87,26 +116,23 @@ export function PaymentForm() {
         ),
       });
       // Invalidate immediately
-      queryClient.invalidateQueries({ queryKey: ["/api/payments"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/traces"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/metrics"] });
+      queryClient.invalidateQueries({ queryKey: ['/api/payments'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/traces'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/metrics'] });
 
       // Also refetch after a delay to catch traces that are still being collected
       setTimeout(() => {
-        queryClient.invalidateQueries({ queryKey: ["/api/traces"] });
+        queryClient.invalidateQueries({ queryKey: ['/api/traces'] });
       }, 1000);
       setTimeout(() => {
-        queryClient.invalidateQueries({ queryKey: ["/api/traces"] });
+        queryClient.invalidateQueries({ queryKey: ['/api/traces'] });
       }, 2500);
-
-
-
     },
     onError: (error) => {
       toast({
-        title: "Payment Failed",
+        title: 'Payment Failed',
         description: error.message,
-        variant: "destructive",
+        variant: 'destructive',
       });
     },
   });
@@ -119,7 +145,9 @@ export function PaymentForm() {
     <Card className="w-full">
       <CardHeader>
         <div className="flex items-center justify-between">
-          <CardTitle className="text-lg font-semibold text-slate-800">Submit Payment Request</CardTitle>
+          <CardTitle className="text-lg font-semibold text-slate-800">
+            Submit Payment Request
+          </CardTitle>
           <Badge variant="secondary" className="text-xs">
             PoC Mode
           </Badge>
@@ -230,28 +258,29 @@ export function PaymentForm() {
                 OpenTelemetry Configuration
               </h3>
 
-
-
               <div className="mb-4 flex items-center justify-between">
                 <div>
-                  <label className="text-xs font-medium text-slate-600">Gateway-Initiated Trace</label>
-                  <p className="text-xs text-slate-500">Disable browser OTEL (Kong creates trace)</p>
+                  <label className="text-xs font-medium text-slate-600">
+                    Gateway-Initiated Trace
+                  </label>
+                  <p className="text-xs text-slate-500">
+                    Disable browser OTEL (Kong creates trace)
+                  </p>
                 </div>
-                <Switch
-                  checked={disableBrowserTrace}
-                  onCheckedChange={setDisableBrowserTrace}
-                />
+                <Switch checked={disableBrowserTrace} onCheckedChange={setDisableBrowserTrace} />
               </div>
 
               {!disableBrowserTrace && (
                 <div className="text-xs text-slate-500 bg-blue-50 border border-blue-200 rounded p-2">
-                  <strong>Browser-initiated trace:</strong> React client creates root span via OTEL instrumentation
+                  <strong>Browser-initiated trace:</strong> React client creates root span via OTEL
+                  instrumentation
                 </div>
               )}
 
               {disableBrowserTrace && (
                 <div className="text-center py-3 text-xs text-slate-500 bg-amber-50 border border-amber-200 rounded">
-                  <strong>Gateway-initiated trace:</strong> No client OTEL → Kong creates trace context
+                  <strong>Gateway-initiated trace:</strong> No client OTEL → Kong creates trace
+                  context
                 </div>
               )}
             </div>

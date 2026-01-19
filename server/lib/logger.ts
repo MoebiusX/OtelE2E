@@ -1,12 +1,13 @@
 /**
  * Structured Logging Service
- * 
+ *
  * Provides structured JSON logging with OpenTelemetry trace context integration.
  * Uses Pino for high-performance logging.
  */
 
 import pino, { Logger } from 'pino';
 import { trace, Span } from '@opentelemetry/api';
+
 import { config } from '../config';
 
 // ============================================
@@ -15,7 +16,7 @@ import { config } from '../config';
 
 const pinoConfig: pino.LoggerOptions = {
   level: config.logging.level,
-  
+
   // Format log level labels
   formatters: {
     level: (label) => ({ level: label.toUpperCase() }),
@@ -29,16 +30,18 @@ const pinoConfig: pino.LoggerOptions = {
   timestamp: pino.stdTimeFunctions.isoTime,
 
   // Pretty print in development (if enabled)
-  transport: config.logging.pretty ? {
-    target: 'pino-pretty',
-    options: {
-      colorize: true,
-      translateTime: 'HH:MM:ss.l',
-      ignore: 'pid,hostname',
-      singleLine: false,
-      messageFormat: '[{component}] {msg}',
-    },
-  } : undefined,
+  transport: config.logging.pretty
+    ? {
+        target: 'pino-pretty',
+        options: {
+          colorize: true,
+          translateTime: 'HH:MM:ss.l',
+          ignore: 'pid,hostname',
+          singleLine: false,
+          messageFormat: '[{component}] {msg}',
+        },
+      }
+    : undefined,
 };
 
 // Base logger instance
@@ -54,14 +57,14 @@ const baseLogger = pino(pinoConfig);
 function getTraceContext(): { traceId?: string; spanId?: string } {
   const span: Span | undefined = trace.getActiveSpan();
   const spanContext = span?.spanContext();
-  
+
   if (spanContext && spanContext.traceId && spanContext.spanId) {
     return {
       traceId: spanContext.traceId,
       spanId: spanContext.spanId,
     };
   }
-  
+
   return {};
 }
 
@@ -87,22 +90,19 @@ export interface ComponentLogger {
 
 /**
  * Create a logger for a specific component with automatic trace context
- * 
+ *
  * @param component - Component name (e.g., 'server', 'rabbitmq', 'kong')
  * @param defaultBindings - Additional default bindings to include in all logs
- * 
+ *
  * @example
  * const logger = createLogger('payment-service');
  * logger.info('Processing payment', { amount: 100 });
- * 
+ *
  * @example
  * const logger = createLogger('rabbitmq', { queue: 'orders' });
  * logger.debug('Message published');
  */
-export function createLogger(
-  component: string,
-  defaultBindings: object = {}
-): ComponentLogger {
+export function createLogger(component: string, defaultBindings: object = {}): ComponentLogger {
   const componentLogger = baseLogger.child({
     component,
     ...defaultBindings,
@@ -112,7 +112,7 @@ export function createLogger(
   const wrapLogMethod = (method: keyof Logger) => {
     return (...args: any[]) => {
       const traceContext = getTraceContext();
-      
+
       // If first arg is an object, merge trace context
       if (typeof args[0] === 'object' && args[0] !== null && !Array.isArray(args[0])) {
         args[0] = { ...args[0], ...traceContext };
@@ -120,7 +120,7 @@ export function createLogger(
         // If first arg is a string, prepend trace context object
         args.unshift(traceContext);
       }
-      
+
       return (componentLogger[method] as any)(...args);
     };
   };
@@ -148,7 +148,7 @@ export const logger = baseLogger;
 
 /**
  * Create a logger with explicit trace context (useful for async operations)
- * 
+ *
  * @param component - Component name
  * @param traceId - Explicit trace ID
  * @param spanId - Explicit span ID
@@ -156,7 +156,7 @@ export const logger = baseLogger;
 export function createLoggerWithContext(
   component: string,
   traceId: string,
-  spanId: string
+  spanId: string,
 ): Logger {
   return baseLogger.child({
     component,
@@ -172,19 +172,18 @@ export function createLoggerWithContext(
 /**
  * Log an error with full stack trace and context
  */
-export function logError(
-  logger: ComponentLogger,
-  error: Error,
-  context?: object
-): void {
-  logger.error({
-    err: {
-      message: error.message,
-      name: error.name,
-      stack: error.stack,
+export function logError(logger: ComponentLogger, error: Error, context?: object): void {
+  logger.error(
+    {
+      err: {
+        message: error.message,
+        name: error.name,
+        stack: error.stack,
+      },
+      ...context,
     },
-    ...context,
-  }, error.message);
+    error.message,
+  );
 }
 
 /**
@@ -194,13 +193,16 @@ export function logPerformance(
   logger: ComponentLogger,
   operation: string,
   durationMs: number,
-  metadata?: object
+  metadata?: object,
 ): void {
-  logger.info({
-    operation,
-    durationMs,
-    ...metadata,
-  }, `${operation} completed in ${durationMs}ms`);
+  logger.info(
+    {
+      operation,
+      durationMs,
+      ...metadata,
+    },
+    `${operation} completed in ${durationMs}ms`,
+  );
 }
 
 // Graceful shutdown

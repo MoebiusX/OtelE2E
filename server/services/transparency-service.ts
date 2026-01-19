@@ -1,9 +1,11 @@
 /**
  * Transparency Service
- * 
+ *
  * Aggregates system metrics for public transparency dashboard.
  * This is Krystaline's differentiator - "Proof of Observability"
  */
+
+import { z } from 'zod';
 
 import { db } from '../db';
 import { config } from '../config';
@@ -13,16 +15,15 @@ import { anomalyDetector } from '../monitor/anomaly-detector';
 import { traces } from '../otel';
 import { createLogger } from '../lib/logger';
 import { getErrorMessage } from '../lib/errors';
-import { 
-  systemStatusSchema, 
-  publicTradeSchema, 
+import {
+  systemStatusSchema,
+  publicTradeSchema,
   transparencyMetricsSchema,
   dbOrderRowSchema,
   type SystemStatus,
   type PublicTrade,
   type TransparencyMetrics,
 } from '../../shared/schema';
-import { z } from 'zod';
 
 const logger = createLogger('transparency-service');
 
@@ -67,29 +68,28 @@ class TransparencyService {
       // Get trades from last 24 hours
       const tradesLast24h = await db.query(
         'SELECT COUNT(*) as count FROM orders WHERE created_at > $1',
-        [yesterday]
+        [yesterday],
       );
 
       // Get total trades
-      const tradesTotal = await db.query(
-        'SELECT COUNT(*) as count FROM orders'
-      );
+      const tradesTotal = await db.query('SELECT COUNT(*) as count FROM orders');
 
       // Get active users (traded in last 24h)
       const activeUsers = await db.query(
         'SELECT COUNT(DISTINCT user_id) as count FROM orders WHERE created_at > $1',
-        [yesterday]
+        [yesterday],
       );
 
       // Get anomaly stats
       const anomalyHistory = historyStore.getAnomalyHistory({ hours: 24 });
-      const criticalAnomalies = anomalyHistory.filter(a => a.severity <= 3);
+      const criticalAnomalies = anomalyHistory.filter((a) => a.severity <= 3);
 
       // Calculate average execution time from recent traces
       const recentTraces = traces.slice(-100);
-      const avgExecutionMs = recentTraces.length > 0
-        ? recentTraces.reduce((sum, t) => sum + (t.duration || 0), 0) / recentTraces.length
-        : 0;
+      const avgExecutionMs =
+        recentTraces.length > 0
+          ? recentTraces.reduce((sum, t) => sum + (t.duration || 0), 0) / recentTraces.length
+          : 0;
 
       // Calculate uptime as percentage of time since server started
       // This is honest: we can only guarantee uptime since last restart
@@ -97,15 +97,20 @@ class TransparencyService {
       const uptimeDays = uptimeMs / (1000 * 60 * 60 * 24);
       // Report 100% if we've been running continuously since start (which we have)
       // If we had actual downtime tracking, we'd calculate: (uptimeMs - downtimeMs) / uptimeMs * 100
-      const uptimePercentage = uptimeDays >= 1 ? 99.9 : Math.round((uptimeMs / (24 * 60 * 60 * 1000)) * 1000) / 10;
+      const uptimePercentage =
+        uptimeDays >= 1 ? 99.9 : Math.round((uptimeMs / (24 * 60 * 60 * 1000)) * 1000) / 10;
 
       // Service health checks - inferred from recent activity
       // API is operational if we got this far
       // Other services: infer from trace activity (operational if active, degraded if no recent activity)
       const services = {
         api: 'operational' as const,
-        exchange: recentTraces.some(t => t.name.includes('order')) ? 'operational' as const : 'degraded' as const,
-        wallets: recentTraces.some(t => t.name.includes('wallet') || t.name.includes('balance')) ? 'operational' as const : 'degraded' as const,
+        exchange: recentTraces.some((t) => t.name.includes('order'))
+          ? ('operational' as const)
+          : ('degraded' as const),
+        wallets: recentTraces.some((t) => t.name.includes('wallet') || t.name.includes('balance'))
+          ? ('operational' as const)
+          : ('degraded' as const),
         monitoring: 'operational' as const, // If we're generating this status, monitoring is working
       };
 
@@ -116,7 +121,7 @@ class TransparencyService {
       const overallStatus = hasOutage ? 'maintenance' : hasDegraded ? 'degraded' : 'operational';
 
       // Performance metrics from traces
-      const durations = recentTraces.map(t => t.duration || 0).sort((a, b) => a - b);
+      const durations = recentTraces.map((t) => t.duration || 0).sort((a, b) => a - b);
       const performance = {
         p50ResponseMs: this.percentile(durations, 50),
         p95ResponseMs: this.percentile(durations, 95),
@@ -141,7 +146,10 @@ class TransparencyService {
 
       // Validate response before returning
       const validatedStatus = systemStatusSchema.parse(status);
-      logger.info({ status: validatedStatus.status, uptime: validatedStatus.uptime }, 'Generated system status');
+      logger.info(
+        { status: validatedStatus.status, uptime: validatedStatus.uptime },
+        'Generated system status',
+      );
       return validatedStatus;
     } catch (error: unknown) {
       logger.error({ err: error }, 'Failed to generate system status');
@@ -170,11 +178,11 @@ class TransparencyService {
         FROM orders 
         ORDER BY created_at DESC 
         LIMIT $1`,
-        [limit]
+        [limit],
       );
 
       // Validate and map database rows to PublicTrade objects
-      const publicTrades: PublicTrade[] = result.rows.map(row => {
+      const publicTrades: PublicTrade[] = result.rows.map((row) => {
         // Validate database row structure
         const validatedRow = dbOrderRowSchema.parse({
           id: row.id,
@@ -190,13 +198,14 @@ class TransparencyService {
           updated_at: row.updated_at,
         });
 
-        const trace = traces.find(t => t.name.includes(validatedRow.id));
-        
+        const trace = traces.find((t) => t.name.includes(validatedRow.id));
+
         // Handle created_at as either Date or string
-        const createdAt = validatedRow.created_at instanceof Date 
-          ? validatedRow.created_at 
-          : new Date(validatedRow.created_at);
-        
+        const createdAt =
+          validatedRow.created_at instanceof Date
+            ? validatedRow.created_at
+            : new Date(validatedRow.created_at);
+
         const trade: PublicTrade = {
           tradeId: validatedRow.id,
           timestamp: createdAt.toISOString(),
@@ -236,24 +245,24 @@ class TransparencyService {
       // Trades in last hour for rate calculation
       const recentTrades = await db.query(
         'SELECT COUNT(*) as count FROM orders WHERE created_at > $1',
-        [lastHour]
+        [lastHour],
       );
 
       // Active traders in last hour
       const activeTraders = await db.query(
         'SELECT COUNT(DISTINCT user_id) as count FROM orders WHERE created_at > $1',
-        [lastHour]
+        [lastHour],
       );
 
       // 24h volume
       const volume24h = await db.query(
         'SELECT SUM(quantity * price) as volume FROM orders WHERE created_at > $1',
-        [yesterday]
+        [yesterday],
       );
 
       // Latest price
       const latestPrice = await db.query(
-        'SELECT price FROM orders ORDER BY created_at DESC LIMIT 1'
+        'SELECT price FROM orders ORDER BY created_at DESC LIMIT 1',
       );
 
       // Anomaly stats
@@ -270,9 +279,7 @@ class TransparencyService {
 
       // Calculate anomaly detection rate
       const totalTradesCount = parseInt(totalTrades.rows[0]?.count || '0');
-      const anomalyRate = totalTradesCount > 0 
-        ? (allAnomalies.length / totalTradesCount) * 100 
-        : 0;
+      const anomalyRate = totalTradesCount > 0 ? (allAnomalies.length / totalTradesCount) * 100 : 0;
 
       const metrics: TransparencyMetrics = {
         timestamp: now.toISOString(),
@@ -314,9 +321,9 @@ class TransparencyService {
       // Query Jaeger API directly for trace data
       const jaegerUrl = config.observability.jaegerUrl;
       const url = `${jaegerUrl}/api/traces/${traceId}`;
-      
+
       const response = await fetch(url);
-      
+
       if (!response.ok) {
         if (response.status === 404) {
           logger.warn({ traceId }, 'Trace not found in Jaeger');
@@ -327,7 +334,7 @@ class TransparencyService {
       }
 
       const data = await response.json();
-      
+
       // Jaeger returns { data: [trace] }
       if (!data.data || data.data.length === 0) {
         logger.warn({ traceId }, 'Trace not found in Jaeger response');
@@ -335,7 +342,7 @@ class TransparencyService {
       }
 
       const jaegerTrace = data.data[0];
-      
+
       // Extract service names from processes
       const services = Object.values(jaegerTrace.processes || {})
         .map((p: any) => p.serviceName)

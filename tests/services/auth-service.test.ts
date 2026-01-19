@@ -1,6 +1,6 @@
 /**
  * Auth Service Unit Tests
- * 
+ *
  * Tests for authentication service functions
  */
 
@@ -44,7 +44,12 @@ vi.mock('../../server/lib/logger', () => ({
   }),
 }));
 
-import { authService, registerSchema, loginSchema, verifySchema } from '../../server/auth/auth-service';
+import {
+  authService,
+  registerSchema,
+  loginSchema,
+  verifySchema,
+} from '../../server/auth/auth-service';
 import db from '../../server/db';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
@@ -172,15 +177,17 @@ describe('Auth Service', () => {
     it('should register new user successfully', async () => {
       vi.mocked(db.query)
         .mockResolvedValueOnce({ rows: [] }) // Check existing
-        .mockResolvedValueOnce({ 
-          rows: [{ 
-            id: 'user-123', 
-            email: 'test@example.com', 
-            phone: null,
-            status: 'pending',
-            kyc_level: 0,
-            created_at: new Date(),
-          }]
+        .mockResolvedValueOnce({
+          rows: [
+            {
+              id: 'user-123',
+              email: 'test@example.com',
+              phone: null,
+              status: 'pending',
+              kyc_level: 0,
+              created_at: new Date(),
+            },
+          ],
         }) // Create user
         .mockResolvedValueOnce({ rows: [] }); // Insert verification code
 
@@ -193,31 +200,36 @@ describe('Auth Service', () => {
 
       expect(result.user.email).toBe('test@example.com');
       expect(result.message).toContain('Verification code sent');
-      expect(emailService.sendVerificationCode).toHaveBeenCalledWith('test@example.com', expect.any(String));
+      expect(emailService.sendVerificationCode).toHaveBeenCalledWith(
+        'test@example.com',
+        expect.any(String),
+      );
     });
 
     it('should throw error if email already exists', async () => {
-      vi.mocked(db.query).mockResolvedValueOnce({ 
-        rows: [{ id: 'existing-user' }] 
+      vi.mocked(db.query).mockResolvedValueOnce({
+        rows: [{ id: 'existing-user' }],
       });
 
       await expect(
         authService.register({
           email: 'existing@example.com',
           password: 'Password123',
-        })
+        }),
       ).rejects.toThrow('Email already registered');
     });
 
     it('should hash password before storing', async () => {
       vi.mocked(db.query)
         .mockResolvedValueOnce({ rows: [] })
-        .mockResolvedValueOnce({ 
-          rows: [{ 
-            id: 'user-123', 
-            email: 'test@example.com',
-            status: 'pending',
-          }]
+        .mockResolvedValueOnce({
+          rows: [
+            {
+              id: 'user-123',
+              email: 'test@example.com',
+              status: 'pending',
+            },
+          ],
         })
         .mockResolvedValueOnce({ rows: [] });
 
@@ -235,15 +247,17 @@ describe('Auth Service', () => {
   describe('verifyEmail', () => {
     it('should verify email with valid code', async () => {
       vi.mocked(db.query)
-        .mockResolvedValueOnce({ 
-          rows: [{ 
-            id: 'user-123', 
-            email: 'test@example.com',
-            status: 'pending',
-          }]
+        .mockResolvedValueOnce({
+          rows: [
+            {
+              id: 'user-123',
+              email: 'test@example.com',
+              status: 'pending',
+            },
+          ],
         }) // Find user
-        .mockResolvedValueOnce({ 
-          rows: [{ id: 'code-123', code: '123456' }]
+        .mockResolvedValueOnce({
+          rows: [{ id: 'code-123', code: '123456' }],
         }); // Find code
 
       vi.mocked(db.transaction).mockImplementation(async (callback: any) => {
@@ -279,14 +293,14 @@ describe('Auth Service', () => {
         authService.verifyEmail({
           email: 'nonexistent@example.com',
           code: '123456',
-        })
+        }),
       ).rejects.toThrow('User not found');
     });
 
     it('should throw error if code is invalid', async () => {
       vi.mocked(db.query)
-        .mockResolvedValueOnce({ 
-          rows: [{ id: 'user-123', email: 'test@example.com' }]
+        .mockResolvedValueOnce({
+          rows: [{ id: 'user-123', email: 'test@example.com' }],
         })
         .mockResolvedValueOnce({ rows: [] }); // No matching code
 
@@ -294,7 +308,7 @@ describe('Auth Service', () => {
         authService.verifyEmail({
           email: 'test@example.com',
           code: '000000',
-        })
+        }),
       ).rejects.toThrow('Invalid or expired code');
     });
   });
@@ -302,13 +316,15 @@ describe('Auth Service', () => {
   describe('login', () => {
     it('should login verified user with correct password', async () => {
       vi.mocked(db.query)
-        .mockResolvedValueOnce({ 
-          rows: [{ 
-            id: 'user-123', 
-            email: 'test@example.com',
-            password_hash: 'hashed_password',
-            status: 'verified',
-          }]
+        .mockResolvedValueOnce({
+          rows: [
+            {
+              id: 'user-123',
+              email: 'test@example.com',
+              password_hash: 'hashed_password',
+              status: 'verified',
+            },
+          ],
         })
         .mockResolvedValueOnce({ rows: [] }) // Update last login
         .mockResolvedValueOnce({ rows: [] }); // Insert session
@@ -331,52 +347,58 @@ describe('Auth Service', () => {
         authService.login({
           email: 'nonexistent@example.com',
           password: 'Password123',
-        })
+        }),
       ).rejects.toThrow('Invalid email or password');
     });
 
     it('should throw error for unverified user', async () => {
-      vi.mocked(db.query).mockResolvedValueOnce({ 
-        rows: [{ 
-          id: 'user-123', 
-          email: 'test@example.com',
-          status: 'pending',
-        }]
+      vi.mocked(db.query).mockResolvedValueOnce({
+        rows: [
+          {
+            id: 'user-123',
+            email: 'test@example.com',
+            status: 'pending',
+          },
+        ],
       });
 
       await expect(
         authService.login({
           email: 'test@example.com',
           password: 'Password123',
-        })
+        }),
       ).rejects.toThrow('Please verify your email first');
     });
 
     it('should throw error for suspended user', async () => {
-      vi.mocked(db.query).mockResolvedValueOnce({ 
-        rows: [{ 
-          id: 'user-123', 
-          email: 'test@example.com',
-          status: 'suspended',
-        }]
+      vi.mocked(db.query).mockResolvedValueOnce({
+        rows: [
+          {
+            id: 'user-123',
+            email: 'test@example.com',
+            status: 'suspended',
+          },
+        ],
       });
 
       await expect(
         authService.login({
           email: 'test@example.com',
           password: 'Password123',
-        })
+        }),
       ).rejects.toThrow('Account suspended');
     });
 
     it('should throw error for incorrect password', async () => {
-      vi.mocked(db.query).mockResolvedValueOnce({ 
-        rows: [{ 
-          id: 'user-123', 
-          email: 'test@example.com',
-          password_hash: 'hashed_password',
-          status: 'verified',
-        }]
+      vi.mocked(db.query).mockResolvedValueOnce({
+        rows: [
+          {
+            id: 'user-123',
+            email: 'test@example.com',
+            password_hash: 'hashed_password',
+            status: 'verified',
+          },
+        ],
       });
 
       vi.mocked(bcrypt.compare).mockResolvedValue(false as never);
@@ -385,7 +407,7 @@ describe('Auth Service', () => {
         authService.login({
           email: 'test@example.com',
           password: 'WrongPassword',
-        })
+        }),
       ).rejects.toThrow('Invalid email or password');
     });
   });
@@ -422,14 +444,14 @@ describe('Auth Service', () => {
 
   describe('refreshToken', () => {
     it('should call generateTokens for valid refresh token', async () => {
-      vi.mocked(jwt.verify).mockReturnValue({ 
-        userId: 'user-123', 
-        type: 'refresh' 
+      vi.mocked(jwt.verify).mockReturnValue({
+        userId: 'user-123',
+        type: 'refresh',
       } as any);
 
       vi.mocked(db.query)
-        .mockResolvedValueOnce({ 
-          rows: [{ refresh_token_hash: 'hashed_refresh' }]
+        .mockResolvedValueOnce({
+          rows: [{ refresh_token_hash: 'hashed_refresh' }],
         })
         .mockResolvedValueOnce({ rows: [] }); // Insert new session
 
@@ -445,28 +467,26 @@ describe('Auth Service', () => {
     });
 
     it('should throw error for non-refresh token', async () => {
-      vi.mocked(jwt.verify).mockReturnValue({ 
-        userId: 'user-123', 
-        type: 'access' 
+      vi.mocked(jwt.verify).mockReturnValue({
+        userId: 'user-123',
+        type: 'access',
       } as any);
 
-      await expect(
-        authService.refreshToken('access_token')
-      ).rejects.toThrow('Invalid token type');
+      await expect(authService.refreshToken('access_token')).rejects.toThrow('Invalid token type');
     });
 
     it('should throw error for expired session', async () => {
-      vi.mocked(jwt.verify).mockReturnValue({ 
-        userId: 'user-123', 
-        type: 'refresh' 
+      vi.mocked(jwt.verify).mockReturnValue({
+        userId: 'user-123',
+        type: 'refresh',
       } as any);
 
       vi.mocked(db.query).mockResolvedValueOnce({ rows: [] }); // No sessions
       vi.mocked(bcrypt.compare).mockResolvedValue(false as never);
 
-      await expect(
-        authService.refreshToken('old_refresh_token')
-      ).rejects.toThrow('Session expired or invalid');
+      await expect(authService.refreshToken('old_refresh_token')).rejects.toThrow(
+        'Session expired or invalid',
+      );
     });
   });
 
@@ -476,10 +496,9 @@ describe('Auth Service', () => {
 
       await authService.logout('user-123');
 
-      expect(db.query).toHaveBeenCalledWith(
-        'DELETE FROM sessions WHERE user_id = $1',
-        ['user-123']
-      );
+      expect(db.query).toHaveBeenCalledWith('DELETE FROM sessions WHERE user_id = $1', [
+        'user-123',
+      ]);
     });
   });
 
@@ -513,8 +532,8 @@ describe('Auth Service', () => {
   describe('resendVerificationCode', () => {
     it('should resend code for pending user', async () => {
       vi.mocked(db.query)
-        .mockResolvedValueOnce({ 
-          rows: [{ id: 'user-123', email: 'test@example.com', status: 'pending' }]
+        .mockResolvedValueOnce({
+          rows: [{ id: 'user-123', email: 'test@example.com', status: 'pending' }],
         })
         .mockResolvedValueOnce({ rows: [] }); // Insert new code
 
@@ -524,16 +543,16 @@ describe('Auth Service', () => {
 
       expect(emailService.sendVerificationCode).toHaveBeenCalledWith(
         'test@example.com',
-        expect.any(String)
+        expect.any(String),
       );
     });
 
     it('should throw error if user not found or already verified', async () => {
       vi.mocked(db.query).mockResolvedValueOnce({ rows: [] });
 
-      await expect(
-        authService.resendVerificationCode('verified@example.com')
-      ).rejects.toThrow('User not found or already verified');
+      await expect(authService.resendVerificationCode('verified@example.com')).rejects.toThrow(
+        'User not found or already verified',
+      );
     });
   });
 });

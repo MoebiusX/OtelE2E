@@ -1,6 +1,6 @@
 /**
  * Transfer API Integration Tests
- * 
+ *
  * Tests for /api/transfer endpoints
  */
 
@@ -55,7 +55,10 @@ vi.mock('@opentelemetry/api', () => ({
   trace: {
     getActiveSpan: vi.fn(),
     getSpan: vi.fn(() => ({
-      spanContext: () => ({ traceId: 'abcd1234abcd1234abcd1234abcd1234', spanId: 'efgh5678efgh5678' }),
+      spanContext: () => ({
+        traceId: 'abcd1234abcd1234abcd1234abcd1234',
+        spanId: 'efgh5678efgh5678',
+      }),
     })),
     getTracer: vi.fn(() => ({
       startActiveSpan: vi.fn((name, opts, fn) => {
@@ -66,7 +69,10 @@ vi.mock('@opentelemetry/api', () => ({
           recordException: vi.fn(),
           setStatus: vi.fn(),
           setAttribute: vi.fn(),
-          spanContext: () => ({ traceId: 'abcd1234abcd1234abcd1234abcd1234', spanId: 'efgh5678efgh5678' }),
+          spanContext: () => ({
+            traceId: 'abcd1234abcd1234abcd1234abcd1234',
+            spanId: 'efgh5678efgh5678',
+          }),
         });
       }),
     })),
@@ -94,14 +100,14 @@ describe('Transfer API Integration', () => {
   beforeEach(() => {
     app = createApp();
     vi.clearAllMocks();
-    
+
     // Default mocks for transfer operations
     vi.mocked(storage.getWallet).mockResolvedValue({
       btc: 5.0,
       usd: 100000,
       lastUpdated: new Date(),
     });
-    
+
     vi.mocked(storage.createTransfer).mockResolvedValue({
       id: 'TXF-test-123',
       fromUserId: 'alice',
@@ -110,7 +116,7 @@ describe('Transfer API Integration', () => {
       status: 'PENDING',
       createdAt: new Date(),
     } as any);
-    
+
     vi.mocked(storage.updateTransfer).mockResolvedValue(undefined);
     vi.mocked(storage.updateWallet).mockResolvedValue(undefined);
   });
@@ -143,15 +149,15 @@ describe('Transfer API Integration', () => {
     it('should return updated wallets for both users', async () => {
       // Reset and set up proper mock sequence for this specific test
       vi.clearAllMocks();
-      
+
       // First call: sender wallet (for validation)
-      // Second call: sender wallet after transfer 
+      // Second call: sender wallet after transfer
       // Third call: recipient wallet after transfer
       vi.mocked(storage.getWallet)
-        .mockResolvedValueOnce({ btc: 5.0, usd: 100000, lastUpdated: new Date() })  // initial check
-        .mockResolvedValueOnce({ btc: 4.5, usd: 100000, lastUpdated: new Date() })  // alice after
-        .mockResolvedValueOnce({ btc: 0.5, usd: 0, lastUpdated: new Date() });      // bob after
-      
+        .mockResolvedValueOnce({ btc: 5.0, usd: 100000, lastUpdated: new Date() }) // initial check
+        .mockResolvedValueOnce({ btc: 4.5, usd: 100000, lastUpdated: new Date() }) // alice after
+        .mockResolvedValueOnce({ btc: 0.5, usd: 0, lastUpdated: new Date() }); // bob after
+
       vi.mocked(storage.createTransfer).mockResolvedValue({
         id: 'TXF-test-123',
         fromUserId: 'alice',
@@ -171,9 +177,7 @@ describe('Transfer API Integration', () => {
         toUserId: 'bob',
       };
 
-      const response = await request(app)
-        .post('/api/transfer')
-        .send(transferRequest);
+      const response = await request(app).post('/api/transfer').send(transferRequest);
 
       // The first test passed, so if this fails it's due to mock sequence issues
       // Accept either success or error for this complex multi-mock test
@@ -192,9 +196,7 @@ describe('Transfer API Integration', () => {
         // missing amount
       };
 
-      const response = await request(app)
-        .post('/api/transfer')
-        .send(invalidTransfer);
+      const response = await request(app).post('/api/transfer').send(invalidTransfer);
 
       expect(response.status).toBe(400);
       expect(response.body.error).toBe('Invalid transfer request');
@@ -207,9 +209,7 @@ describe('Transfer API Integration', () => {
         amount: -0.5,
       };
 
-      const response = await request(app)
-        .post('/api/transfer')
-        .send(invalidTransfer);
+      const response = await request(app).post('/api/transfer').send(invalidTransfer);
 
       expect(response.status).toBe(400);
     });
@@ -221,9 +221,7 @@ describe('Transfer API Integration', () => {
         amount: 0,
       };
 
-      const response = await request(app)
-        .post('/api/transfer')
-        .send(invalidTransfer);
+      const response = await request(app).post('/api/transfer').send(invalidTransfer);
 
       expect(response.status).toBe(400);
     });
@@ -232,11 +230,17 @@ describe('Transfer API Integration', () => {
       // Reset mocks and ensure all needed mocks are in place
       vi.clearAllMocks();
       vi.mocked(storage.getWallet).mockResolvedValue({
-        btc: 5.0, usd: 100000, lastUpdated: new Date(),
+        btc: 5.0,
+        usd: 100000,
+        lastUpdated: new Date(),
       });
       vi.mocked(storage.createTransfer).mockResolvedValue({
-        id: 'TXF-trace-123', fromUserId: 'unknown', toUserId: 'unknown',
-        amount: 0.1, status: 'PENDING', createdAt: new Date(),
+        id: 'TXF-trace-123',
+        fromUserId: 'unknown',
+        toUserId: 'unknown',
+        amount: 0.1,
+        status: 'PENDING',
+        createdAt: new Date(),
       } as any);
       vi.mocked(storage.updateTransfer).mockResolvedValue(undefined);
       vi.mocked(storage.updateWallet).mockResolvedValue(undefined);
@@ -263,11 +267,17 @@ describe('Transfer API Integration', () => {
       // Reset and configure mocks for this test
       vi.clearAllMocks();
       vi.mocked(storage.getWallet).mockResolvedValue({
-        btc: 5.0, usd: 100000, lastUpdated: new Date(),
+        btc: 5.0,
+        usd: 100000,
+        lastUpdated: new Date(),
       });
       vi.mocked(storage.createTransfer).mockResolvedValue({
-        id: 'TXF-detail-123', fromUserId: 'unknown', toUserId: 'unknown',
-        amount: 1.0, status: 'PENDING', createdAt: new Date(),
+        id: 'TXF-detail-123',
+        fromUserId: 'unknown',
+        toUserId: 'unknown',
+        amount: 1.0,
+        status: 'PENDING',
+        createdAt: new Date(),
       } as any);
       vi.mocked(storage.updateTransfer).mockResolvedValue(undefined);
       vi.mocked(storage.updateWallet).mockResolvedValue(undefined);
@@ -278,9 +288,7 @@ describe('Transfer API Integration', () => {
         amount: 1.0,
       };
 
-      const response = await request(app)
-        .post('/api/transfer')
-        .send(transferRequest);
+      const response = await request(app).post('/api/transfer').send(transferRequest);
 
       // If successful, should have transfer details
       if (response.status === 200) {
@@ -299,9 +307,7 @@ describe('Transfer API Integration', () => {
         amount: 0.5,
       };
 
-      const response = await request(app)
-        .post('/api/transfer')
-        .send(invalidTransfer);
+      const response = await request(app).post('/api/transfer').send(invalidTransfer);
 
       expect(response.status).toBe(400);
       expect(response.body.error).toBe('Invalid transfer request');
@@ -370,9 +376,7 @@ describe('Transfer API Integration', () => {
         amount: 100,
       };
 
-      const response = await request(app)
-        .post('/api/payments')
-        .send(paymentRequest);
+      const response = await request(app).post('/api/payments').send(paymentRequest);
 
       expect(response.status).toBe(200);
       expect(response.body.success).toBe(true);
@@ -390,9 +394,7 @@ describe('Transfer API Integration', () => {
         createdAt: new Date(),
       } as any);
 
-      const response = await request(app)
-        .post('/api/payments')
-        .send({});
+      const response = await request(app).post('/api/payments').send({});
 
       expect(response.status).toBe(200);
       expect(response.body.payment.amount).toBe(100);
@@ -408,9 +410,7 @@ describe('Transfer API Integration', () => {
         createdAt: new Date(),
       } as any);
 
-      const response = await request(app)
-        .post('/api/payments')
-        .send({ amount: 50 });
+      const response = await request(app).post('/api/payments').send({ amount: 50 });
 
       expect(response.body.traceId).toBeDefined();
     });

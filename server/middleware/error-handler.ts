@@ -1,12 +1,13 @@
 /**
  * Global Error Handler Middleware
- * 
+ *
  * Catches all errors, logs them appropriately, and formats consistent error responses.
  * Should be registered as the last middleware in the Express app.
  */
 
 import { Request, Response, NextFunction } from 'express';
 import { ZodError } from 'zod';
+
 import { AppError, ValidationError, InternalServerError, isOperationalError } from '../lib/errors';
 import { createLogger, logError } from '../lib/logger';
 
@@ -20,12 +21,7 @@ const logger = createLogger('error-handler');
  * Global error handler middleware
  * Processes all errors thrown in the application
  */
-export function errorHandler(
-  err: Error,
-  req: Request,
-  res: Response,
-  next: NextFunction
-): void {
+export function errorHandler(err: Error, req: Request, res: Response, next: NextFunction): void {
   // Skip if response already sent
   if (res.headersSent) {
     return next(err);
@@ -43,10 +39,7 @@ export function errorHandler(
 
   // Handle Zod validation errors
   if (err instanceof ZodError) {
-    const validationError = new ValidationError(
-      'Request validation failed',
-      formatZodErrors(err)
-    );
+    const validationError = new ValidationError('Request validation failed', formatZodErrors(err));
     return sendErrorResponse(res, validationError, requestContext);
   }
 
@@ -59,9 +52,7 @@ export function errorHandler(
   // Handle unknown errors (programming errors)
   logUnknownError(err, requestContext);
   const unknownError = new InternalServerError(
-    process.env.NODE_ENV === 'production' 
-      ? 'An unexpected error occurred'
-      : err.message
+    process.env.NODE_ENV === 'production' ? 'An unexpected error occurred' : err.message,
   );
   sendErrorResponse(res, unknownError, requestContext);
 }
@@ -101,14 +92,17 @@ function logAppError(error: AppError, context: object): void {
  * Log unknown/unhandled errors (potential bugs)
  */
 function logUnknownError(error: Error, context: object): void {
-  logger.error({
-    err: {
-      name: error.name,
-      message: error.message,
-      stack: error.stack,
+  logger.error(
+    {
+      err: {
+        name: error.name,
+        message: error.message,
+        stack: error.stack,
+      },
+      ...context,
     },
-    ...context,
-  }, `Unhandled error: ${error.message}`);
+    `Unhandled error: ${error.message}`,
+  );
 }
 
 // ============================================
@@ -118,19 +112,11 @@ function logUnknownError(error: Error, context: object): void {
 /**
  * Send formatted error response
  */
-function sendErrorResponse(
-  res: Response,
-  error: AppError,
-  context: object
-): void {
+function sendErrorResponse(res: Response, error: AppError, context: object): void {
   // In production, hide internal error details
-  const shouldHideDetails = 
-    process.env.NODE_ENV === 'production' && 
-    !error.isOperational;
+  const shouldHideDetails = process.env.NODE_ENV === 'production' && !error.isOperational;
 
-  const errorResponse = shouldHideDetails 
-    ? error.toSafeJSON() 
-    : error.toJSON();
+  const errorResponse = shouldHideDetails ? error.toSafeJSON() : error.toJSON();
 
   // Add request correlation ID if present
   if (context && 'correlationId' in context && context.correlationId) {
@@ -169,14 +155,20 @@ function formatZodErrors(error: ZodError): object {
  */
 export function handleUnhandledRejection(): void {
   process.on('unhandledRejection', (reason: Error | any, promise: Promise<any>) => {
-    logger.fatal({
-      err: reason instanceof Error ? {
-        message: reason.message,
-        stack: reason.stack,
-        name: reason.name,
-      } : { reason },
-      promise: promise.toString(),
-    }, 'Unhandled Promise Rejection');
+    logger.fatal(
+      {
+        err:
+          reason instanceof Error
+            ? {
+                message: reason.message,
+                stack: reason.stack,
+                name: reason.name,
+              }
+            : { reason },
+        promise: promise.toString(),
+      },
+      'Unhandled Promise Rejection',
+    );
 
     // In production, gracefully shutdown
     if (process.env.NODE_ENV === 'production') {
@@ -191,13 +183,16 @@ export function handleUnhandledRejection(): void {
  */
 export function handleUncaughtException(): void {
   process.on('uncaughtException', (error: Error) => {
-    logger.fatal({
-      err: {
-        message: error.message,
-        stack: error.stack,
-        name: error.name,
+    logger.fatal(
+      {
+        err: {
+          message: error.message,
+          stack: error.stack,
+          name: error.name,
+        },
       },
-    }, 'Uncaught Exception');
+      'Uncaught Exception',
+    );
 
     // Always exit on uncaught exceptions (unsafe to continue)
     logger.info('Exiting due to uncaught exception...');

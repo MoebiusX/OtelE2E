@@ -20,15 +20,18 @@ curl http://localhost:16686        # Jaeger UI
 ## Service Endpoints
 
 ### Kong Gateway
+
 - **Proxy**: http://localhost:8000
 - **Admin API**: http://localhost:8001
 - **Manager UI**: http://localhost:8002
 
 ### RabbitMQ
+
 - **AMQP**: amqp://admin:admin123@localhost:5672
 - **Management UI**: http://localhost:15672 (admin/admin123)
 
 ### Jaeger (Optional)
+
 - **UI**: http://localhost:16686
 - **OTLP HTTP**: http://localhost:4318
 - **OTLP gRPC**: http://localhost:4317
@@ -59,6 +62,7 @@ JAEGER_ENDPOINT=http://localhost:4318/v1/traces
 ## Testing Authentic OpenTelemetry
 
 ### Via Kong Gateway
+
 ```bash
 # Route payment through Kong Gateway
 curl -X POST http://localhost:8000/api/payments \
@@ -68,6 +72,7 @@ curl -X POST http://localhost:8000/api/payments \
 ```
 
 ### Direct to API (bypassing Kong)
+
 ```bash
 # Direct API call
 curl -X POST http://localhost:5000/api/payments \
@@ -92,14 +97,17 @@ docker-compose -f docker-compose.external.yml down -v
 ## Troubleshooting
 
 ### Kong Gateway Not Available
+
 - Check if port 8000/8001 are free
 - Verify database initialization completed: `docker-compose logs kong-migrations`
 
 ### RabbitMQ Connection Failed
+
 - Check if port 5672 is free
 - Verify credentials: admin/admin123
 
 ### No Traces in Jaeger
+
 - Ensure JAEGER_ENDPOINT is configured
 - Check if port 4318 is accessible
 

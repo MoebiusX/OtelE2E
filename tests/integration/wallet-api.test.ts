@@ -1,6 +1,6 @@
 /**
  * Wallet API Integration Tests
- * 
+ *
  * Tests for /api/wallet endpoints
  */
 
@@ -51,16 +51,24 @@ vi.mock('@opentelemetry/api', () => ({
   trace: {
     getActiveSpan: vi.fn(),
     getSpan: vi.fn(() => ({
-      spanContext: () => ({ traceId: 'abcd1234abcd1234abcd1234abcd1234', spanId: 'efgh5678efgh5678' }),
+      spanContext: () => ({
+        traceId: 'abcd1234abcd1234abcd1234abcd1234',
+        spanId: 'efgh5678efgh5678',
+      }),
     })),
     getTracer: vi.fn(() => ({
-      startActiveSpan: vi.fn((name, fn) => fn({
-        end: vi.fn(),
-        recordException: vi.fn(),
-        setStatus: vi.fn(),
-        setAttribute: vi.fn(),
-        spanContext: () => ({ traceId: 'abcd1234abcd1234abcd1234abcd1234', spanId: 'efgh5678efgh5678' }),
-      })),
+      startActiveSpan: vi.fn((name, fn) =>
+        fn({
+          end: vi.fn(),
+          recordException: vi.fn(),
+          setStatus: vi.fn(),
+          setAttribute: vi.fn(),
+          spanContext: () => ({
+            traceId: 'abcd1234abcd1234abcd1234abcd1234',
+            spanId: 'efgh5678efgh5678',
+          }),
+        }),
+      ),
     })),
   },
   context: {

@@ -1,6 +1,6 @@
 /**
  * Order API Integration Tests
- * 
+ *
  * Tests for /api/orders endpoints
  */
 
@@ -54,16 +54,24 @@ vi.mock('@opentelemetry/api', () => ({
   trace: {
     getActiveSpan: vi.fn(),
     getSpan: vi.fn(() => ({
-      spanContext: () => ({ traceId: 'abcd1234abcd1234abcd1234abcd1234', spanId: 'efgh5678efgh5678' }),
+      spanContext: () => ({
+        traceId: 'abcd1234abcd1234abcd1234abcd1234',
+        spanId: 'efgh5678efgh5678',
+      }),
     })),
     getTracer: vi.fn(() => ({
-      startActiveSpan: vi.fn((name, fn) => fn({
-        end: vi.fn(),
-        recordException: vi.fn(),
-        setStatus: vi.fn(),
-        setAttribute: vi.fn(),
-        spanContext: () => ({ traceId: 'abcd1234abcd1234abcd1234abcd1234', spanId: 'efgh5678efgh5678' }),
-      })),
+      startActiveSpan: vi.fn((name, fn) =>
+        fn({
+          end: vi.fn(),
+          recordException: vi.fn(),
+          setStatus: vi.fn(),
+          setAttribute: vi.fn(),
+          spanContext: () => ({
+            traceId: 'abcd1234abcd1234abcd1234abcd1234',
+            spanId: 'efgh5678efgh5678',
+          }),
+        }),
+      ),
     })),
   },
   context: {
@@ -89,14 +97,14 @@ describe('Order API Integration', () => {
   beforeEach(() => {
     app = createApp();
     vi.clearAllMocks();
-    
+
     // Default mock for getWallet (sufficient funds)
     vi.mocked(storage.getWallet).mockResolvedValue({
       btc: 10.0,
       usd: 500000,
       lastUpdated: new Date(),
     });
-    
+
     // Default mock for createOrder
     vi.mocked(storage.createOrder).mockResolvedValue({
       orderId: 'ORD-test-123',
@@ -107,7 +115,7 @@ describe('Order API Integration', () => {
       status: 'PENDING',
       createdAt: new Date(),
     } as any);
-    
+
     vi.mocked(storage.updateWallet).mockResolvedValue(undefined);
   });
 
@@ -163,9 +171,7 @@ describe('Order API Integration', () => {
         orderType: 'MARKET',
       };
 
-      const response = await request(app)
-        .post('/api/orders')
-        .send(orderRequest);
+      const response = await request(app).post('/api/orders').send(orderRequest);
 
       expect(response.body.traceId).toBeDefined();
       expect(response.body.spanId).toBeDefined();
@@ -180,9 +186,7 @@ describe('Order API Integration', () => {
         userId: 'bob@demo.com',
       };
 
-      const response = await request(app)
-        .post('/api/orders')
-        .send(orderRequest);
+      const response = await request(app).post('/api/orders').send(orderRequest);
 
       expect(response.status).toBe(200);
       expect(storage.getWallet).toHaveBeenCalledWith('bob@demo.com');
@@ -196,9 +200,7 @@ describe('Order API Integration', () => {
         orderType: 'MARKET',
       };
 
-      const response = await request(app)
-        .post('/api/orders')
-        .send(invalidOrder);
+      const response = await request(app).post('/api/orders').send(invalidOrder);
 
       expect(response.status).toBe(400);
       expect(response.body.error).toBe('Invalid order request');
@@ -213,9 +215,7 @@ describe('Order API Integration', () => {
         orderType: 'MARKET',
       };
 
-      const response = await request(app)
-        .post('/api/orders')
-        .send(invalidOrder);
+      const response = await request(app).post('/api/orders').send(invalidOrder);
 
       expect(response.status).toBe(400);
     });
@@ -228,9 +228,7 @@ describe('Order API Integration', () => {
         orderType: 'MARKET',
       };
 
-      const response = await request(app)
-        .post('/api/orders')
-        .send(invalidOrder);
+      const response = await request(app).post('/api/orders').send(invalidOrder);
 
       expect(response.status).toBe(400);
     });
@@ -243,9 +241,7 @@ describe('Order API Integration', () => {
         orderType: 'MARKET',
       };
 
-      const response = await request(app)
-        .post('/api/orders')
-        .send(invalidOrder);
+      const response = await request(app).post('/api/orders').send(invalidOrder);
 
       expect(response.status).toBe(400);
     });
@@ -258,9 +254,7 @@ describe('Order API Integration', () => {
         orderType: 'MARKET',
       };
 
-      const response = await request(app)
-        .post('/api/orders')
-        .send(orderRequest);
+      const response = await request(app).post('/api/orders').send(orderRequest);
 
       expect(response.body.execution).toBeDefined();
       expect(response.body.execution.status).toBeDefined();
@@ -274,9 +268,7 @@ describe('Order API Integration', () => {
         orderType: 'MARKET',
       };
 
-      const response = await request(app)
-        .post('/api/orders')
-        .send(orderRequest);
+      const response = await request(app).post('/api/orders').send(orderRequest);
 
       expect(response.body.wallet).toBeDefined();
     });
@@ -355,9 +347,7 @@ describe('Order API Integration', () => {
         orderType: 'MARKET',
       };
 
-      const response = await request(app)
-        .post('/api/orders')
-        .send(orderRequest);
+      const response = await request(app).post('/api/orders').send(orderRequest);
 
       // ETH/USD is not a valid pair according to the schema
       expect(response.status).toBe(400);
@@ -372,9 +362,7 @@ describe('Order API Integration', () => {
         orderType: 'MARKET',
       };
 
-      const response = await request(app)
-        .post('/api/orders')
-        .send(orderRequest);
+      const response = await request(app).post('/api/orders').send(orderRequest);
 
       expect(response.status).toBe(200);
     });
@@ -387,9 +375,7 @@ describe('Order API Integration', () => {
         orderType: 'MARKET',
       };
 
-      const response = await request(app)
-        .post('/api/orders')
-        .send(orderRequest);
+      const response = await request(app).post('/api/orders').send(orderRequest);
 
       expect(response.status).toBe(200);
     });

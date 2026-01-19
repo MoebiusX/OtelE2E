@@ -1,34 +1,40 @@
 // Initialize OpenTelemetry first
-import "./otel";
+import './otel';
 
 // Initialize configuration and logging
-import { config } from "./config";
-import { createLogger } from "./lib/logger";
+import { config } from './config';
+import { createLogger } from './lib/logger';
 const logger = createLogger('server');
-import { requestLogger } from "./middleware/request-logger";
-import { errorHandler, notFoundHandler, handleUnhandledRejection, handleUncaughtException } from "./middleware/error-handler";
-import { 
-  generalRateLimiter, 
-  authRateLimiter, 
-  securityHeaders, 
-  corsMiddleware, 
-  requestTimeout 
-} from "./middleware/security";
+import { requestLogger } from './middleware/request-logger';
+import {
+  errorHandler,
+  notFoundHandler,
+  handleUnhandledRejection,
+  handleUncaughtException,
+} from './middleware/error-handler';
+import {
+  generalRateLimiter,
+  authRateLimiter,
+  securityHeaders,
+  corsMiddleware,
+  requestTimeout,
+} from './middleware/security';
 
-import express, { type Request, Response, NextFunction } from "express";
-import { registerRoutes } from "./api/routes";
-import { setupVite, serveStatic, log } from "./vite";
-import { kongClient } from "./services/kong-client";
-import { rabbitMQClient } from "./services/rabbitmq-client";
-import { monitorRoutes, startMonitor } from "./monitor";
-import { metricsMiddleware, registerMetricsEndpoint } from "./metrics/prometheus";
-import { transparencyService } from "./services/transparency-service";
-import authRoutes from "./auth/routes";
-import walletRoutes from "./wallet/routes";
-import tradeRoutes from "./trade/routes";
-import publicRoutes from "./api/public-routes";
-import healthRoutes from "./api/health-routes";
-import { binanceFeed } from "./services/binance-feed";
+import express, { type Request, Response, NextFunction } from 'express';
+
+import { registerRoutes } from './api/routes';
+import { setupVite, serveStatic, log } from './vite';
+import { kongClient } from './services/kong-client';
+import { rabbitMQClient } from './services/rabbitmq-client';
+import { monitorRoutes, startMonitor } from './monitor';
+import { metricsMiddleware, registerMetricsEndpoint } from './metrics/prometheus';
+import { transparencyService } from './services/transparency-service';
+import authRoutes from './auth/routes';
+import walletRoutes from './wallet/routes';
+import tradeRoutes from './trade/routes';
+import publicRoutes from './api/public-routes';
+import healthRoutes from './api/health-routes';
+import { binanceFeed } from './services/binance-feed';
 
 const app = express();
 
@@ -68,15 +74,19 @@ app.use(corsMiddleware);
   logger.info('Initializing external services...');
 
   // Setup Kong Gateway proxy routes with OTEL span attribute middleware
-  app.use('/kong', async (req, res, next) => {
-    // Mark this span as api-gateway component for proper service identification
-    const { trace } = await import('@opentelemetry/api');
-    const span = trace.getActiveSpan();
-    if (span) {
-      span.setAttribute('component', 'api-gateway');
-    }
-    next();
-  }, kongClient.createProxy());
+  app.use(
+    '/kong',
+    async (req, res, next) => {
+      // Mark this span as api-gateway component for proper service identification
+      const { trace } = await import('@opentelemetry/api');
+      const span = trace.getActiveSpan();
+      if (span) {
+        span.setAttribute('component', 'api-gateway');
+      }
+      next();
+    },
+    kongClient.createProxy(),
+  );
 
   // Initialize RabbitMQ connection
   try {
@@ -84,7 +94,10 @@ app.use(corsMiddleware);
     await rabbitMQClient.startConsumer();
     logger.info({ component: 'rabbitmq' }, 'RabbitMQ connected and consumer started');
   } catch (error) {
-    logger.warn({ component: 'rabbitmq', err: error }, 'RabbitMQ initialization failed - continuing without message queue');
+    logger.warn(
+      { component: 'rabbitmq', err: error },
+      'RabbitMQ initialization failed - continuing without message queue',
+    );
   }
 
   // Start real-time price feed (Binance public WebSocket - no API key needed)
@@ -92,7 +105,10 @@ app.use(corsMiddleware);
     binanceFeed.start();
     logger.info({ component: 'binance' }, 'Binance price feed started - real-time prices enabled');
   } catch (error) {
-    logger.warn({ component: 'binance', err: error }, 'Binance price feed failed to start - trading will show prices unavailable');
+    logger.warn(
+      { component: 'binance', err: error },
+      'Binance price feed failed to start - trading will show prices unavailable',
+    );
   }
 
   // Check Kong Gateway health
@@ -129,16 +145,16 @@ app.use(corsMiddleware);
   transparencyService.start();
 
   // Create server
-  const { createServer } = await import("http");
+  const { createServer } = await import('http');
   const server = createServer(app);
 
   // Setup WebSocket server for real-time monitoring
-  const { wsServer } = await import("./monitor/ws-server");
+  const { wsServer } = await import('./monitor/ws-server');
   wsServer.setup(server);
 
   // Setup Vite in development or serve static in production
   // This MUST come before notFoundHandler to serve SPA routes
-  if (app.get("env") === "development") {
+  if (app.get('env') === 'development') {
     await setupVite(app, server);
   } else {
     serveStatic(app);
@@ -155,13 +171,16 @@ app.use(corsMiddleware);
   // Start server
   const port = config.server.port;
   const host = config.server.host;
-  
+
   server.listen(port, host, () => {
-    logger.info({
-      port,
-      host,
-      env: config.env,
-    }, `Server started successfully`);
+    logger.info(
+      {
+        port,
+        host,
+        env: config.env,
+      },
+      `Server started successfully`,
+    );
     logger.info(`Serving on http://${host}:${port}`);
     logger.info(`WebSocket available at ws://localhost:${port}/ws/monitor`);
     logger.info(`Health check at http://${host}:${port}/health`);
@@ -169,16 +188,16 @@ app.use(corsMiddleware);
 
   // Graceful shutdown
   let isShuttingDown = false;
-  
+
   const shutdown = async (signal: string) => {
     if (isShuttingDown) {
       logger.warn('Shutdown already in progress');
       return;
     }
     isShuttingDown = true;
-    
+
     logger.info({ signal }, 'Received shutdown signal, closing gracefully...');
-    
+
     // Stop accepting new connections
     server.close(() => {
       logger.info('HTTP server closed');

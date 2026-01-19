@@ -1,6 +1,6 @@
 /**
  * Trade Routes Integration Tests
- * 
+ *
  * Tests for /api/trade/* endpoints
  */
 
@@ -45,13 +45,13 @@ function createTradeApp() {
   app.get('/api/trade/price-status', (req, res) => {
     const status = mockPriceService.getStatus();
     const prices = mockPriceService.getAllPrices();
-    res.json({ 
-      success: true, 
+    res.json({
+      success: true,
       status,
       prices,
-      message: status.connected 
+      message: status.connected
         ? 'Real-time prices from ' + status.source
-        : 'Price feed disconnected - trading may be unavailable'
+        : 'Price feed disconnected - trading may be unavailable',
     });
   });
 
@@ -65,10 +65,10 @@ function createTradeApp() {
   app.get('/api/trade/price/:asset', (req, res) => {
     const price = mockTradeService.getPrice(req.params.asset);
     if (price === null) {
-      return res.status(503).json({ 
-        success: false, 
-        asset: req.params.asset.toUpperCase(), 
-        error: 'Price not available - real-time feed may be disconnected'
+      return res.status(503).json({
+        success: false,
+        asset: req.params.asset.toUpperCase(),
+        error: 'Price not available - real-time feed may be disconnected',
       });
     }
     res.json({ success: true, asset: req.params.asset.toUpperCase(), price });
@@ -82,14 +82,14 @@ function createTradeApp() {
         success: false,
         from: req.params.from.toUpperCase(),
         to: req.params.to.toUpperCase(),
-        error: 'Rate not available'
+        error: 'Rate not available',
       });
     }
     res.json({
       success: true,
       from: req.params.from.toUpperCase(),
       to: req.params.to.toUpperCase(),
-      rate
+      rate,
     });
   });
 
@@ -114,13 +114,13 @@ function createTradeApp() {
         (req as any).user.id,
         fromAsset,
         toAsset,
-        amount
+        amount,
       );
       res.json({
         success: true,
         message: `Converted ${amount} ${fromAsset} to ${result.toAmount.toFixed(8)} ${toAsset}`,
         toAmount: result.toAmount,
-        orderId: result.orderId
+        orderId: result.orderId,
       });
     } catch (error: unknown) {
       res.status(400).json({ error: error.message });
@@ -142,7 +142,7 @@ function createTradeApp() {
         pair,
         side,
         price,
-        quantity
+        quantity,
       );
       res.json({ success: true, order });
     } catch (error: unknown) {
@@ -351,9 +351,7 @@ describe('Trade Routes Integration', () => {
     });
 
     it('should return 400 for insufficient balance', async () => {
-      mockTradeService.executeConvert.mockRejectedValue(
-        new Error('Insufficient balance')
-      );
+      mockTradeService.executeConvert.mockRejectedValue(new Error('Insufficient balance'));
 
       const response = await request(app)
         .post('/api/trade/convert')
@@ -421,9 +419,7 @@ describe('Trade Routes Integration', () => {
     });
 
     it('should return 400 for non-existent order', async () => {
-      mockTradeService.cancelOrder.mockRejectedValue(
-        new Error('Order not found')
-      );
+      mockTradeService.cancelOrder.mockRejectedValue(new Error('Order not found'));
 
       const response = await request(app)
         .delete('/api/trade/order/invalid-order')

@@ -1,5 +1,5 @@
 # Axolotl LoRA Fine-tuning Config for Anomaly Analyzer
-# 
+#
 # Train a specialized model for crypto exchange anomaly analysis.
 # Based on Llama 3.2 1B - small enough for fast inference, trainable on consumer GPUs.
 

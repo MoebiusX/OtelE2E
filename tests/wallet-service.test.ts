@@ -17,7 +17,7 @@ describe('Address Generation Integration', () => {
   it('should handle demo user emails correctly', () => {
     const aliceAddress = generateWalletAddress('alice@demo.com');
     const bobAddress = generateWalletAddress('bob@demo.com');
-    
+
     expect(aliceAddress.startsWith('kx1')).toBe(true);
     expect(bobAddress.startsWith('kx1')).toBe(true);
     expect(aliceAddress).not.toBe(bobAddress);

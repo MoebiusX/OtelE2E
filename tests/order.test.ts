@@ -25,41 +25,29 @@ describe('Insert Order Schema Validation', () => {
     });
 
     it('should accept small quantities', () => {
-      expect(() =>
-        insertOrderSchema.parse({ ...validOrder, quantity: 0.00001 })
-      ).not.toThrow();
+      expect(() => insertOrderSchema.parse({ ...validOrder, quantity: 0.00001 })).not.toThrow();
     });
 
     it('should accept large quantities', () => {
-      expect(() =>
-        insertOrderSchema.parse({ ...validOrder, quantity: 1000000 })
-      ).not.toThrow();
+      expect(() => insertOrderSchema.parse({ ...validOrder, quantity: 1000000 })).not.toThrow();
     });
   });
 
   describe('invalid orders', () => {
     it('should reject order with invalid pair', () => {
-      expect(() =>
-        insertOrderSchema.parse({ ...validOrder, pair: 'ETH/USD' })
-      ).toThrow();
+      expect(() => insertOrderSchema.parse({ ...validOrder, pair: 'ETH/USD' })).toThrow();
     });
 
     it('should reject order with invalid side', () => {
-      expect(() =>
-        insertOrderSchema.parse({ ...validOrder, side: 'HOLD' })
-      ).toThrow();
+      expect(() => insertOrderSchema.parse({ ...validOrder, side: 'HOLD' })).toThrow();
     });
 
     it('should reject order with zero quantity', () => {
-      expect(() =>
-        insertOrderSchema.parse({ ...validOrder, quantity: 0 })
-      ).toThrow();
+      expect(() => insertOrderSchema.parse({ ...validOrder, quantity: 0 })).toThrow();
     });
 
     it('should reject order with negative quantity', () => {
-      expect(() =>
-        insertOrderSchema.parse({ ...validOrder, quantity: -1 })
-      ).toThrow();
+      expect(() => insertOrderSchema.parse({ ...validOrder, quantity: -1 })).toThrow();
     });
 
     it('should reject order with missing pair', () => {
@@ -68,9 +56,7 @@ describe('Insert Order Schema Validation', () => {
     });
 
     it('should reject non-MARKET order types', () => {
-      expect(() =>
-        insertOrderSchema.parse({ ...validOrder, orderType: 'LIMIT' })
-      ).toThrow();
+      expect(() => insertOrderSchema.parse({ ...validOrder, orderType: 'LIMIT' })).toThrow();
     });
   });
 });

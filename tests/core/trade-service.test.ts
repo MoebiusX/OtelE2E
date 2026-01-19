@@ -1,6 +1,6 @@
 /**
  * Trade Service Unit Tests
- * 
+ *
  * Tests for crypto conversions, quotes, and trading pairs
  */
 
@@ -10,9 +10,11 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 vi.mock('../../server/db', () => ({
   default: {
     query: vi.fn(),
-    transaction: vi.fn((fn) => fn({
-      query: vi.fn(),
-    })),
+    transaction: vi.fn((fn) =>
+      fn({
+        query: vi.fn(),
+      }),
+    ),
   },
 }));
 
@@ -187,7 +189,7 @@ describe('Trade Service', () => {
 
       const after = Date.now();
       const expiresAt = quote.expiresAt.getTime();
-      
+
       expect(expiresAt).toBeGreaterThanOrEqual(before + 29000);
       expect(expiresAt).toBeLessThanOrEqual(after + 31000);
     });
@@ -209,7 +211,7 @@ describe('Trade Service', () => {
       const pairs = tradeService.getPairs();
 
       expect(pairs.length).toBe(TRADING_PAIRS.length);
-      pairs.forEach(pair => {
+      pairs.forEach((pair) => {
         expect(pair).toHaveProperty('pair');
         expect(pair).toHaveProperty('price');
         expect(pair).toHaveProperty('change24h');
@@ -221,7 +223,7 @@ describe('Trade Service', () => {
 
       const pairs = tradeService.getPairs();
 
-      pairs.forEach(pair => {
+      pairs.forEach((pair) => {
         expect(pair.price).toBe(0);
       });
     });
@@ -231,7 +233,7 @@ describe('Trade Service', () => {
 
       const pairs = tradeService.getPairs();
 
-      pairs.forEach(pair => {
+      pairs.forEach((pair) => {
         expect(pair.change24h).toBeGreaterThanOrEqual(-5);
         expect(pair.change24h).toBeLessThanOrEqual(5);
       });

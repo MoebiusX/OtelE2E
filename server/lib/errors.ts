@@ -1,6 +1,6 @@
 /**
  * Custom Error Classes
- * 
+ *
  * Standardized error handling with proper status codes and serialization.
  * All application errors should extend AppError.
  */
@@ -21,10 +21,10 @@ export class AppError extends Error {
     statusCode: number = 500,
     code: string = 'INTERNAL_ERROR',
     isOperational: boolean = true,
-    details?: unknown
+    details?: unknown,
   ) {
     super(message);
-    
+
     this.name = this.constructor.name;
     this.statusCode = statusCode;
     this.code = code;
@@ -115,7 +115,7 @@ export class ForbiddenError extends AppError {
  */
 export class NotFoundError extends AppError {
   constructor(resource: string, identifier?: string | number) {
-    const message = identifier 
+    const message = identifier
       ? `${resource} with identifier '${identifier}' not found`
       : `${resource} not found`;
     super(message, 404, 'NOT_FOUND', true);
@@ -170,13 +170,7 @@ export class InternalServerError extends AppError {
  */
 export class ServiceError extends AppError {
   constructor(serviceName: string, message: string, details?: unknown) {
-    super(
-      `${serviceName} service error: ${message}`,
-      503,
-      'SERVICE_UNAVAILABLE',
-      true,
-      details
-    );
+    super(`${serviceName} service error: ${message}`, 503, 'SERVICE_UNAVAILABLE', true, details);
   }
 }
 
@@ -190,10 +184,12 @@ export class ExternalServiceError extends AppError {
       503,
       'EXTERNAL_SERVICE_ERROR',
       true,
-      originalError ? {
-        message: originalError.message,
-        name: originalError.name,
-      } : undefined
+      originalError
+        ? {
+            message: originalError.message,
+            name: originalError.name,
+          }
+        : undefined,
     );
   }
 }
@@ -203,13 +199,7 @@ export class ExternalServiceError extends AppError {
  */
 export class DatabaseError extends AppError {
   constructor(operation: string, details?: unknown) {
-    super(
-      `Database operation failed: ${operation}`,
-      500,
-      'DATABASE_ERROR',
-      true,
-      details
-    );
+    super(`Database operation failed: ${operation}`, 500, 'DATABASE_ERROR', true, details);
   }
 }
 
@@ -218,13 +208,10 @@ export class DatabaseError extends AppError {
  */
 export class TimeoutError extends AppError {
   constructor(operation: string, timeoutMs: number) {
-    super(
-      `Operation '${operation}' timed out after ${timeoutMs}ms`,
-      504,
-      'TIMEOUT',
-      true,
-      { operation, timeoutMs }
-    );
+    super(`Operation '${operation}' timed out after ${timeoutMs}ms`, 504, 'TIMEOUT', true, {
+      operation,
+      timeoutMs,
+    });
   }
 }
 
@@ -269,7 +256,7 @@ export class InsufficientFundsError extends AppError {
       422,
       'INSUFFICIENT_FUNDS',
       true,
-      { asset, required, available }
+      { asset, required, available },
     );
   }
 }
@@ -312,7 +299,7 @@ export function wrapError(error: unknown, defaultMessage: string = 'An error occ
 export function createErrorFromStatusCode(
   statusCode: number,
   message?: string,
-  details?: unknown
+  details?: unknown,
 ): AppError {
   const defaultMessage = message || `Request failed with status ${statusCode}`;
 

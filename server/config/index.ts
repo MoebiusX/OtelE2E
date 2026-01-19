@@ -1,6 +1,6 @@
 /**
  * Configuration Management
- * 
+ *
  * Centralized, type-safe configuration with validation.
  * All environment variables are loaded and validated here.
  */
@@ -13,7 +13,7 @@ import { z } from 'zod';
 
 const configSchema = z.object({
   env: z.enum(['development', 'production', 'test']).default('development'),
-  
+
   server: z.object({
     port: z.number().int().positive().default(5000),
     host: z.string().default('0.0.0.0'),
@@ -51,18 +51,22 @@ const configSchema = z.object({
     otelCollectorUrl: z.string().optional(),
   }),
 
-  ai: z.object({
-    ollamaUrl: z.string().default('http://localhost:11434'),
-    model: z.string().default('llama3.2:1b'),
-  }).optional(),
+  ai: z
+    .object({
+      ollamaUrl: z.string().default('http://localhost:11434'),
+      model: z.string().default('llama3.2:1b'),
+    })
+    .optional(),
 
-  smtp: z.object({
-    host: z.string().default('localhost'),
-    port: z.number().int().positive().default(1025),
-    secure: z.boolean().default(false),
-    user: z.string().optional(),
-    password: z.string().optional(),
-  }).optional(),
+  smtp: z
+    .object({
+      host: z.string().default('localhost'),
+      port: z.number().int().positive().default(1025),
+      secure: z.boolean().default(false),
+      user: z.string().optional(),
+      password: z.string().optional(),
+    })
+    .optional(),
 
   logging: z.object({
     level: z.enum(['trace', 'debug', 'info', 'warn', 'error', 'fatal']).default('info'),
@@ -77,7 +81,7 @@ const configSchema = z.object({
 function loadConfig() {
   const rawConfig = {
     env: process.env.NODE_ENV || 'development',
-    
+
     server: {
       port: process.env.PORT ? parseInt(process.env.PORT, 10) : 5000,
       host: process.env.HOST || '0.0.0.0',
@@ -90,8 +94,8 @@ function loadConfig() {
       name: process.env.DB_NAME || 'crypto_exchange',
       user: process.env.DB_USER || 'exchange',
       password: process.env.DB_PASSWORD || 'exchange123',
-      maxConnections: process.env.DB_MAX_CONNECTIONS 
-        ? parseInt(process.env.DB_MAX_CONNECTIONS, 10) 
+      maxConnections: process.env.DB_MAX_CONNECTIONS
+        ? parseInt(process.env.DB_MAX_CONNECTIONS, 10)
         : 20,
       idleTimeoutMs: process.env.DB_IDLE_TIMEOUT_MS
         ? parseInt(process.env.DB_IDLE_TIMEOUT_MS, 10)
@@ -120,18 +124,22 @@ function loadConfig() {
       otelCollectorUrl: process.env.OTEL_COLLECTOR_URL,
     },
 
-    ai: process.env.OLLAMA_URL ? {
-      ollamaUrl: process.env.OLLAMA_URL,
-      model: process.env.OLLAMA_MODEL || 'llama3.2:1b',
-    } : undefined,
+    ai: process.env.OLLAMA_URL
+      ? {
+          ollamaUrl: process.env.OLLAMA_URL,
+          model: process.env.OLLAMA_MODEL || 'llama3.2:1b',
+        }
+      : undefined,
 
-    smtp: process.env.SMTP_HOST ? {
-      host: process.env.SMTP_HOST,
-      port: process.env.SMTP_PORT ? parseInt(process.env.SMTP_PORT, 10) : 1025,
-      secure: process.env.SMTP_SECURE === 'true',
-      user: process.env.SMTP_USER,
-      password: process.env.SMTP_PASSWORD,
-    } : undefined,
+    smtp: process.env.SMTP_HOST
+      ? {
+          host: process.env.SMTP_HOST,
+          port: process.env.SMTP_PORT ? parseInt(process.env.SMTP_PORT, 10) : 1025,
+          secure: process.env.SMTP_SECURE === 'true',
+          user: process.env.SMTP_USER,
+          password: process.env.SMTP_PASSWORD,
+        }
+      : undefined,
 
     logging: {
       level: process.env.LOG_LEVEL || (process.env.NODE_ENV === 'production' ? 'info' : 'debug'),
@@ -144,17 +152,35 @@ function loadConfig() {
 
     // In production require that critical secrets are explicitly set and not left as insecure defaults
     if (validatedConfig.env === 'production') {
-      const insecureDefaults: Array<{ key: string; value: any; defaultValue: any }>= [
-        { key: 'server.jwtSecret', value: validatedConfig.server.jwtSecret, defaultValue: 'dev-secret-change-in-production' },
-        { key: 'database.password', value: validatedConfig.database.password, defaultValue: 'exchange123' },
-        { key: 'rabbitmq.url', value: validatedConfig.rabbitmq.url, defaultValue: 'amqp://admin:admin123@localhost:5672' },
+      const insecureDefaults: Array<{ key: string; value: any; defaultValue: any }> = [
+        {
+          key: 'server.jwtSecret',
+          value: validatedConfig.server.jwtSecret,
+          defaultValue: 'dev-secret-change-in-production',
+        },
+        {
+          key: 'database.password',
+          value: validatedConfig.database.password,
+          defaultValue: 'exchange123',
+        },
+        {
+          key: 'rabbitmq.url',
+          value: validatedConfig.rabbitmq.url,
+          defaultValue: 'amqp://admin:admin123@localhost:5672',
+        },
       ];
 
-      const failing = insecureDefaults.filter(d => !d.value || d.value === d.defaultValue);
+      const failing = insecureDefaults.filter((d) => !d.value || d.value === d.defaultValue);
       if (failing.length > 0) {
-        console.error('[CONFIG] ❌ Production configuration is missing required secrets or uses insecure defaults:');
-        failing.forEach(f => console.error(`  - ${f.key} is missing or using an insecure default`));
-        console.error('[CONFIG] Please set the required environment variables (see .env.example) and try again.');
+        console.error(
+          '[CONFIG] ❌ Production configuration is missing required secrets or uses insecure defaults:',
+        );
+        failing.forEach((f) =>
+          console.error(`  - ${f.key} is missing or using an insecure default`),
+        );
+        console.error(
+          '[CONFIG] Please set the required environment variables (see .env.example) and try again.',
+        );
         process.exit(1);
       }
     }

@@ -1,6 +1,6 @@
 /**
  * Monitor Module - Index
- * 
+ *
  * Exports all monitor services and starts background processes.
  */
 
@@ -23,32 +23,32 @@ import { historyStore } from './history-store';
  * Start all monitor services
  */
 export function startMonitor(): void {
-    logger.info('Starting trace monitoring services');
+  logger.info('Starting trace monitoring services');
 
-    // Start history store (for auto-save)
-    historyStore.start();
+  // Start history store (for auto-save)
+  historyStore.start();
 
-    // Start trace profiler (polls Jaeger every 30s)
-    traceProfiler.start();
+  // Start trace profiler (polls Jaeger every 30s)
+  traceProfiler.start();
 
-    // Start anomaly detector (checks every 10s)
-    // Delay start to allow baselines to populate
-    setTimeout(() => {
-        anomalyDetector.start();
-    }, 35000); // Start after first baseline collection
+  // Start anomaly detector (checks every 10s)
+  // Delay start to allow baselines to populate
+  setTimeout(() => {
+    anomalyDetector.start();
+  }, 35000); // Start after first baseline collection
 
-    logger.info('Monitor services started successfully');
+  logger.info('Monitor services started successfully');
 }
 
 /**
  * Stop all monitor services
  */
 export function stopMonitor(): void {
-    logger.info('Stopping trace monitoring services');
+  logger.info('Stopping trace monitoring services');
 
-    anomalyDetector.stop();
-    traceProfiler.stop();
-    historyStore.stop();
+  anomalyDetector.stop();
+  traceProfiler.stop();
+  historyStore.stop();
 
-    logger.info('Monitor services stopped');
+  logger.info('Monitor services stopped');
 }

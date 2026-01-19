@@ -1,16 +1,18 @@
 // Clean API Routes - Crypto Exchange
 // Multi-user with BTC transfers
 
-import type { Express } from "express";
-import { Request, Response } from "express";
-import { z } from "zod";
-import { fromZodError } from "zod-validation-error";
-import { orderService, getPrice } from "../core/order-service";
-import { insertOrderSchema, insertTransferSchema } from "@shared/schema";
-import { traces } from "../otel";
-import { createLogger } from "../lib/logger";
-import { getErrorMessage } from "../lib/errors";
-import db from "../db";
+import type { Express } from 'express';
+import { Request, Response } from 'express';
+import { z } from 'zod';
+import { fromZodError } from 'zod-validation-error';
+
+import { orderService, getPrice } from '../core/order-service';
+import { traces } from '../otel';
+import { createLogger } from '../lib/logger';
+import { getErrorMessage } from '../lib/errors';
+import db from '../db';
+
+import { insertOrderSchema, insertTransferSchema } from '@shared/schema';
 
 const logger = createLogger('api-routes');
 
@@ -22,25 +24,25 @@ export function registerRoutes(app: Express) {
   // ============================================
 
   // Get all verified users (for transfers)
-  app.get("/api/users", async (req: Request, res: Response) => {
+  app.get('/api/users', async (req: Request, res: Response) => {
     try {
       // Get real users from database (only verified ones)
       const result = await db.query(
-        `SELECT id, email, status FROM users WHERE status = 'verified' ORDER BY created_at DESC LIMIT 50`
+        `SELECT id, email, status FROM users WHERE status = 'verified' ORDER BY created_at DESC LIMIT 50`,
       );
-      
+
       // Map to expected format for transfer form
-      const users = result.rows.map(user => ({
+      const users = result.rows.map((user) => ({
         id: user.id,
         name: user.email.split('@')[0], // Use username part of email
         email: user.email,
-        avatar: '👤'
+        avatar: '👤',
       }));
-      
+
       res.json(users);
     } catch (error: unknown) {
       logger.error({ error: getErrorMessage(error) }, 'Failed to fetch users');
-      res.status(500).json({ error: "Failed to fetch users" });
+      res.status(500).json({ error: 'Failed to fetch users' });
     }
   });
 
@@ -49,55 +51,55 @@ export function registerRoutes(app: Express) {
   // ============================================
 
   // Get current BTC price
-  app.get("/api/price", async (req: Request, res: Response) => {
+  app.get('/api/price', async (req: Request, res: Response) => {
     try {
       const price = getPrice();
       res.json({
-        pair: "BTC/USD",
+        pair: 'BTC/USD',
         price,
         change24h: (Math.random() - 0.5) * 5,
-        timestamp: new Date()
+        timestamp: new Date(),
       });
     } catch (error: unknown) {
-      res.status(500).json({ error: "Failed to fetch price" });
+      res.status(500).json({ error: 'Failed to fetch price' });
     }
   });
 
   // Get wallet balance for a user (default: alice)
-  app.get("/api/wallet", async (req: Request, res: Response) => {
+  app.get('/api/wallet', async (req: Request, res: Response) => {
     try {
       const userId = (req.query.userId as string) || 'alice';
       const wallet = await orderService.getWallet(userId);
       if (!wallet) {
-        return res.status(404).json({ error: "User not found" });
+        return res.status(404).json({ error: 'User not found' });
       }
       const price = getPrice();
       res.json({
         ...wallet,
         btcValue: wallet.btc * price,
-        totalValue: wallet.usd + (wallet.btc * price)
+        totalValue: wallet.usd + wallet.btc * price,
       });
     } catch (error: unknown) {
-      res.status(500).json({ error: "Failed to fetch wallet" });
+      res.status(500).json({ error: 'Failed to fetch wallet' });
     }
   });
 
   // Get wallet for specific user
-  app.get("/api/wallet/:userId", async (req: Request, res: Response) => {
+  app.get('/api/wallet/:userId', async (req: Request, res: Response) => {
     try {
       const { userId } = req.params;
       const wallet = await orderService.getWallet(userId);
       if (!wallet) {
-        return res.status(404).json({ error: "User not found" });
+        return res.status(404).json({ error: 'User not found' });
       }
       const price = getPrice();
       res.json({
         ...wallet,
         btcValue: wallet.btc * price,
-        totalValue: wallet.usd + (wallet.btc * price)
+        totalValue: wallet.usd + wallet.btc * price,
       });
     } catch (error: unknown) {
-      res.status(500).json({ error: "Failed to fetch wallet" });
+      res.status(500).json({ error: 'Failed to fetch wallet' });
     }
   });
 
@@ -106,7 +108,7 @@ export function registerRoutes(app: Express) {
   // ============================================
 
   // Submit trade order
-  app.post("/api/orders", async (req: Request, res: Response) => {
+  app.post('/api/orders', async (req: Request, res: Response) => {
     try {
       const incomingTraceparent = req.headers['traceparent'];
       if (incomingTraceparent) {
@@ -115,14 +117,14 @@ export function registerRoutes(app: Express) {
 
       // Extend schema to include userId
       const orderWithUserSchema = insertOrderSchema.extend({
-        userId: z.string().optional()
+        userId: z.string().optional(),
       });
 
       const validation = orderWithUserSchema.safeParse(req.body);
       if (!validation.success) {
         return res.status(400).json({
-          error: "Invalid order request",
-          details: fromZodError(validation.error).message
+          error: 'Invalid order request',
+          details: fromZodError(validation.error).message,
         });
       }
 
@@ -133,7 +135,7 @@ export function registerRoutes(app: Express) {
         pair: orderData.pair,
         side: orderData.side,
         quantity: orderData.quantity,
-        orderType: orderData.orderType
+        orderType: orderData.orderType,
       });
 
       const wallet = await orderService.getWallet(orderData.userId || 'alice');
@@ -145,27 +147,26 @@ export function registerRoutes(app: Express) {
           orderId: result.orderId,
           pair: orderData.pair,
           side: orderData.side,
-          quantity: orderData.quantity
+          quantity: orderData.quantity,
         },
         execution: result.execution,
         wallet,
         traceId: result.traceId,
-        spanId: result.spanId
+        spanId: result.spanId,
       });
-
     } catch (error: unknown) {
       logger.error({ err: error }, 'Order processing failed');
-      res.status(500).json({ error: "Failed to process order" });
+      res.status(500).json({ error: 'Failed to process order' });
     }
   });
 
   // Get orders
-  app.get("/api/orders", async (req: Request, res: Response) => {
+  app.get('/api/orders', async (req: Request, res: Response) => {
     try {
       const orders = await orderService.getOrders(10);
       res.json(orders);
     } catch (error: unknown) {
-      res.status(500).json({ error: "Failed to fetch orders" });
+      res.status(500).json({ error: 'Failed to fetch orders' });
     }
   });
 
@@ -174,7 +175,7 @@ export function registerRoutes(app: Express) {
   // ============================================
 
   // Transfer BTC between users
-  app.post("/api/transfer", async (req: Request, res: Response) => {
+  app.post('/api/transfer', async (req: Request, res: Response) => {
     try {
       const incomingTraceparent = req.headers['traceparent'];
       if (incomingTraceparent) {
@@ -184,13 +185,13 @@ export function registerRoutes(app: Express) {
       const validation = insertTransferSchema.safeParse(req.body);
       if (!validation.success) {
         return res.status(400).json({
-          error: "Invalid transfer request",
-          details: fromZodError(validation.error).message
+          error: 'Invalid transfer request',
+          details: fromZodError(validation.error).message,
         });
       }
 
       const transferData = validation.data;
-      
+
       // fromUserId and toUserId are optional - provide defaults if needed
       const fromUserId = transferData.fromUserId || 'unknown';
       const toUserId = transferData.toUserId || 'unknown';
@@ -198,7 +199,7 @@ export function registerRoutes(app: Express) {
       const result = await orderService.processTransfer({
         fromUserId,
         toUserId,
-        amount: transferData.amount
+        amount: transferData.amount,
       });
 
       // Get updated wallets
@@ -213,25 +214,24 @@ export function registerRoutes(app: Express) {
         message: result.message,
         wallets: {
           [fromUserId]: fromWallet,
-          [toUserId]: toWallet
+          [toUserId]: toWallet,
         },
         traceId: result.traceId,
-        spanId: result.spanId
+        spanId: result.spanId,
       });
-
     } catch (error: unknown) {
       logger.error({ err: error }, 'Transfer processing failed');
-      res.status(500).json({ error: "Failed to process transfer" });
+      res.status(500).json({ error: 'Failed to process transfer' });
     }
   });
 
   // Get transfers
-  app.get("/api/transfers", async (req: Request, res: Response) => {
+  app.get('/api/transfers', async (req: Request, res: Response) => {
     try {
       const transfers = await orderService.getTransfers(10);
       res.json(transfers);
     } catch (error: unknown) {
-      res.status(500).json({ error: "Failed to fetch transfers" });
+      res.status(500).json({ error: 'Failed to fetch transfers' });
     }
   });
 
@@ -239,13 +239,13 @@ export function registerRoutes(app: Express) {
   // LEGACY PAYMENT ROUTES (backwards compat)
   // ============================================
 
-  app.post("/api/payments", async (req: Request, res: Response) => {
+  app.post('/api/payments', async (req: Request, res: Response) => {
     const orderRequest = {
       userId: 'alice',
-      pair: "BTC/USD" as const,
-      side: "BUY" as const,
+      pair: 'BTC/USD' as const,
+      side: 'BUY' as const,
       quantity: (req.body.amount || 100) / getPrice(),
-      orderType: "MARKET" as const
+      orderType: 'MARKET' as const,
     };
 
     try {
@@ -257,27 +257,29 @@ export function registerRoutes(app: Express) {
         payment: {
           id: result.orderId,
           amount: req.body.amount || 100,
-          currency: "USD",
-          status: result.execution?.status || "PENDING"
+          currency: 'USD',
+          status: result.execution?.status || 'PENDING',
         },
         traceId: result.traceId,
-        processorResponse: result.execution ? {
-          status: result.execution.status,
-          processedAt: result.execution.processedAt,
-          processorId: result.execution.processorId
-        } : undefined
+        processorResponse: result.execution
+          ? {
+              status: result.execution.status,
+              processedAt: result.execution.processedAt,
+              processorId: result.execution.processorId,
+            }
+          : undefined,
       });
     } catch (error: unknown) {
-      res.status(500).json({ error: "Failed to process payment" });
+      res.status(500).json({ error: 'Failed to process payment' });
     }
   });
 
-  app.get("/api/payments", async (req: Request, res: Response) => {
+  app.get('/api/payments', async (req: Request, res: Response) => {
     try {
       const orders = await orderService.getOrders(10);
       res.json(orders);
     } catch (error: unknown) {
-      res.status(500).json({ error: "Failed to fetch payments" });
+      res.status(500).json({ error: 'Failed to fetch payments' });
     }
   });
 
@@ -285,11 +287,11 @@ export function registerRoutes(app: Express) {
   // TRACES ENDPOINT (for UI)
   // ============================================
 
-  app.get("/api/traces", async (req: Request, res: Response) => {
+  app.get('/api/traces', async (req: Request, res: Response) => {
     try {
       const traceGroups = new Map<string, any[]>();
 
-      traces.forEach(span => {
+      traces.forEach((span) => {
         const traceId = span.traceId;
         if (!traceGroups.has(traceId)) {
           traceGroups.set(traceId, []);
@@ -298,14 +300,14 @@ export function registerRoutes(app: Express) {
       });
 
       const formattedTraces = Array.from(traceGroups.entries()).map(([traceId, spans]) => {
-        const rootSpan = spans.find(s => !s.parentSpanId) || spans[0];
+        const rootSpan = spans.find((s) => !s.parentSpanId) || spans[0];
         return {
           traceId,
           rootSpanId: rootSpan?.spanId || spans[0]?.spanId,
           status: 'completed',
-          duration: Math.max(...spans.map(s => s.duration || 0)),
-          startTime: new Date(Math.min(...spans.map(s => new Date(s.startTime).getTime()))),
-          spans: spans.map(span => ({
+          duration: Math.max(...spans.map((s) => s.duration || 0)),
+          startTime: new Date(Math.min(...spans.map((s) => new Date(s.startTime).getTime()))),
+          spans: spans.map((span) => ({
             spanId: span.spanId,
             parentSpanId: span.parentSpanId,
             traceId: span.traceId,
@@ -315,27 +317,29 @@ export function registerRoutes(app: Express) {
             startTime: span.startTime,
             endTime: span.endTime,
             tags: span.attributes || {},
-            status: 'completed'
-          }))
+            status: 'completed',
+          })),
         };
       });
 
-      formattedTraces.sort((a, b) => new Date(b.startTime).getTime() - new Date(a.startTime).getTime());
+      formattedTraces.sort(
+        (a, b) => new Date(b.startTime).getTime() - new Date(a.startTime).getTime(),
+      );
       res.json(formattedTraces.slice(0, 10));
     } catch (error: unknown) {
-      res.status(500).json({ error: "Failed to fetch traces" });
+      res.status(500).json({ error: 'Failed to fetch traces' });
     }
   });
 
   // Clear all data
-  app.delete("/api/clear", async (req: Request, res: Response) => {
+  app.delete('/api/clear', async (req: Request, res: Response) => {
     try {
       const { clearTraces } = await import('../otel');
       await orderService.clearAllData();
       clearTraces();
-      res.json({ success: true, message: "All data cleared" });
+      res.json({ success: true, message: 'All data cleared' });
     } catch (error: unknown) {
-      res.status(500).json({ error: "Failed to clear data" });
+      res.status(500).json({ error: 'Failed to clear data' });
     }
   });
 }

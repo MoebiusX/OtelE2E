@@ -17,6 +17,7 @@ scripts\restart.bat
 ## What This Demo Shows
 
 ### Full Distributed Trace (17 spans)
+
 ```
 kx-wallet: order.submit.client             ← Browser starts trade
 ├── kx-wallet: HTTP POST                   ← Fetch request
@@ -32,6 +33,7 @@ kx-wallet: order.submit.client             ← Browser starts trade
 ```
 
 ### Multi-User Transfers
+
 ```
 kx-wallet: transfer.submit.client          ← Browser starts transfer
 ├── kx-wallet: HTTP POST                   ← Fetch request
@@ -41,25 +43,25 @@ kx-wallet: transfer.submit.client          ← Browser starts transfer
 
 ### Services & OTEL Names
 
-| Service | URL | OTEL Service Name |
-|---------|-----|-------------------|
-| Krystaline Wallet (Browser) | http://localhost:5173 | `kx-wallet` |
-| Krystaline Exchange API (Server) | http://localhost:5000 | `kx-exchange` |
-| Krystaline Matcher (Processor) | RabbitMQ consumer | `kx-matcher` |
-| Kong Gateway | http://localhost:8000 | `api-gateway` |
-| Jaeger UI | http://localhost:16686 | - |
-| RabbitMQ | http://localhost:15672 | - |
-| Prometheus | http://localhost:9090 | - |
+| Service                          | URL                    | OTEL Service Name |
+| -------------------------------- | ---------------------- | ----------------- |
+| Krystaline Wallet (Browser)      | http://localhost:5173  | `kx-wallet`       |
+| Krystaline Exchange API (Server) | http://localhost:5000  | `kx-exchange`     |
+| Krystaline Matcher (Processor)   | RabbitMQ consumer      | `kx-matcher`      |
+| Kong Gateway                     | http://localhost:8000  | `api-gateway`     |
+| Jaeger UI                        | http://localhost:16686 | -                 |
+| RabbitMQ                         | http://localhost:15672 | -                 |
+| Prometheus                       | http://localhost:9090  | -                 |
 
 ### Metrics Endpoints
 
-| Metric Source | URL | Description |
-|---------------|-----|-------------|
-| Exchange API | http://localhost:5000/metrics | Application metrics (requests, orders, latency) |
-| RabbitMQ | http://localhost:15692/metrics | Queue depth, message rates, connections |
-| PostgreSQL (App) | http://localhost:9187/metrics | Database connections, query stats |
-| PostgreSQL (Kong) | http://localhost:9188/metrics | Kong database metrics |
-| Node Exporter | http://localhost:9100/metrics | OS metrics (CPU, memory, disk, network) |
+| Metric Source     | URL                            | Description                                     |
+| ----------------- | ------------------------------ | ----------------------------------------------- |
+| Exchange API      | http://localhost:5000/metrics  | Application metrics (requests, orders, latency) |
+| RabbitMQ          | http://localhost:15692/metrics | Queue depth, message rates, connections         |
+| PostgreSQL (App)  | http://localhost:9187/metrics  | Database connections, query stats               |
+| PostgreSQL (Kong) | http://localhost:9188/metrics  | Kong database metrics                           |
+| Node Exporter     | http://localhost:9100/metrics  | OS metrics (CPU, memory, disk, network)         |
 
 ## Architecture
 
@@ -81,17 +83,20 @@ Browser (order.response.received)
 ## Features
 
 ### Trading
+
 - **Dark themed** crypto trading UI
 - **BTC/USD trading** with simulated price (~$42K range)
 - **BUY/SELL orders** with fill price and slippage
 - **Real-time wallet** balance updates
 
 ### Multi-User
+
 - **User switcher** - Toggle between Alice 👩 and Bob 👨
 - **BTC transfers** - Send BTC between users
 - **Per-user wallets** - Each user has separate BTC/USD balance
 
 ### Tracing
+
 - **17 spans** for order flow
 - **4 services** in distributed trace
 - **Context propagation** through RabbitMQ
@@ -99,18 +104,19 @@ Browser (order.response.received)
 
 ## API Endpoints
 
-| Endpoint | Method | Description |
-|----------|--------|-------------|
-| `/api/users` | GET | List users (Alice, Bob) |
-| `/api/wallet?userId=alice` | GET | Get user's wallet |
-| `/api/orders` | POST | Submit trade order |
-| `/api/transfer` | POST | Transfer BTC between users |
-| `/api/transfers` | GET | List recent transfers |
-| `/api/price` | GET | Current BTC price |
+| Endpoint                   | Method | Description                |
+| -------------------------- | ------ | -------------------------- |
+| `/api/users`               | GET    | List users (Alice, Bob)    |
+| `/api/wallet?userId=alice` | GET    | Get user's wallet          |
+| `/api/orders`              | POST   | Submit trade order         |
+| `/api/transfer`            | POST   | Transfer BTC between users |
+| `/api/transfers`           | GET    | List recent transfers      |
+| `/api/price`               | GET    | Current BTC price          |
 
 ## Testing
 
 ### Manual Test - Order
+
 1. Go to http://localhost:5173
 2. Select Alice or Bob
 3. Enter BTC amount (e.g., 0.01)
@@ -118,6 +124,7 @@ Browser (order.response.received)
 5. Check Jaeger at http://localhost:16686 → service `kx-wallet` or `kx-exchange`
 
 ### Manual Test - Transfer
+
 1. Select Alice
 2. Click "Transfer BTC" tab
 3. Enter amount (e.g., 0.1)
@@ -135,12 +142,12 @@ Browser (order.response.received)
 
 ## Scripts
 
-| Script | Description |
-|--------|-------------|
-| `npm run dev` | Start development environment |
-| `scripts\restart.bat` | Clean restart (Docker + app) |
-| `npm run test:e2e` | Run E2E tests |
-| `npm run build` | Build for production |
+| Script                | Description                   |
+| --------------------- | ----------------------------- |
+| `npm run dev`         | Start development environment |
+| `scripts\restart.bat` | Clean restart (Docker + app)  |
+| `npm run test:e2e`    | Run E2E tests                 |
+| `npm run build`       | Build for production          |
 
 ---
 

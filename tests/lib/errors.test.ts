@@ -1,6 +1,6 @@
 /**
  * Error Classes Unit Tests
- * 
+ *
  * Tests for custom error types and error utilities
  */
 

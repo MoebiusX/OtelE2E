@@ -17,11 +17,7 @@ function formatCrypto(amount: number, symbol: string): string {
   return `${amount.toFixed(decimals)} ${symbol}`;
 }
 
-function calculateSlippage(
-  orderPrice: number,
-  fillPrice: number,
-  side: 'BUY' | 'SELL'
-): number {
+function calculateSlippage(orderPrice: number, fillPrice: number, side: 'BUY' | 'SELL'): number {
   if (side === 'BUY') {
     return ((fillPrice - orderPrice) / orderPrice) * 100;
   } else {
@@ -175,11 +171,11 @@ describe('Price Simulation', () => {
     it('should simulate price within expected range', () => {
       const basePrice = 50000;
       const volatility = 0.01; // 1%
-      
+
       for (let i = 0; i < 100; i++) {
         const movement = (Math.random() - 0.5) * 2 * volatility;
         const newPrice = basePrice * (1 + movement);
-        
+
         expect(newPrice).toBeGreaterThan(basePrice * (1 - volatility));
         expect(newPrice).toBeLessThan(basePrice * (1 + volatility));
       }
@@ -190,23 +186,23 @@ describe('Price Simulation', () => {
     it('should calculate bid-ask spread', () => {
       const midPrice = 50000;
       const spreadPercent = 0.1; // 0.1%
-      
+
       const bid = midPrice * (1 - spreadPercent / 200);
       const ask = midPrice * (1 + spreadPercent / 200);
       const spread = ask - bid;
-      
+
       expect(bid).toBeLessThan(midPrice);
       expect(ask).toBeGreaterThan(midPrice);
-      expect(spread).toBeCloseTo(midPrice * spreadPercent / 100, 2);
+      expect(spread).toBeCloseTo((midPrice * spreadPercent) / 100, 2);
     });
 
     it('should maintain bid < mid < ask relationship', () => {
       const midPrice = 50000;
       const spreadPercent = 0.5;
-      
+
       const bid = midPrice * (1 - spreadPercent / 200);
       const ask = midPrice * (1 + spreadPercent / 200);
-      
+
       expect(bid).toBeLessThan(midPrice);
       expect(midPrice).toBeLessThan(ask);
     });

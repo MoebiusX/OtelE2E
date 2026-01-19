@@ -1,6 +1,6 @@
 /**
  * Test Application Factory
- * 
+ *
  * Creates a minimal Express app for integration testing.
  * Does not start the server or connect to external services.
  */
@@ -44,13 +44,15 @@ vi.mock('@opentelemetry/api', () => ({
       spanContext: () => ({ traceId: 'test-trace-id-12345678', spanId: 'test-span-id' }),
     })),
     getTracer: vi.fn(() => ({
-      startActiveSpan: vi.fn((name, fn) => fn({
-        end: vi.fn(),
-        recordException: vi.fn(),
-        setStatus: vi.fn(),
-        setAttribute: vi.fn(),
-        spanContext: () => ({ traceId: 'test-trace-id-12345678', spanId: 'test-span-id' }),
-      })),
+      startActiveSpan: vi.fn((name, fn) =>
+        fn({
+          end: vi.fn(),
+          recordException: vi.fn(),
+          setStatus: vi.fn(),
+          setAttribute: vi.fn(),
+          spanContext: () => ({ traceId: 'test-trace-id-12345678', spanId: 'test-span-id' }),
+        }),
+      ),
     })),
   },
   context: {
@@ -71,15 +73,15 @@ import { rabbitMQClient } from '../../server/services/rabbitmq-client';
 
 export function createTestApp(): Express {
   const app = express();
-  
+
   // Essential middleware
   app.use(express.json());
   app.use(express.urlencoded({ extended: false }));
-  
+
   // Register routes
   app.use(healthRoutes);
   registerRoutes(app);
-  
+
   return app;
 }
 

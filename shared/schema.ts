@@ -1,4 +1,4 @@
-import { z } from "zod";
+import { z } from 'zod';
 
 // ============================================
 // KRYSTALINE EXCHANGE - WALLET SCHEMAS
@@ -6,26 +6,27 @@ import { z } from "zod";
 
 // Wallet Address Format: kx1 + base32 encoded identifier
 // Example: kx1qxy2kgdygjrsqtzq2n0yrf249
-export const walletAddressSchema = z.string()
-  .regex(/^kx1[a-z0-9]{20,40}$/, "Invalid wallet address format (must start with kx1)");
+export const walletAddressSchema = z
+  .string()
+  .regex(/^kx1[a-z0-9]{20,40}$/, 'Invalid wallet address format (must start with kx1)');
 
 // Core Wallet - independent of user auth
 export const kxWalletSchema = z.object({
-  walletId: z.string(),           // Primary key: "wal_" + nanoid
-  address: walletAddressSchema,    // Human-readable: kx1...
-  ownerId: z.string(),             // User's UUID from auth
-  label: z.string(),               // "Main Trading Wallet"
-  type: z.enum(["custodial", "non-custodial"]),
+  walletId: z.string(), // Primary key: "wal_" + nanoid
+  address: walletAddressSchema, // Human-readable: kx1...
+  ownerId: z.string(), // User's UUID from auth
+  label: z.string(), // "Main Trading Wallet"
+  type: z.enum(['custodial', 'non-custodial']),
   createdAt: z.date(),
 });
 
 // Wallet Balance - stored separately for each asset
 export const walletBalanceSchema = z.object({
   walletId: z.string(),
-  asset: z.enum(["BTC", "USD", "ETH"]),
+  asset: z.enum(['BTC', 'USD', 'ETH']),
   // Balance stored as integer in smallest unit (satoshi=8 decimals, cents=2)
   balance: z.number().int(),
-  decimals: z.number().int().min(0).max(18),  // BTC=8, USD=2
+  decimals: z.number().int().min(0).max(18), // BTC=8, USD=2
   lastUpdated: z.date(),
 });
 
@@ -42,27 +43,27 @@ export const userWalletMappingSchema = z.object({
 
 // Trade Order - submitted by client
 export const insertOrderSchema = z.object({
-  pair: z.literal("BTC/USD"),
-  side: z.enum(["BUY", "SELL"]),
+  pair: z.literal('BTC/USD'),
+  side: z.enum(['BUY', 'SELL']),
   quantity: z.number().positive(),
-  orderType: z.enum(["MARKET"]),
+  orderType: z.enum(['MARKET']),
 });
 
 // Payment schema - for direct payment transfers (legacy payment form)
 export const insertPaymentSchema = z.object({
   amount: z.number().positive(),
-  currency: z.enum(["USD", "BTC", "ETH"]),
+  currency: z.enum(['USD', 'BTC', 'ETH']),
   recipient: z.string().email(),
   description: z.string().optional(),
 });
 
 export const orderSchema = z.object({
   orderId: z.string(),
-  pair: z.literal("BTC/USD"),
-  side: z.enum(["BUY", "SELL"]),
+  pair: z.literal('BTC/USD'),
+  side: z.enum(['BUY', 'SELL']),
   quantity: z.number(),
-  orderType: z.enum(["MARKET"]),
-  status: z.enum(["PENDING", "FILLED", "REJECTED"]),
+  orderType: z.enum(['MARKET']),
+  status: z.enum(['PENDING', 'FILLED', 'REJECTED']),
   fillPrice: z.number().optional(),
   totalValue: z.number().optional(),
   traceId: z.string(),
@@ -75,11 +76,11 @@ export const executionSchema = z.object({
   orderId: z.string(),
   executionId: z.string(),
   pair: z.string(),
-  side: z.enum(["BUY", "SELL"]),
+  side: z.enum(['BUY', 'SELL']),
   quantity: z.number(),
   fillPrice: z.number(),
   totalValue: z.number(),
-  status: z.enum(["FILLED", "REJECTED"]),
+  status: z.enum(['FILLED', 'REJECTED']),
   processorId: z.string(),
   timestamp: z.string(),
 });
@@ -93,7 +94,7 @@ export const walletSchema = z.object({
 
 // Price Data
 export const priceSchema = z.object({
-  pair: z.literal("BTC/USD"),
+  pair: z.literal('BTC/USD'),
   price: z.number(),
   change24h: z.number(),
   timestamp: z.date(),
@@ -117,8 +118,8 @@ export const userWalletSchema = walletSchema.extend({
 
 // BTC Transfer between wallets (uses addresses)
 export const insertTransferSchema = z.object({
-  fromAddress: walletAddressSchema,  // kx1... sender address
-  toAddress: walletAddressSchema,    // kx1... recipient address
+  fromAddress: walletAddressSchema, // kx1... sender address
+  toAddress: walletAddressSchema, // kx1... recipient address
   amount: z.number().positive(),
   // Legacy fields for backwards compatibility
   fromUserId: z.string().optional(),
@@ -127,12 +128,12 @@ export const insertTransferSchema = z.object({
 
 export const transferSchema = z.object({
   transferId: z.string(),
-  fromAddress: z.string(),          // kx1... sender address
-  toAddress: z.string(),            // kx1... recipient address
+  fromAddress: z.string(), // kx1... sender address
+  toAddress: z.string(), // kx1... recipient address
   fromUserId: z.string().optional(), // Legacy: owner of sender wallet
-  toUserId: z.string().optional(),   // Legacy: owner of recipient wallet
+  toUserId: z.string().optional(), // Legacy: owner of recipient wallet
   amount: z.number(),
-  status: z.enum(["PENDING", "COMPLETED", "FAILED"]),
+  status: z.enum(['PENDING', 'COMPLETED', 'FAILED']),
   traceId: z.string(),
   spanId: z.string(),
   createdAt: z.date(),
@@ -289,13 +290,15 @@ export const tradeTraceSchema = z.object({
   timestamp: z.string(),
   duration: z.number().nonnegative(),
   status: z.string(),
-  spans: z.array(z.object({
-    spanId: z.string(),
-    operation: z.string(),
-    service: z.string(),
-    duration: z.number().nonnegative(),
-    status: z.string(),
-  })),
+  spans: z.array(
+    z.object({
+      spanId: z.string(),
+      operation: z.string(),
+      service: z.string(),
+      duration: z.number().nonnegative(),
+      status: z.string(),
+    }),
+  ),
 });
 
 // Database row schemas for validation

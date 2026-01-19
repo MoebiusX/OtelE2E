@@ -1,6 +1,7 @@
 # OpenTelemetry Payment PoC - Container Deployment Guide
 
 ## Prerequisites
+
 - Docker and Docker Compose installed
 - At least 4GB RAM available for containers
 - Ports 5000, 8000, 5432, 16686 available
@@ -8,6 +9,7 @@
 ## Quick Start
 
 1. **Clone and build the containers:**
+
 ```bash
 git clone <repository-url>
 cd opentelemetry-payment-poc
@@ -15,8 +17,9 @@ docker-compose up --build
 ```
 
 2. **Access the services:**
+
 - **Payment API**: http://localhost:5000
-- **Kong Gateway**: http://localhost:8000  
+- **Kong Gateway**: http://localhost:8000
 - **Jaeger Tracing UI**: http://localhost:16686
 - **PostgreSQL**: localhost:5432
 
@@ -46,30 +49,33 @@ docker-compose up --build
 ## Usage Examples
 
 ### Submit Payment (via Kong Gateway)
+
 ```bash
 curl -X POST http://localhost:8000/api/payments \
   -H "Content-Type: application/json" \
   -d '{
     "amount": 999.99,
-    "currency": "USD", 
+    "currency": "USD",
     "recipient": "test@example.com",
     "description": "Container deployment test"
   }'
 ```
 
 ### Submit Payment (direct to API)
+
 ```bash
 curl -X POST http://localhost:5000/api/payments \
   -H "Content-Type: application/json" \
   -d '{
     "amount": 750.00,
     "currency": "USD",
-    "recipient": "direct@example.com", 
+    "recipient": "direct@example.com",
     "description": "Direct API test"
   }'
 ```
 
 ### View Traces
+
 - **Application UI**: http://localhost:5000 (or http://localhost:8000)
 - **Jaeger UI**: http://localhost:16686
 
@@ -81,7 +87,7 @@ The system creates these authentic OpenTelemetry spans:
    - `kong-gateway-processing` - API gateway request handling
    - Attributes: `http.method`, `kong.service`, `kong.route`
 
-2. **HTTP Request Spans** 
+2. **HTTP Request Spans**
    - `POST` / `DELETE` - Auto-instrumented HTTP operations
    - Full HTTP attributes from OpenTelemetry SDK
 
@@ -93,11 +99,13 @@ The system creates these authentic OpenTelemetry spans:
 ## Development vs Production
 
 ### Development (Replit)
+
 - In-memory storage
 - Single process
 - Hot reloading
 
 ### Production (Containers)
+
 - PostgreSQL persistence
 - Multi-container architecture
 - Production builds
@@ -106,6 +114,7 @@ The system creates these authentic OpenTelemetry spans:
 ## Troubleshooting
 
 ### Container Issues
+
 ```bash
 # Check service status
 docker-compose ps
@@ -119,6 +128,7 @@ docker-compose restart
 ```
 
 ### Database Issues
+
 ```bash
 # Connect to PostgreSQL
 docker-compose exec postgres psql -U payment_user -d payment_poc
@@ -129,6 +139,7 @@ docker-compose up --build
 ```
 
 ### Network Issues
+
 ```bash
 # Test service connectivity
 docker-compose exec payment-api curl http://kong-gateway:8000/health
@@ -138,12 +149,14 @@ docker-compose exec kong-gateway curl http://payment-api:5000/api/payments
 ## Environment Variables
 
 ### payment-api
+
 - `NODE_ENV=production`
 - `DATABASE_URL=postgresql://...`
 - `OTEL_SERVICE_NAME=payment-api`
 - `OTEL_EXPORTER_OTLP_ENDPOINT=http://jaeger:14268/api/traces`
 
 ### kong-gateway
+
 - `BACKEND_URL=http://payment-api:5000`
 
 ## Monitoring and Observability

@@ -97,38 +97,39 @@ krystaline-exchange/
 
 ### Domain Objects (shared/schema.ts)
 
-| Object | Purpose |
-|--------|---------|
-| `Payment` | Payment transaction record with amount, currency, recipient |
-| `Trace` | Distributed trace metadata (traceId, rootSpanId, status) |
-| `Span` | Individual span within a trace (operationName, serviceName, duration) |
-| `User` | User authentication data (not currently used) |
+| Object    | Purpose                                                               |
+| --------- | --------------------------------------------------------------------- |
+| `Payment` | Payment transaction record with amount, currency, recipient           |
+| `Trace`   | Distributed trace metadata (traceId, rootSpanId, status)              |
+| `Span`    | Individual span within a trace (operationName, serviceName, duration) |
+| `User`    | User authentication data (not currently used)                         |
 
 ### Server Components
 
-| Component | File | Responsibility |
-|-----------|------|----------------|
-| `Express App` | `server/index.ts` | HTTP server, middleware, lifecycle |
-| `OTEL SDK` | `server/otel.ts` | Trace collection, span processing, batch export |
-| `API Routes` | `server/api/routes.ts` | REST endpoints: POST /payments, GET /traces |
-| `PaymentService` | `server/core/payment-service.ts` | Payment validation, storage, queue publishing |
-| `KongClient` | `server/services/kong-client.ts` | Kong service/route configuration |
-| `RabbitMQClient` | `server/services/rabbitmq-client.ts` | Message publishing with W3C trace context |
-| `MemoryStorage` | `server/storage.ts` | In-memory data store for payments, traces |
+| Component        | File                                 | Responsibility                                  |
+| ---------------- | ------------------------------------ | ----------------------------------------------- |
+| `Express App`    | `server/index.ts`                    | HTTP server, middleware, lifecycle              |
+| `OTEL SDK`       | `server/otel.ts`                     | Trace collection, span processing, batch export |
+| `API Routes`     | `server/api/routes.ts`               | REST endpoints: POST /payments, GET /traces     |
+| `PaymentService` | `server/core/payment-service.ts`     | Payment validation, storage, queue publishing   |
+| `KongClient`     | `server/services/kong-client.ts`     | Kong service/route configuration                |
+| `RabbitMQClient` | `server/services/rabbitmq-client.ts` | Message publishing with W3C trace context       |
+| `MemoryStorage`  | `server/storage.ts`                  | In-memory data store for payments, traces       |
 
 ### Infrastructure Components
 
-| Component | Config File | Purpose |
-|-----------|-------------|---------|
-| Kong Gateway | `docker-compose.external.yml` | API gateway, context injection |
-| RabbitMQ | `docker-compose.external.yml` | Message queue |
-| OTEL Collector | `otel-collector-config.yaml` | Trace aggregation, routing |
-| Jaeger | `docker-compose.yml` | Trace visualization |
-| Prometheus | `prometheus.yml` | Metrics collection |
+| Component      | Config File                   | Purpose                        |
+| -------------- | ----------------------------- | ------------------------------ |
+| Kong Gateway   | `docker-compose.external.yml` | API gateway, context injection |
+| RabbitMQ       | `docker-compose.external.yml` | Message queue                  |
+| OTEL Collector | `otel-collector-config.yaml`  | Trace aggregation, routing     |
+| Jaeger         | `docker-compose.yml`          | Trace visualization            |
+| Prometheus     | `prometheus.yml`              | Metrics collection             |
 
 ## Data Flow
 
 ### Payment Request Flow
+
 ```
 1. UI submits payment form
 2. Request goes to Kong Gateway (port 8000)
@@ -142,6 +143,7 @@ krystaline-exchange/
 ```
 
 ### Trace Context Propagation
+
 ```
 Mode 1 (Empty Headers): UI → Kong (creates traceparent) → API → RabbitMQ
 Mode 2 (Client Headers): UI (creates traceparent) → Kong (preserves) → API → RabbitMQ
@@ -149,19 +151,19 @@ Mode 2 (Client Headers): UI (creates traceparent) → Kong (preserves) → API �
 
 ## NPM Scripts
 
-| Script | Purpose |
-|--------|---------|
-| `npm run dev` | Start all services (Docker + Express + Vite) |
-| `npm run dev:server` | Start Express server only |
-| `npm run test:e2e` | Run automated E2E tests |
-| `npm run build` | Build for production |
+| Script               | Purpose                                      |
+| -------------------- | -------------------------------------------- |
+| `npm run dev`        | Start all services (Docker + Express + Vite) |
+| `npm run dev:server` | Start Express server only                    |
+| `npm run test:e2e`   | Run automated E2E tests                      |
+| `npm run build`      | Build for production                         |
 
 ## Key Configurations
 
-| File | Purpose |
-|------|---------|
-| `package.json` | Dependencies, scripts |
-| `tsconfig.json` | TypeScript config |
-| `vite.config.ts` | Vite bundler config |
-| `tailwind.config.ts` | Tailwind CSS config |
-| `docker-compose.external.yml` | Docker services |
+| File                          | Purpose               |
+| ----------------------------- | --------------------- |
+| `package.json`                | Dependencies, scripts |
+| `tsconfig.json`               | TypeScript config     |
+| `vite.config.ts`              | Vite bundler config   |
+| `tailwind.config.ts`          | Tailwind CSS config   |
+| `docker-compose.external.yml` | Docker services       |

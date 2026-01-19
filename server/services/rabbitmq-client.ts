@@ -1,5 +1,6 @@
 import * as amqp from 'amqplib';
 import { trace, context, SpanStatusCode, SpanKind, propagation } from '@opentelemetry/api';
+
 import { config } from '../config';
 import { createLogger } from '../lib/logger';
 import { ExternalServiceError, TimeoutError, getErrorMessage } from '../lib/errors';
@@ -10,14 +11,14 @@ export interface OrderMessage {
   orderId: string;
   correlationId: string;
   pair: string;
-  side: "BUY" | "SELL";
+  side: 'BUY' | 'SELL';
   quantity: number;
-  orderType: "MARKET";
+  orderType: 'MARKET';
   currentPrice: number;
   traceId: string;
   spanId: string;
   timestamp: string;
-  userId?: string;  // Optional user ID for order tracking
+  userId?: string; // Optional user ID for order tracking
 }
 
 export interface ExecutionResponse {
@@ -53,7 +54,10 @@ export class RabbitMQClient {
 
   async connect(): Promise<boolean> {
     try {
-      logger.info({ url: config.rabbitmq.url.replace(/\/\/.*@/, '//*****@') }, 'Connecting to RabbitMQ...');
+      logger.info(
+        { url: config.rabbitmq.url.replace(/\/\/.*@/, '//*****@') },
+        'Connecting to RabbitMQ...',
+      );
       const conn = await amqp.connect(config.rabbitmq.url);
       this.connection = conn as unknown as amqp.Connection;
       this.channel = await conn.createChannel();
@@ -65,9 +69,12 @@ export class RabbitMQClient {
       await this.channel.assertQueue(this.LEGACY_QUEUE, { durable: true });
       await this.channel.assertQueue(this.LEGACY_RESPONSE, { durable: true });
 
-      logger.info({
-        queues: [this.ORDERS_QUEUE, this.RESPONSE_QUEUE, this.LEGACY_QUEUE, this.LEGACY_RESPONSE],
-      }, 'RabbitMQ connected successfully');
+      logger.info(
+        {
+          queues: [this.ORDERS_QUEUE, this.RESPONSE_QUEUE, this.LEGACY_QUEUE, this.LEGACY_RESPONSE],
+        },
+        'RabbitMQ connected successfully',
+      );
       return true;
     } catch (error) {
       logger.error({ err: error }, 'RabbitMQ connection failed');
@@ -78,7 +85,10 @@ export class RabbitMQClient {
   /**
    * Publish order and wait for execution response from matcher
    */
-  async publishOrderAndWait(order: OrderMessage, timeoutMs: number = 5000): Promise<ExecutionResponse> {
+  async publishOrderAndWait(
+    order: OrderMessage,
+    timeoutMs: number = 5000,
+  ): Promise<ExecutionResponse> {
     if (!this.channel) {
       throw new ExternalServiceError('RabbitMQ', new Error('No channel available'));
     }
@@ -100,24 +110,31 @@ export class RabbitMQClient {
       // Create span as child of the current active span
       const parentContext = context.active();
       const activeSpan = trace.getSpan(parentContext);
-      logger.info({
-        hasActiveSpan: !!activeSpan,
-        activeTraceId: activeSpan?.spanContext().traceId,
-        activeSpanId: activeSpan?.spanContext().spanId,
-      }, 'Publishing order - checking active context');
+      logger.info(
+        {
+          hasActiveSpan: !!activeSpan,
+          activeTraceId: activeSpan?.spanContext().traceId,
+          activeSpanId: activeSpan?.spanContext().spanId,
+        },
+        'Publishing order - checking active context',
+      );
 
-      const span = this.tracer.startSpan('publish orders', {
-        kind: SpanKind.PRODUCER,
-        attributes: {
-          'messaging.system': 'rabbitmq',
-          'messaging.destination': this.LEGACY_QUEUE,
-          'messaging.operation': 'publish',
-          'order.id': order.orderId,
-          'order.pair': order.pair,
-          'order.side': order.side,
-          'order.quantity': order.quantity
-        }
-      }, parentContext);
+      const span = this.tracer.startSpan(
+        'publish orders',
+        {
+          kind: SpanKind.PRODUCER,
+          attributes: {
+            'messaging.system': 'rabbitmq',
+            'messaging.destination': this.LEGACY_QUEUE,
+            'messaging.operation': 'publish',
+            'order.id': order.orderId,
+            'order.pair': order.pair,
+            'order.side': order.side,
+            'order.quantity': order.quantity,
+          },
+        },
+        parentContext,
+      );
 
       // Set span in context and inject for propagation
       const spanContext = trace.setSpan(parentContext, span);
@@ -134,41 +151,45 @@ export class RabbitMQClient {
           const parentHeaders: Record<string, string> = {};
           propagation.inject(parentContext, parentHeaders);
 
-          logger.debug({
-            orderId: order.orderId,
-            correlationId,
-            publishTraceparent: publishHeaders.traceparent?.slice(0, 40),
-          }, 'Injecting trace headers for order');
-
-          // Send to legacy queue with both contexts
-          const sent = this.channel!.sendToQueue(
-            this.LEGACY_QUEUE,
-            Buffer.from(message),
+          logger.debug(
             {
-              persistent: true,
-              correlationId: correlationId,
-              headers: {
-                ...publishHeaders,
-                'x-correlation-id': correlationId,
-                'x-parent-traceparent': parentHeaders.traceparent || '',
-                'x-parent-tracestate': parentHeaders.tracestate || ''
-              }
-            }
+              orderId: order.orderId,
+              correlationId,
+              publishTraceparent: publishHeaders.traceparent?.slice(0, 40),
+            },
+            'Injecting trace headers for order',
           );
 
+          // Send to legacy queue with both contexts
+          const sent = this.channel!.sendToQueue(this.LEGACY_QUEUE, Buffer.from(message), {
+            persistent: true,
+            correlationId: correlationId,
+            headers: {
+              ...publishHeaders,
+              'x-correlation-id': correlationId,
+              'x-parent-traceparent': parentHeaders.traceparent || '',
+              'x-parent-tracestate': parentHeaders.tracestate || '',
+            },
+          });
+
           if (sent) {
-            logger.info({
-              orderId: order.orderId,
-              side: order.side,
-              quantity: order.quantity,
-              correlationId,
-            }, `Published order to ${this.LEGACY_QUEUE}`);
+            logger.info(
+              {
+                orderId: order.orderId,
+                side: order.side,
+                quantity: order.quantity,
+                correlationId,
+              },
+              `Published order to ${this.LEGACY_QUEUE}`,
+            );
             span.setStatus({ code: SpanStatusCode.OK });
           } else {
             clearTimeout(timeout);
             this.pendingResponses.delete(correlationId);
             span.setStatus({ code: SpanStatusCode.ERROR, message: 'Failed to send' });
-            reject(new ExternalServiceError('RabbitMQ', new Error('Failed to send order to queue')));
+            reject(
+              new ExternalServiceError('RabbitMQ', new Error('Failed to send order to queue')),
+            );
           }
         } catch (error: unknown) {
           clearTimeout(timeout);
@@ -197,7 +218,7 @@ export class RabbitMQClient {
       currentPrice: 42500,
       traceId: payment.traceId,
       spanId: payment.spanId,
-      timestamp: payment.timestamp
+      timestamp: payment.timestamp,
     };
 
     const response = await this.publishOrderAndWait(order, timeoutMs);
@@ -208,7 +229,7 @@ export class RabbitMQClient {
       correlationId: response.correlationId,
       status: response.status === 'FILLED' ? 'acknowledged' : 'rejected',
       processedAt: response.processedAt,
-      processorId: response.processorId
+      processorId: response.processorId,
     };
   }
 
@@ -227,21 +248,27 @@ export class RabbitMQClient {
           const response = JSON.parse(msg.content.toString());
           const correlationId = response.correlationId || msg.properties.correlationId;
 
-          logger.debug({
-            correlationId: correlationId?.slice(0, 8),
-            status: response.status,
-          }, 'Received execution response');
+          logger.debug(
+            {
+              correlationId: correlationId?.slice(0, 8),
+              status: response.status,
+            },
+            'Received execution response',
+          );
 
           // Convert legacy response format
           const executionResponse: ExecutionResponse = {
             orderId: response.orderId || `ORD-${response.paymentId}`,
             correlationId,
             // Handle both new (FILLED) and legacy (acknowledged) status formats
-            status: (response.status === 'FILLED' || response.status === 'acknowledged') ? 'FILLED' : 'REJECTED',
+            status:
+              response.status === 'FILLED' || response.status === 'acknowledged'
+                ? 'FILLED'
+                : 'REJECTED',
             fillPrice: response.fillPrice || 42500,
             totalValue: response.totalValue || 0,
             processedAt: response.processedAt,
-            processorId: response.processorId
+            processorId: response.processorId,
           };
 
           const callback = this.pendingResponses.get(correlationId);

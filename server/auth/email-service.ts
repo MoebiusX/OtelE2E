@@ -1,43 +1,45 @@
 /**
  * Email Service
- * 
+ *
  * Send emails via SMTP (MailDev in dev, real SMTP in prod).
  * Krystaline branding - Crystal Clear Crypto
  */
 
 import nodemailer from 'nodemailer';
+
 import { config } from '../config';
 import { createLogger } from '../lib/logger';
 
 const logger = createLogger('email');
 
 const transporter = nodemailer.createTransport({
-    host: config.smtp?.host || 'localhost',
-    port: config.smtp?.port || 1025,
-    secure: config.smtp?.secure || false,
-    // No auth needed for MailDev in dev
-    ...(config.smtp?.user && config.smtp?.password && {
-        auth: {
-            user: config.smtp.user,
-            pass: config.smtp.password,
-        },
+  host: config.smtp?.host || 'localhost',
+  port: config.smtp?.port || 1025,
+  secure: config.smtp?.secure || false,
+  // No auth needed for MailDev in dev
+  ...(config.smtp?.user &&
+    config.smtp?.password && {
+      auth: {
+        user: config.smtp.user,
+        pass: config.smtp.password,
+      },
     }),
 });
 
 interface EmailOptions {
-    to: string;
-    subject: string;
-    text?: string;
-    html?: string;
+  to: string;
+  subject: string;
+  text?: string;
+  html?: string;
 }
 
 // Krystaline brand colors
 const BRAND = {
-    name: 'Krystaline',
-    tagline: 'Crystal Clear Crypto',
-    primaryColor: '#8B5CF6', // Purple
-    secondaryColor: '#EC4899', // Pink
-    bgColor: '#0F172A', // Dark slate
+  name: 'Krystaline',
+  tagline: 'Crystal Clear Crypto',
+  primaryColor: '#8B5CF6', // Purple
+  secondaryColor: '#EC4899', // Pink
+  bgColor: '#0F172A', // Dark slate
 };
 
 // Email header/footer template
@@ -79,68 +81,74 @@ const emailWrapper = (content: string) => `
 `;
 
 export const emailService = {
-    async send(options: EmailOptions): Promise<boolean> {
-        try {
-            const info = await transporter.sendMail({
-                from: process.env.EMAIL_FROM || `"${BRAND.name}" <no-reply@krystaline.io>`,
-                to: options.to,
-                subject: options.subject,
-                text: options.text,
-                html: options.html,
-            });
+  async send(options: EmailOptions): Promise<boolean> {
+    try {
+      const info = await transporter.sendMail({
+        from: process.env.EMAIL_FROM || `"${BRAND.name}" <no-reply@krystaline.io>`,
+        to: options.to,
+        subject: options.subject,
+        text: options.text,
+        html: options.html,
+      });
 
-            logger.info({
-                to: options.to,
-                subject: options.subject,
-                messageId: info.messageId
-            }, 'Email sent successfully');
-            logger.debug('Email preview available at http://localhost:1080');
-            return true;
-        } catch (error: unknown) {
-            logger.error({
-                err: error,
-                to: options.to,
-                subject: options.subject
-            }, 'Failed to send email');
-            return false;
-        }
-    },
+      logger.info(
+        {
+          to: options.to,
+          subject: options.subject,
+          messageId: info.messageId,
+        },
+        'Email sent successfully',
+      );
+      logger.debug('Email preview available at http://localhost:1080');
+      return true;
+    } catch (error: unknown) {
+      logger.error(
+        {
+          err: error,
+          to: options.to,
+          subject: options.subject,
+        },
+        'Failed to send email',
+      );
+      return false;
+    }
+  },
 
-    async sendVerificationCode(email: string, code: string): Promise<boolean> {
-        return this.send({
-            to: email,
-            subject: `Verify your email - ${BRAND.name}`,
-            html: emailWrapper(`
+  async sendVerificationCode(email: string, code: string): Promise<boolean> {
+    return this.send({
+      to: email,
+      subject: `Verify your email - ${BRAND.name}`,
+      html: emailWrapper(`
                 <h2 style="margin-top: 0;">Email Verification</h2>
                 <p>Your verification code is:</p>
                 <div class="code-box">${code}</div>
                 <p style="color: #666;">This code expires in 10 minutes.</p>
                 <p style="color: #999; font-size: 14px;">If you didn't request this, please ignore this email.</p>
             `),
-            text: `Your ${BRAND.name} verification code is: ${code}\n\nThis code expires in 10 minutes.`
-        });
-    },
+      text: `Your ${BRAND.name} verification code is: ${code}\n\nThis code expires in 10 minutes.`,
+    });
+  },
 
-    async sendPasswordReset(email: string, code: string): Promise<boolean> {
-        return this.send({
-            to: email,
-            subject: `Password Reset - ${BRAND.name}`,
-            html: emailWrapper(`
+  async sendPasswordReset(email: string, code: string): Promise<boolean> {
+    return this.send({
+      to: email,
+      subject: `Password Reset - ${BRAND.name}`,
+      html: emailWrapper(`
                 <h2 style="margin-top: 0;">Password Reset</h2>
                 <p>Your password reset code is:</p>
                 <div class="code-box">${code}</div>
                 <p style="color: #666;">This code expires in 10 minutes.</p>
                 <p style="color: #999; font-size: 14px;">If you didn't request this, please ignore this email.</p>
             `),
-            text: `Your ${BRAND.name} password reset code is: ${code}\n\nThis code expires in 10 minutes.`
-        });
-    },
+      text: `Your ${BRAND.name} password reset code is: ${code}\n\nThis code expires in 10 minutes.`,
+    });
+  },
 
-    async sendWelcome(email: string): Promise<boolean> {
-        return this.send({
-            to: email,
-            subject: `Welcome to ${BRAND.name}! 💎`,
-            html: emailWrapper(`
+  async sendWelcome(email: string): Promise<boolean> {
+    return this.send({
+      to: email,
+      subject: `Welcome to ${BRAND.name}! 💎`,
+      html: emailWrapper(`
                 <h2 style="margin-top: 0;">Welcome to ${BRAND.name}! 🎉</h2>
                 <p>Your account has been verified and is ready to use.</p>
                 <p>You've been credited with test funds to explore the platform:</p>
@@ -156,9 +164,9 @@ export const emailService = {
                     Crystal clear transparency. Every transaction, every trade, fully observable.
                 </p>
             `),
-            text: `Welcome to ${BRAND.name}!\n\nYou've been credited with test funds:\n- 10,000 USDT\n- 1 BTC\n- 10 ETH\n\nStart trading at http://localhost:5000/portfolio`
-        });
-    }
+      text: `Welcome to ${BRAND.name}!\n\nYou've been credited with test funds:\n- 10,000 USDT\n- 1 BTC\n- 10 ETH\n\nStart trading at http://localhost:5000/portfolio`,
+    });
+  },
 };
 
 export default emailService;

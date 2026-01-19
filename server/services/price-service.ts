@@ -1,8 +1,8 @@
 /**
  * Price Service
- * 
+ *
  * Provides real-time cryptocurrency prices from external APIs.
- * 
+ *
  * PHILOSOPHY: Everything MUST be real. No fake/mocked data.
  * If prices are unavailable, we clearly indicate that rather than fake it.
  */
@@ -30,7 +30,7 @@ const priceCache: Map<string, PriceData> = new Map();
 const CACHE_TTL_MS = 60000; // 1 minute cache
 
 // Service status
-let serviceStatus: PriceServiceStatus = {
+const serviceStatus: PriceServiceStatus = {
   connected: false,
   source: 'none',
   lastUpdate: null,
@@ -39,9 +39,9 @@ let serviceStatus: PriceServiceStatus = {
 
 // Stable coin prices (these are pegged, not variable)
 const STABLE_PRICES: Record<string, number> = {
-  USDT: 1.00,
-  USDC: 1.00,
-  USD: 1.00,
+  USDT: 1.0,
+  USDC: 1.0,
+  USD: 1.0,
 };
 
 /**
@@ -54,7 +54,7 @@ export const priceService = {
    */
   getPrice(symbol: string): PriceData | null {
     const upperSymbol = symbol.toUpperCase();
-    
+
     // Stable coins have fixed prices
     if (STABLE_PRICES[upperSymbol] !== undefined) {
       return {
@@ -64,7 +64,7 @@ export const priceService = {
         timestamp: new Date(),
       };
     }
-    
+
     // Check cache
     const cached = priceCache.get(upperSymbol);
     if (cached) {
@@ -75,7 +75,7 @@ export const priceService = {
       // Cache expired, remove it
       priceCache.delete(upperSymbol);
     }
-    
+
     // No cached price available
     return null;
   },
@@ -87,15 +87,15 @@ export const priceService = {
   getRate(fromSymbol: string, toSymbol: string): number | null {
     const fromPrice = this.getPrice(fromSymbol);
     const toPrice = this.getPrice(toSymbol);
-    
+
     if (!fromPrice || !toPrice) {
       return null;
     }
-    
+
     if (toPrice.price === 0) {
       return null;
     }
-    
+
     return fromPrice.price / toPrice.price;
   },
 
@@ -119,21 +119,21 @@ export const priceService = {
    */
   updatePrice(symbol: string, price: number, source: string): void {
     const upperSymbol = symbol.toUpperCase();
-    
+
     const priceData: PriceData = {
       symbol: upperSymbol,
       price,
       source,
       timestamp: new Date(),
     };
-    
+
     priceCache.set(upperSymbol, priceData);
-    
+
     serviceStatus.lastUpdate = new Date();
     if (!serviceStatus.availableAssets.includes(upperSymbol)) {
       serviceStatus.availableAssets.push(upperSymbol);
     }
-    
+
     logger.debug(`Price updated: ${upperSymbol} = $${price} (${source})`);
   },
 
@@ -160,7 +160,7 @@ export const priceService = {
    */
   getAllPrices(): PriceData[] {
     const prices: PriceData[] = [];
-    
+
     // Add stable coins
     for (const [symbol, price] of Object.entries(STABLE_PRICES)) {
       prices.push({
@@ -170,7 +170,7 @@ export const priceService = {
         timestamp: new Date(),
       });
     }
-    
+
     // Add cached prices
     for (const priceData of Array.from(priceCache.values())) {
       const age = Date.now() - priceData.timestamp.getTime();
@@ -178,7 +178,7 @@ export const priceService = {
         prices.push(priceData);
       }
     }
-    
+
     return prices;
   },
 };

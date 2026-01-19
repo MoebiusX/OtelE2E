@@ -2,8 +2,9 @@
 // Clean separation of payment processing concerns
 // NOTE: This is a legacy service - the system now uses order-service.ts for trades
 
-import { rabbitMQClient } from '../services/rabbitmq-client';
 import { trace } from '@opentelemetry/api';
+
+import { rabbitMQClient } from '../services/rabbitmq-client';
 import { createLogger } from '../lib/logger';
 
 const logger = createLogger('payment');
@@ -52,12 +53,15 @@ export class PaymentService {
     const spanId = spanContext?.spanId || this.generateSpanId();
     const correlationId = this.generateCorrelationId();
 
-    logger.info({
-      traceId: traceId.slice(0, 8),
-      spanId: spanId.slice(0, 8),
-      amount: request.amount,
-      currency: request.currency
-    }, 'Processing payment with OTEL trace context');
+    logger.info(
+      {
+        traceId: traceId.slice(0, 8),
+        spanId: spanId.slice(0, 8),
+        amount: request.amount,
+        currency: request.currency,
+      },
+      'Processing payment with OTEL trace context',
+    );
 
     // Store payment record in memory
     const payment: StoredPayment = {
@@ -68,30 +72,36 @@ export class PaymentService {
       description: request.description,
       traceId,
       spanId,
-      createdAt: new Date()
+      createdAt: new Date(),
     };
     paymentsStore.push(payment);
 
     // Publish payment and wait for processor response
     if (rabbitMQClient.isConnected()) {
       try {
-        const processorResponse = await rabbitMQClient.publishPaymentAndWait({
-          paymentId: payment.id,
-          correlationId,
-          amount: payment.amount,
-          currency: payment.currency,
-          recipient: payment.recipient,
-          description: payment.description || '',
-          traceId,
-          spanId,
-          timestamp: payment.createdAt.toISOString()
-        }, 5000); // 5 second timeout
+        const processorResponse = await rabbitMQClient.publishPaymentAndWait(
+          {
+            paymentId: payment.id,
+            correlationId,
+            amount: payment.amount,
+            currency: payment.currency,
+            recipient: payment.recipient,
+            description: payment.description || '',
+            traceId,
+            spanId,
+            timestamp: payment.createdAt.toISOString(),
+          },
+          5000,
+        ); // 5 second timeout
 
-        logger.info({
-          paymentId: payment.id,
-          status: processorResponse.status,
-          processorId: processorResponse.processorId
-        }, 'Payment processor response received');
+        logger.info(
+          {
+            paymentId: payment.id,
+            status: processorResponse.status,
+            processorId: processorResponse.processorId,
+          },
+          'Payment processor response received',
+        );
 
         return {
           paymentId: payment.id,
@@ -100,30 +110,36 @@ export class PaymentService {
           processorResponse: {
             status: processorResponse.status,
             processedAt: processorResponse.processedAt,
-            processorId: processorResponse.processorId
-          }
+            processorId: processorResponse.processorId,
+          },
         };
       } catch (error: unknown) {
-        logger.warn({
-          err: error,
-          paymentId: payment.id
-        }, 'Payment processor timeout or error');
-        
+        logger.warn(
+          {
+            err: error,
+            paymentId: payment.id,
+          },
+          'Payment processor timeout or error',
+        );
+
         // Return without processor response on timeout
         return {
           paymentId: payment.id,
           traceId,
-          spanId
+          spanId,
         };
       }
     } else {
-      logger.warn({ paymentId: payment.id }, 'RabbitMQ not connected - payment processed without queue');
+      logger.warn(
+        { paymentId: payment.id },
+        'RabbitMQ not connected - payment processed without queue',
+      );
     }
 
     return {
       paymentId: payment.id,
       traceId,
-      spanId
+      spanId,
     };
   }
 
@@ -144,7 +160,7 @@ export class PaymentService {
   }
 
   async getPayment(id: number): Promise<StoredPayment | undefined> {
-    return paymentsStore.find(p => p.id === id);
+    return paymentsStore.find((p) => p.id === id);
   }
 
   async clearAllData(): Promise<void> {

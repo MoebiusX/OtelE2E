@@ -11,14 +11,16 @@ const loginRequestSchema = z.object({
   password: z.string().min(6),
 });
 
-const registerRequestSchema = z.object({
-  email: z.string().email(),
-  password: z.string().min(8),
-  confirmPassword: z.string(),
-}).refine((data) => data.password === data.confirmPassword, {
-  message: "Passwords don't match",
-  path: ["confirmPassword"],
-});
+const registerRequestSchema = z
+  .object({
+    email: z.string().email(),
+    password: z.string().min(8),
+    confirmPassword: z.string(),
+  })
+  .refine((data) => data.password === data.confirmPassword, {
+    message: "Passwords don't match",
+    path: ['confirmPassword'],
+  });
 
 const tokenPayloadSchema = z.object({
   userId: z.string(),
@@ -134,7 +136,8 @@ describe('Auth Request Validation', () => {
 });
 
 describe('Password Requirements', () => {
-  const passwordSchema = z.string()
+  const passwordSchema = z
+    .string()
     .min(8, 'Password must be at least 8 characters')
     .regex(/[A-Z]/, 'Password must contain at least one uppercase letter')
     .regex(/[a-z]/, 'Password must contain at least one lowercase letter')
@@ -172,14 +175,7 @@ describe('Email Validation', () => {
     'user@example.co.uk',
   ];
 
-  const invalidEmails = [
-    'not-an-email',
-    '@example.com',
-    'user@',
-    'user@.com',
-    'user@example.',
-    '',
-  ];
+  const invalidEmails = ['not-an-email', '@example.com', 'user@', 'user@.com', 'user@example.', ''];
 
   validEmails.forEach((email) => {
     it(`should accept valid email: ${email}`, () => {

@@ -1,6 +1,6 @@
 /**
  * Order Service Unit Tests
- * 
+ *
  * Tests for trade order submission and BTC transfers
  */
 
@@ -49,7 +49,12 @@ vi.mock('@opentelemetry/api', () => ({
   SpanStatusCode: { OK: 0, ERROR: 1 },
 }));
 
-import { OrderService, getPrice, type OrderRequest, type TransferRequest } from '../../server/core/order-service';
+import {
+  OrderService,
+  getPrice,
+  type OrderRequest,
+  type TransferRequest,
+} from '../../server/core/order-service';
 import { storage } from '../../server/storage';
 import { rabbitMQClient } from '../../server/services/rabbitmq-client';
 
@@ -237,7 +242,7 @@ describe('Order Service', () => {
       // This test verifies the RabbitMQ connection check is performed
       // Full RabbitMQ integration is tested in integration tests
       vi.clearAllMocks();
-      
+
       vi.mocked(storage.getWallet).mockResolvedValue({
         btc: 2.0,
         usd: 100000,
@@ -249,14 +254,14 @@ describe('Order Service', () => {
 
       // When RabbitMQ times out or fails, should still return an order
       vi.mocked(rabbitMQClient.publishOrderAndWait).mockRejectedValue(
-        new Error('RabbitMQ timeout')
+        new Error('RabbitMQ timeout'),
       );
 
       const result = await orderService.submitOrder(validBuyOrder);
 
       // Verify isConnected was checked
       expect(rabbitMQClient.isConnected).toHaveBeenCalled();
-      
+
       // Should still return orderId even if RabbitMQ fails
       expect(result.orderId).toMatch(/^ORD-/);
       expect(result.order).toBeDefined();
@@ -270,12 +275,30 @@ describe('Order ID Generation', () => {
     vi.mocked(storage.getWallet).mockResolvedValue(null);
 
     const results = await Promise.all([
-      service.submitOrder({ userId: 'a', pair: 'BTC/USD', side: 'BUY', quantity: 1, orderType: 'MARKET' }),
-      service.submitOrder({ userId: 'b', pair: 'BTC/USD', side: 'BUY', quantity: 1, orderType: 'MARKET' }),
-      service.submitOrder({ userId: 'c', pair: 'BTC/USD', side: 'BUY', quantity: 1, orderType: 'MARKET' }),
+      service.submitOrder({
+        userId: 'a',
+        pair: 'BTC/USD',
+        side: 'BUY',
+        quantity: 1,
+        orderType: 'MARKET',
+      }),
+      service.submitOrder({
+        userId: 'b',
+        pair: 'BTC/USD',
+        side: 'BUY',
+        quantity: 1,
+        orderType: 'MARKET',
+      }),
+      service.submitOrder({
+        userId: 'c',
+        pair: 'BTC/USD',
+        side: 'BUY',
+        quantity: 1,
+        orderType: 'MARKET',
+      }),
     ]);
 
-    const orderIds = results.map(r => r.orderId);
+    const orderIds = results.map((r) => r.orderId);
     const uniqueIds = new Set(orderIds);
     expect(uniqueIds.size).toBe(3);
   });

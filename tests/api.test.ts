@@ -9,19 +9,25 @@ import { z } from 'zod';
 const healthResponseSchema = z.object({
   status: z.enum(['healthy', 'degraded', 'unhealthy']),
   timestamp: z.string(),
-  services: z.record(z.object({
-    status: z.string(),
-    latency: z.number().optional(),
-  })).optional(),
+  services: z
+    .record(
+      z.object({
+        status: z.string(),
+        latency: z.number().optional(),
+      }),
+    )
+    .optional(),
 });
 
 const walletResponseSchema = z.object({
-  wallets: z.array(z.object({
-    id: z.string(),
-    asset: z.string(),
-    balance: z.number(),
-    address: z.string().optional(),
-  })),
+  wallets: z.array(
+    z.object({
+      id: z.string(),
+      asset: z.string(),
+      balance: z.number(),
+      address: z.string().optional(),
+    }),
+  ),
 });
 
 const orderResponseSchema = z.object({
@@ -102,9 +108,7 @@ describe('API Response Schema Validation', () => {
 
     it('should validate wallet list without addresses (legacy)', () => {
       const response = {
-        wallets: [
-          { id: 'wal_abc123', asset: 'BTC', balance: 1.5 },
-        ],
+        wallets: [{ id: 'wal_abc123', asset: 'BTC', balance: 1.5 }],
       };
       expect(() => walletResponseSchema.parse(response)).not.toThrow();
     });
