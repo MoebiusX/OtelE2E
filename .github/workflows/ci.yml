@@ -113,3 +113,7 @@ jobs:
 
       - name: Run TypeScript type check
         run: npm run check
+
+      - name: Run ESLint (warn-only)
+        run: npm run lint
+        continue-on-error: true
