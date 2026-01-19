@@ -5,10 +5,11 @@ import { SimpleSpanProcessor, SpanExporter } from '@opentelemetry/sdk-trace-node
 import { ExportResult, ExportResultCode } from '@opentelemetry/core';
 import { ReadableSpan } from '@opentelemetry/sdk-trace-base';
 import { OTLPTraceExporter } from '@opentelemetry/exporter-trace-otlp-http';
+import { createLogger } from './lib/logger';
+const logger = createLogger('otel');
 
 // Store traces for local visualization
-export const traces: any[] = [];
-
+export const traces: any[] = []; 
 // Clear traces function for proper isolation
 export function clearTraces() {
   traces.length = 0;
@@ -45,18 +46,11 @@ class TraceCollector implements SpanExporter {
 
       // Debug logging to see what spans are being captured
       const operation = span.attributes?.['messaging.operation'] || httpMethod || spanName;
-      console.log(`[OTEL] Capturing span: ${spanName} | Operation: ${operation} | TraceID: ${span.spanContext().traceId} | Service: ${span.attributes?.['service.name']}`);
+      logger.debug({ operation, spanName, traceId: span.spanContext().traceId, service: span.attributes?.['service.name'] }, `Capturing span`);
 
       // Show attributes for debugging span capture
       if (span.attributes?.['messaging.system'] || spanName.includes('amqp') || spanName.includes('rabbitmq')) {
-        console.log(`[OTEL] RabbitMQ span captured:`, {
-          name: span.name,
-          messaging: {
-            system: span.attributes?.['messaging.system'],
-            operation: span.attributes?.['messaging.operation'],
-            destination: span.attributes?.['messaging.destination']
-          }
-        });
+        logger.debug({ name: span.name, messaging: { system: span.attributes?.['messaging.system'], operation: span.attributes?.['messaging.operation'], destination: span.attributes?.['messaging.destination'] } }, 'RabbitMQ span captured');
       }
 
       const traceData = {
@@ -78,8 +72,8 @@ class TraceCollector implements SpanExporter {
       const existingSpan = traces.find(t => t.traceId === traceData.traceId && t.spanId === traceData.spanId);
       if (!existingSpan) {
         traces.push(traceData);
-        console.log(`[OTEL] Stored span in traces array. Total traces: ${traces.length}`);
-        console.log(`[OTEL] All traces now:`, traces.map(t => ({ name: t.name, traceId: t.traceId.slice(0, 8) })));
+        logger.debug({ tracesCount: traces.length }, 'Stored trace');
+        logger.debug({ traces: traces.map(t => ({ name: t.name, traceId: t.traceId.slice(0, 8) })) }, 'All traces now');
       }
 
       // Keep only last 100 traces
