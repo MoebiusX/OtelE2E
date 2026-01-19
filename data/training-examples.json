@@ -195,5 +195,25 @@
     "completion": "SUMMARY: The observed HTTP GET request to the crypto-wallet service experienced a latency deviation of 3.74 standard deviations from its expected value, suggesting an unexpected delay in the response time. This anomaly may be caused by an issue with the exchange API, which is responsible for routing requests to other services.\n\nCAUSES:\n- **Exchange API Delay**: The latency deviation could be attributed to an excessive delay in processing requests through the exchange API, potentially due to a bottleneck or incorrect configuration.\n- **Request Burden on crypto-wallet Service**: If the crypto-wallet service is under heavy load, it may be experiencing increased CPU usage and memory allocation, causing delays in its response time.\nRECOMMENDATIONS:\n- **Optimize Exchange API Configuration**: Review the exchange API's configuration to ensure it is optimized for performance. This may involve adjusting parameters such as request handling rates or caching mechanisms.\n- **Monitor and Optimize Request Burden on crypto-wallet Service**: Regularly monitor CPU usage, memory allocation, and request rates on the crypto-wallet service to identify potential bottlenecks. Implement measures to optimize resource utilization and reduce latency when necessary.\n- **Analyze and Resolve Resource Utilization Issues**: Investigate any issues related to resource utilization within the system, such as high CPU or memory usage patterns. Take corrective action to resolve these issues, ensuring that resources are allocated efficiently to support the expected workload of the crypto-wallet service.",
     "rating": "bad",
     "correction": "The service just restarted, this request took time as it was warming up the system. You need to check how many requests have been processed to discard first request latency/"
+  },
+  {
+    "id": "train_1768806455869_y1130d",
+    "timestamp": "2026-01-19T07:07:35.869Z",
+    "anomaly": {
+      "id": "0fa80a27eee30953642c7f0aa594a25e-54adb3ad48a9fb69",
+      "traceId": "0fa80a27eee30953642c7f0aa594a25e",
+      "service": "kx-exchange",
+      "operation": "GET",
+      "duration": 431.98,
+      "expectedMean": 31.59,
+      "deviation": 3.64,
+      "severity": 1,
+      "severityName": "Critical",
+      "timestamp": "2026-01-19T07:06:23.462Z"
+    },
+    "prompt": "You are an expert in distributed systems and observability. Analyze this performance anomaly:\n\n## Anomaly Details\n- Service: kx-exchange\n- Operation: GET\n- Duration: 431.98ms (expected: 31.59ms ± 110.08ms)\n- Deviation: 3.64σ (standard deviations from mean)\n- Severity: SEV1 (Critical)\n- Timestamp: Mon Jan 19 2026 08:06:23 GMT+0100 (Central European Standard Time)\n\n## Span Attributes\n{\n  \"http.request.method\": \"GET\",\n  \"http.request.method_original\": \"GET\",\n  \"http.response.status_code\": 200,\n  \"network.peer.address\": \"127.0.0.1\",\n  \"network.peer.port\": 16686,\n  \"otel.scope.name\": \"@opentelemetry/instrumentation-undici\",\n  \"otel.scope.version\": \"0.13.1\",\n  \"server.address\": \"localhost\",\n  \"server.port\": 16686,\n  \"span.kind\": \"client\",\n  \"url.full\": \"http://localhost:16686/api/traces?service=kx-exchange&lookback=1h&limit=100\",\n  \"url.path\": \"/api/traces\",\n  \"url.query\": \"?service=kx-exchange&lookback=1h&limit=100\",\n  \"url.scheme\": \"http\",\n  \"user_agent.original\": \"node\"\n}\n\n## Correlated System Metrics (at time of anomaly)\n- CPU Usage: 0.6%\n- Memory: 22MB\n- Request Rate: 0.1 req/s\n- Error Rate: 2.8%\n- P99 Latency: 395ms\n- Active Connections: 0\n\n## Auto-Detected Issues\n- 📊 Notable error rate (2.8%)\n\n## Trace Context\nThe full trace contains 2 spans:\n- kx-exchange: GET (431.98ms)\n- jaeger-all-in-one: /api/traces (98.44ms)\n\n\nBased on the trace data AND correlated metrics, provide:\n1. A brief summary (1-2 sentences) of what likely caused this anomaly\n2. 2-3 possible root causes (consider resource utilization if metrics show issues)\n3. 2-3 actionable recommendations\n\nFormat your response as:\nSUMMARY: [your summary]\nCAUSES:\n- [cause 1]\n- [cause 2]\nRECOMMENDATIONS:\n- [recommendation 1]\n- [recommendation 2]\nCONFIDENCE: [low/medium/high]",
+    "completion": "SUMMARY: The given anomaly in the kx-exchange service indicates a critical issue with the GET request, which resulted in an unexpected latency of 395ms. This delay is likely due to increased CPU usage and memory consumption caused by resource-intensive code or high traffic.\n\nCAUSES:\n- Elevated CPU Usage (0.6%): High CPU utilization could be attributed to complex calculations, long-running operations, or thread density issues.\n- Increased Memory Consumption: The spike in memory usage might be related to the execution of resource-hungry data processing scripts or inefficient caching mechanisms.\nRECOMMENDATIONS:\n- Optimize Database Queries and Reduce Complexity\n- Implement Efficient Caching Strategies\n- Monitor and Analyze Resource Utilization for Performance Bottlenecks",
+    "rating": "bad",
+    "correction": "There is no High CPU utilization"
   }
 ]

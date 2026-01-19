@@ -141,12 +141,25 @@ function loadConfig() {
 
   try {
     const validatedConfig = configSchema.parse(rawConfig);
-    
-    // Log successful configuration load (using console since logger isn't ready yet)
-    console.log('[CONFIG] Configuration loaded and validated successfully');
-    console.log(`[CONFIG] Environment: ${validatedConfig.env}`);
-    console.log(`[CONFIG] Server: ${validatedConfig.server.host}:${validatedConfig.server.port}`);
-    
+
+    // In production require that critical secrets are explicitly set and not left as insecure defaults
+    if (validatedConfig.env === 'production') {
+      const insecureDefaults: Array<{ key: string; value: any; defaultValue: any }>= [
+        { key: 'server.jwtSecret', value: validatedConfig.server.jwtSecret, defaultValue: 'dev-secret-change-in-production' },
+        { key: 'database.password', value: validatedConfig.database.password, defaultValue: 'exchange123' },
+        { key: 'rabbitmq.url', value: validatedConfig.rabbitmq.url, defaultValue: 'amqp://admin:admin123@localhost:5672' },
+      ];
+
+      const failing = insecureDefaults.filter(d => !d.value || d.value === d.defaultValue);
+      if (failing.length > 0) {
+        console.error('[CONFIG] ❌ Production configuration is missing required secrets or uses insecure defaults:');
+        failing.forEach(f => console.error(`  - ${f.key} is missing or using an insecure default`));
+        console.error('[CONFIG] Please set the required environment variables (see .env.example) and try again.');
+        process.exit(1);
+      }
+    }
+
+    // Configuration loaded and validated successfully (no console logging to avoid leaking secrets)
     return validatedConfig;
   } catch (error) {
     console.error('[CONFIG] ❌ Configuration validation failed:');
