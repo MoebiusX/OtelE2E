@@ -141,11 +141,3 @@ Browser (order.response.received)
 | `scripts\restart.bat` | Clean restart (Docker + app) |
 | `npm run test:e2e` | Run E2E tests |
 | `npm run build` | Build for production |
-
----
-
-## CI & Automation
-
-- **GitHub Actions** runs type checks, tests with coverage, builds, and dependency audits on push and pull requests.
-- **CodeQL** performs scheduled security analysis and on PRs.
-- **Dependabot** opens dependency update PRs daily for npm and weekly for Docker (see `.github/dependabot.yml`).
