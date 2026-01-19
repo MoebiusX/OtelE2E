@@ -1,0 +1,23 @@
+name: Container Image Scan
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main, develop]
+
+jobs:
+  trivy-scan:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Run Trivy filesystem scan
+        uses: aquasecurity/trivy-action@master
+        with:
+          format: 'table'
+          exit-code: '1'
+          severity: 'CRITICAL,HIGH'
+          scan-type: 'fs'
+          cache-dir: /tmp/.trivycache
