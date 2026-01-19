@@ -14,10 +14,7 @@
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage",
     "test:e2e": "node scripts/e2e-test.js",
-    "restart": "node scripts/restart.js",
-    "lint": "eslint --ext .ts,.tsx,.js,.jsx .",
-    "lint:fix": "eslint --ext .ts,.tsx,.js,.jsx . --fix",
-    "format": "prettier --write ."
+    "restart": "node scripts/restart.js"
   },
   "dependencies": {
     "@hookform/resolvers": "^3.10.0",
@@ -138,16 +135,7 @@
     "typescript": "5.6.3",
     "vite": "^5.4.14",
     "vite-plugin-node-polyfills": "^0.24.0",
-    "vitest": "^2.1.0",
-    "eslint": "^8.50.0",
-    "@typescript-eslint/parser": "^6.2.0",
-    "@typescript-eslint/eslint-plugin": "^6.2.0",
-    "eslint-config-prettier": "^9.0.0",
-    "prettier": "^3.7.0",
-    "eslint-plugin-import": "^2.27.5",
-    "eslint-import-resolver-typescript": "^3.5.1",
-    "husky": "^8.0.0",
-    "lint-staged": "^14.0.0"
+    "vitest": "^2.1.0"
   },
   "optionalDependencies": {
     "bufferutil": "^4.0.8"
