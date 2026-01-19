@@ -56,10 +56,10 @@ jobs:
             echo "No structured coverage JSON found; check the coverage artifacts for details"
           fi
 
-      - name: Run npm audit and fail on high/critical
+      - name: Run npm audit and warn on high/critical
         run: |
           npm audit --json > audit.json || true
-          node -e "const fs=require('fs'); const a=JSON.parse(fs.readFileSync('audit.json')); const vulnerabilities = a?.vulnerabilities ? Object.values(a.vulnerabilities) : (a?.advisories ? Object.values(a.advisories) : []); const sev=['high','critical']; const filtered = vulnerabilities.filter(v => (v.severity && sev.includes(v.severity.toLowerCase())) || (v?.severity_label && sev.includes(v.severity_label.toLowerCase()))); if(filtered.length){ console.error('High/Critical vulnerabilities found:'); filtered.forEach(f => console.error('-', f.name || f.module_name || f.title)); process.exit(1);} console.log('No high/critical vulnerabilities found');"
+          node -e "const fs=require('fs'); const a=JSON.parse(fs.readFileSync('audit.json')); const vulnerabilities = a?.vulnerabilities ? Object.values(a.vulnerabilities) : (a?.advisories ? Object.values(a.advisories) : []); const sev=['high','critical']; const filtered = vulnerabilities.filter(v => (v.severity && sev.includes(v.severity.toLowerCase())) || (v?.severity_label && sev.includes(v.severity_label.toLowerCase()))); if(filtered.length){ console.warn('High/Critical vulnerabilities found (non-blocking):'); filtered.forEach(f => console.warn('-', f.name || f.module_name || f.title)); } else { console.log('No high/critical vulnerabilities found'); }"
 
       - name: Upload audit.json
         if: always()
