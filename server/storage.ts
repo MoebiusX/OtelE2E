@@ -1,8 +1,6 @@
 import { type Order, type Trace, type InsertTrace, type Span, type InsertSpan, type User, type UserWallet, type Transfer, type KXWallet, type WalletBalance, type UserWalletMapping } from "@shared/schema";
 import { nanoid } from 'nanoid';
 import { createHash } from 'crypto';
-import { createLogger } from './lib/logger';
-const logger = createLogger('storage');
 
 // ============================================
 // KRYSTALINE EXCHANGE - WALLET ADDRESS GENERATION
@@ -181,7 +179,29 @@ export class MemoryStorage implements IStorage {
       this.wallets.set(name, { ...legacyWallet, userId: name });
     }
     
-    logger.info({ demoWallets: { alice: DEMO_WALLETS.alice.address, bob: DEMO_WALLETS.bob.address } }, 'Initialized Krystaline Exchange demo wallets');
+    console.log('[storage] Initialized Krystaline Exchange demo wallets:');
+    console.log(`  Alice: ${DEMO_WALLETS.alice.address}`);
+    console.log(`  Bob: ${DEMO_WALLETS.bob.address}`);
+  }
+
+  // ============================================
+  // USER OPERATIONS
+  // ============================================
+
+  async getUsers(): Promise<User[]> {
+    return USERS;
+  }
+
+  async getUser(userId: string): Promise<User | undefined> {
+    return USERS.find(u => u.id === userId);
+  }
+
+  // ============================================
+  // NEW: KRYSTALINE WALLET OPERATIONS
+  // ============================================
+
+  async getWalletByAddress(address: string): Promise<KXWallet | undefined> {
+    const walletId = this.walletsByAddress.get(address);
     if (!walletId) return undefined;
     return this.kxWallets.get(walletId);
   }
@@ -227,8 +247,8 @@ export class MemoryStorage implements IStorage {
       this.userWalletMappings.set(ownerId, mapping);
     }
     
-    logger.info({ ownerId, address }, 'Created wallet');
-    return wallet; 
+    console.log(`[storage] Created wallet ${address} for ${ownerId}`);
+    return wallet;
   }
 
   // ============================================
@@ -523,11 +543,11 @@ export async function createStorage(): Promise<IStorage> {
   if (storageType === 'postgres') {
     // Dynamic import to avoid loading pg when not needed
     const { getPostgresStorage } = await import('./db/postgres-storage');
-    logger.info({ storageType: 'postgres' }, 'Using PostgreSQL storage');
+    console.log('[storage] Using PostgreSQL storage');
     return getPostgresStorage();
   }
   
-  logger.info({ storageType: 'memory' }, 'Using in-memory storage');
+  console.log('[storage] Using in-memory storage');
   return new MemoryStorage();
 }
 
