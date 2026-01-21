@@ -523,15 +523,16 @@ export class MemoryStorage implements IStorage {
 export type StorageType = 'memory' | 'postgres';
 
 /**
- * Get the configured storage type - defaults to postgres
+ * Get the configured storage type - defaults to memory
+ * Set STORAGE_TYPE=postgres or STORAGE_TYPE=postgresql for PostgreSQL
  */
 export function getStorageType(): StorageType {
   const envType = process.env.STORAGE_TYPE?.toLowerCase();
-  if (envType === 'memory') {
-    return 'memory';
+  if (envType === 'postgres' || envType === 'postgresql') {
+    return 'postgres';
   }
-  // Default to postgres for production
-  return 'postgres';
+  // Default to memory for testing/development
+  return 'memory';
 }
 
 /**
@@ -574,6 +575,11 @@ export function getStorage(): IStorage {
 // This allows code to import { storage } and get the correct backend after initialization
 export const storage: IStorage = new Proxy({} as IStorage, {
   get(_target, prop) {
-    return (_storage as any)[prop];
+    const value = (_storage as any)[prop];
+    // Bind methods to the storage instance so 'this' works correctly
+    if (typeof value === 'function') {
+      return value.bind(_storage);
+    }
+    return value;
   }
 });

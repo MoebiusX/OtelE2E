@@ -3,6 +3,7 @@
 
 import { storage } from '../storage';
 import { rabbitMQClient } from '../services/rabbitmq-client';
+import { walletService } from '../wallet/wallet-service';
 import { trace, context, SpanStatusCode } from '@opentelemetry/api';
 import { createLogger } from '../lib/logger';
 import { OrderError, ValidationError, InsufficientFundsError, getErrorMessage } from '../lib/errors';
@@ -99,32 +100,33 @@ export class OrderService {
             orderId
         }, 'Submitting trade order');
 
-        const wallet = await storage.getWallet(userId);
-        if (!wallet) {
-            return {
-                orderId,
-                traceId,
-                spanId,
-                order: null,
-                execution: {
-                    status: 'REJECTED',
-                    fillPrice: 0,
-                    totalValue: 0,
-                    processedAt: new Date().toISOString(),
-                    processorId: 'local-validator'
-                }
-            };
-        }
-
         const price = getPrice();
         const totalValue = price * request.quantity;
 
+        // Get user's actual wallet balances from database
+        const usdWallet = await walletService.getWallet(userId, 'USD');
+        const btcWallet = await walletService.getWallet(userId, 'BTC');
+
+        // Fallback to legacy storage for demo users (alice, bob)
+        const isLegacyUser = ['alice', 'bob'].includes(userId);
+        let usdBalance = 0;
+        let btcBalance = 0;
+
+        if (isLegacyUser) {
+            const legacyWallet = await storage.getWallet(userId);
+            usdBalance = legacyWallet?.usd || 0;
+            btcBalance = legacyWallet?.btc || 0;
+        } else {
+            usdBalance = usdWallet ? parseFloat(usdWallet.available) : 0;
+            btcBalance = btcWallet ? parseFloat(btcWallet.available) : 0;
+        }
+
         // Validation
-        if (request.side === 'BUY' && totalValue > wallet.usd) {
+        if (request.side === 'BUY' && totalValue > usdBalance) {
             logger.warn({
                 userId,
                 required: totalValue,
-                available: wallet.usd
+                available: usdBalance
             }, 'Order rejected - insufficient USD');
             return {
                 orderId, traceId, spanId,
@@ -133,11 +135,11 @@ export class OrderService {
             };
         }
 
-        if (request.side === 'SELL' && request.quantity > wallet.btc) {
+        if (request.side === 'SELL' && request.quantity > btcBalance) {
             logger.warn({
                 userId,
                 required: request.quantity,
-                available: wallet.btc
+                available: btcBalance
             }, 'Order rejected - insufficient BTC');
             return {
                 orderId, traceId, spanId,
@@ -164,20 +166,20 @@ export class OrderService {
             orderId,
             rabbitMQConnected: isRabbitConnected
         }, 'Order processing - checking RabbitMQ connection');
-        
+
         if (isRabbitConnected) {
             // Capture the current context to ensure it's passed to RabbitMQ
             const currentContext = context.active();
             const activeSpanForRabbit = trace.getSpan(currentContext);
-            
+
             logger.info({
                 hasContext: !!activeSpanForRabbit,
                 contextTraceId: activeSpanForRabbit?.spanContext().traceId,
             }, 'Calling RabbitMQ with captured context');
-            
+
             try {
                 // Execute within the captured context to ensure trace propagation
-                const executionResponse = await context.with(currentContext, () => 
+                const executionResponse = await context.with(currentContext, () =>
                     rabbitMQClient.publishOrderAndWait({
                         orderId,
                         correlationId,

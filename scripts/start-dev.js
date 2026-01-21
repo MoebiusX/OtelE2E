@@ -93,7 +93,7 @@ function startProcess(name, cmd, args, color) {
     const child = spawn(cmd, args, {
         cwd: rootDir,
         shell: true,
-        env: { ...process.env, NODE_ENV: 'development', FORCE_COLOR: '1' }
+        env: { ...process.env, NODE_ENV: 'development', FORCE_COLOR: '1', STORAGE_TYPE: 'postgres' }
     });
 
     child.stdout?.on('data', (data) => {
