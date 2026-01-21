@@ -6,12 +6,12 @@ import { config } from "./config";
 import { createLogger } from "./lib/logger";
 import { requestLogger } from "./middleware/request-logger";
 import { errorHandler, notFoundHandler, handleUnhandledRejection, handleUncaughtException } from "./middleware/error-handler";
-import { 
-  generalRateLimiter, 
-  authRateLimiter, 
-  securityHeaders, 
-  corsMiddleware, 
-  requestTimeout 
+import {
+  generalRateLimiter,
+  authRateLimiter,
+  securityHeaders,
+  corsMiddleware,
+  requestTimeout
 } from "./middleware/security";
 
 import express, { type Request, Response, NextFunction } from "express";
@@ -64,6 +64,10 @@ app.use(express.urlencoded({ extended: false }));
 app.use(corsMiddleware);
 
 (async () => {
+  // Initialize PostgreSQL storage FIRST (before any routes use it)
+  const { initializeStorage } = await import('./storage');
+  await initializeStorage();
+
   // Initialize external services
   logger.info('Initializing external services...');
 
@@ -155,7 +159,7 @@ app.use(corsMiddleware);
   // Start server
   const port = config.server.port;
   const host = config.server.host;
-  
+
   server.listen(port, host, () => {
     logger.info({
       port,
@@ -169,16 +173,16 @@ app.use(corsMiddleware);
 
   // Graceful shutdown
   let isShuttingDown = false;
-  
+
   const shutdown = async (signal: string) => {
     if (isShuttingDown) {
       logger.warn('Shutdown already in progress');
       return;
     }
     isShuttingDown = true;
-    
+
     logger.info({ signal }, 'Received shutdown signal, closing gracefully...');
-    
+
     // Stop accepting new connections
     server.close(() => {
       logger.info('HTTP server closed');

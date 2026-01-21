@@ -222,7 +222,7 @@ export type InsertPayment = InsertOrder;
 
 // System Status - for public transparency dashboard
 export const systemStatusSchema = z.object({
-  status: z.enum(['operational', 'degraded', 'maintenance']),
+  status: z.enum(['operational', 'degraded', 'down']),
   timestamp: z.string(),
   uptime: z.number().min(0).max(100),
   metrics: z.object({

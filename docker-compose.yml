@@ -113,13 +113,7 @@ services:
       - ollama_data:/root/.ollama
     networks:
       - kong-net
-    deploy:
-      resources:
-        reservations:
-          devices:
-            - driver: nvidia
-              count: 1
-              capabilities: [gpu]
+    # Note: GPU support removed for stability. Add back 'deploy' section if NVIDIA GPU available.
     restart: unless-stopped
 
   # Prometheus - Metrics collection and storage

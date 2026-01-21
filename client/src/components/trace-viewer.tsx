@@ -141,7 +141,29 @@ export function TraceViewer() {
     }
   });
 
-  const traceList = traces || [];
+  // Filter to show only trade-related operations (hide login, health checks, etc.)
+  const TRADE_OPERATIONS = ['order', 'trade', 'transfer', 'payment', 'execute', 'match', 'settle', 'wallet', 'balance'];
+  const EXCLUDED_OPERATIONS = ['auth', 'login', 'logout', 'register', 'health', 'status', 'clear', 'verify', 'refresh'];
+
+  const isTradeRelated = (trace: TraceData): boolean => {
+    // Check if any span in the trace is trade-related
+    const hasTradeSpan = trace.spans.some(span => {
+      const opName = (span.operationName || '').toLowerCase();
+      const serviceName = (span.serviceName || '').toLowerCase();
+      
+      // Exclude if it matches excluded operations
+      if (EXCLUDED_OPERATIONS.some(excluded => opName.includes(excluded))) {
+        return false;
+      }
+      
+      // Include if it matches trade operations
+      return TRADE_OPERATIONS.some(trade => opName.includes(trade) || serviceName.includes(trade));
+    });
+    
+    return hasTradeSpan;
+  };
+
+  const traceList = (traces || []).filter(isTradeRelated);
 
   // Callback to mark trace as viewed in localStorage
   const handleTraceViewed = () => {

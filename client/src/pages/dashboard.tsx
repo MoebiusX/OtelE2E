@@ -7,10 +7,33 @@ import { TradeForm } from "@/components/trade-form";
 import { TransferForm } from "@/components/transfer-form";
 import { TraceViewer } from "@/components/trace-viewer";
 import { formatTimeAgo } from "@/lib/utils";
-import { Bitcoin, TrendingUp, Wallet, ArrowUpRight, ArrowDownRight, Send, ArrowRightLeft, Sparkles, X, CheckCircle2, Eye, Zap } from "lucide-react";
+import { Bitcoin, TrendingUp, Wallet, ArrowUpRight, ArrowDownRight, Send, ArrowRightLeft, Sparkles, X, CheckCircle2, Eye, Zap, DollarSign, CreditCard, RefreshCw } from "lucide-react";
 import type { Order, Transfer } from "@shared/schema";
 import Layout from "@/components/Layout";
 import { useLocation, useSearch } from "wouter";
+
+// Types for portfolio
+interface WalletData {
+  asset: string;
+  balance: string;
+  available: string;
+  locked: string;
+}
+
+interface PriceData {
+  BTC: number;
+  ETH: number;
+  source: string;
+}
+
+// Asset configuration for display
+const ASSET_CONFIG: Record<string, { icon: string; color: string; name: string }> = {
+  BTC: { icon: "₿", color: "text-orange-400", name: "Bitcoin" },
+  ETH: { icon: "Ξ", color: "text-purple-400", name: "Ethereum" },
+  USDT: { icon: "₮", color: "text-emerald-400", name: "Tether" },
+  USD: { icon: "$", color: "text-green-400", name: "US Dollar" },
+  EUR: { icon: "€", color: "text-blue-400", name: "Euro" },
+};
 
 type TabType = 'trade' | 'transfer';
 
@@ -21,18 +44,17 @@ function JourneyProgress({ currentStep }: { currentStep: 1 | 2 | 3 | 4 }) {
     { num: 2, label: 'Make First Trade', icon: Zap },
     { num: 3, label: 'View Trace Proof', icon: Eye },
   ];
-  
+
   return (
     <div className="flex items-center justify-center gap-2 mb-6">
       {steps.map((step, i) => (
         <div key={step.num} className="flex items-center">
-          <div className={`flex items-center gap-2 px-3 py-1.5 rounded-full text-sm font-medium transition-all ${
-            step.num < currentStep 
-              ? 'bg-green-500/20 text-green-400' 
-              : step.num === currentStep 
-                ? 'bg-cyan-500/20 text-cyan-400 ring-2 ring-cyan-500/50' 
-                : 'bg-slate-800 text-slate-500'
-          }`}>
+          <div className={`flex items-center gap-2 px-3 py-1.5 rounded-full text-sm font-medium transition-all ${step.num < currentStep
+            ? 'bg-green-500/20 text-green-400'
+            : step.num === currentStep
+              ? 'bg-cyan-500/20 text-cyan-400 ring-2 ring-cyan-500/50'
+              : 'bg-slate-800 text-slate-500'
+            }`}>
             {step.num < currentStep ? (
               <CheckCircle2 className="w-4 h-4" />
             ) : (
@@ -42,9 +64,8 @@ function JourneyProgress({ currentStep }: { currentStep: 1 | 2 | 3 | 4 }) {
             <span className="sm:hidden">{step.num}</span>
           </div>
           {i < steps.length - 1 && (
-            <div className={`w-8 h-0.5 mx-1 ${
-              step.num < currentStep ? 'bg-green-500/50' : 'bg-slate-700'
-            }`} />
+            <div className={`w-8 h-0.5 mx-1 ${step.num < currentStep ? 'bg-green-500/50' : 'bg-slate-700'
+              }`} />
           )}
         </div>
       ))}
@@ -62,7 +83,7 @@ export default function Dashboard() {
 
   // Get current user from localStorage
   const [currentUser, setCurrentUser] = useState<string | null>(null);
-  
+
   useEffect(() => {
     const userData = localStorage.getItem('user');
     if (userData) {
@@ -76,7 +97,7 @@ export default function Dashboard() {
     } else {
       navigate('/login');
     }
-    
+
     // Check if user has already viewed a trace
     if (localStorage.getItem('hasViewedTrace') === 'true') {
       setHasViewedTrace(true);
@@ -115,6 +136,74 @@ export default function Dashboard() {
     refetchInterval: 3000,
   });
 
+  // Portfolio data - use SAME endpoint as trade form for consistency
+  interface SimpleWallet {
+    btc: number;
+    usd: number;
+    btcValue: number;
+    totalValue: number;
+  }
+
+  const { data: simpleWallet, isLoading: simpleWalletLoading } = useQuery<SimpleWallet>({
+    queryKey: ["/api/wallet", { userId: currentUser }],
+    queryFn: async () => {
+      const res = await fetch(`http://localhost:8000/api/wallet?userId=${currentUser}`);
+      return res.json();
+    },
+    enabled: !!currentUser,
+    refetchInterval: 5000,
+  });
+
+  // Also fetch detailed wallets as backup (for asset grid)
+  const { data: walletsData, isLoading: walletsLoading } = useQuery<{ wallets: WalletData[] }>({
+    queryKey: ["/api/wallet/balances"],
+    queryFn: async () => {
+      const token = localStorage.getItem("accessToken");
+      const res = await fetch("/api/wallet/balances", {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (!res.ok) {
+        if (res.status === 401) {
+          localStorage.clear();
+          navigate("/login");
+        }
+        throw new Error("Failed to fetch wallets");
+      }
+      return res.json();
+    },
+    enabled: !!currentUser,
+    refetchInterval: 5000,
+  });
+
+  // Real-time price data from Binance
+  const { data: priceData } = useQuery<PriceData>({
+    queryKey: ["/api/price"],
+    refetchInterval: 3000,
+  });
+
+  // Helper: Get USD rate for an asset
+  const getRate = (asset: string): number => {
+    if (priceData) {
+      if (asset === 'BTC') return priceData.BTC;
+      if (asset === 'ETH') return priceData.ETH;
+    }
+    if (asset === 'USDT' || asset === 'USD') return 1;
+    if (asset === 'EUR') return 1.1;
+    return 0;
+  };
+
+  // Calculate total portfolio value - use simpleWallet for accuracy (matches trade form)
+  const calculateTotalUSD = () => {
+    if (simpleWallet) {
+      return simpleWallet.totalValue || (simpleWallet.btc * (priceData?.BTC || 0) + simpleWallet.usd);
+    }
+    if (!walletsData?.wallets) return 0;
+    return walletsData.wallets.reduce((total, w) => {
+      const rate = getRate(w.asset);
+      return total + parseFloat(w.balance) * rate;
+    }, 0);
+  };
+
   // Track first trade completion
   useEffect(() => {
     if (orders && orders.length > 0) {
@@ -139,239 +228,338 @@ export default function Dashboard() {
   return (
     <Layout>
       <div className="min-h-screen bg-slate-950">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-          <div className="flex justify-between items-center mb-6">
-            <div className="flex items-center space-x-4">
-              <div className="flex items-center space-x-2">
-                <Bitcoin className="w-6 h-6 text-orange-500" />
-                <h1 className="text-xl font-bold text-white">Trade</h1>
-              </div>
-            </div>
-          </div>
-        </div>
-
         {/* Main Content */}
-        <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        
-        {/* Welcome Banner for New Users */}
-        {showWelcome && (
-          <div className="mb-8">
-            <JourneyProgress currentStep={hasViewedTrace ? 4 : hasCompletedFirstTrade ? 3 : 2} />
-            
-            <Card className="bg-gradient-to-r from-cyan-900/40 via-blue-900/40 to-indigo-900/40 border-cyan-500/30 relative overflow-hidden">
-              <button 
-                onClick={() => {
-                  setShowWelcome(false);
-                  localStorage.removeItem('isNewUser');
-                }}
-                className="absolute top-3 right-3 text-slate-400 hover:text-white transition-colors"
-              >
-                <X className="w-5 h-5" />
-              </button>
-              
-              <CardContent className="py-6">
-                <div className="flex items-start gap-4">
-                  <div className="p-3 rounded-xl bg-gradient-to-br from-cyan-500 to-blue-600 shadow-lg shadow-cyan-500/25">
-                    <Sparkles className="w-6 h-6 text-white" />
-                  </div>
-                  <div className="flex-1">
-                    {!hasCompletedFirstTrade ? (
-                      <>
-                        <h3 className="text-xl font-bold text-white mb-1">Welcome to Krystaline! 🎉</h3>
-                        <p className="text-cyan-100/70 mb-4">
-                          You have <span className="text-cyan-400 font-semibold">$10,000 demo balance</span> to explore. 
-                          Make your first trade below and watch it get traced in real-time on the right.
-                        </p>
-                        <div className="flex items-center gap-3 text-sm">
-                          <span className="flex items-center gap-1 text-emerald-400">
-                            <CheckCircle2 className="w-4 h-4" /> Account verified
-                          </span>
-                          <span className="flex items-center gap-1 text-cyan-400 animate-pulse">
-                            <Zap className="w-4 h-4" /> Ready to trade
-                          </span>
-                        </div>
-                      </>
-                    ) : (
-                      <>
-                        <h3 className="text-xl font-bold text-white mb-1">Trade Executed! 🚀</h3>
-                        <p className="text-cyan-100/70 mb-4">
-                          Your trade was captured with full observability. Check the <span className="text-cyan-400 font-semibold">Trace Viewer</span> on the right 
-                          to see every step - from order to settlement. Click any trace to open it in Jaeger.
-                        </p>
-                        <div className="flex items-center gap-3 text-sm">
-                          <span className="flex items-center gap-1 text-emerald-400">
-                            <CheckCircle2 className="w-4 h-4" /> First trade complete
-                          </span>
-                          <span className="flex items-center gap-1 text-purple-400">
-                            <Eye className="w-4 h-4" /> Traces available
-                          </span>
-                        </div>
-                      </>
-                    )}
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          </div>
-        )}
-        
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+        <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
 
-          {/* Left Column - Trade/Transfer */}
-          <div className="space-y-6">
-            {/* Tab Buttons */}
-            <div className="flex gap-2">
-              <Button
-                variant={activeTab === 'trade' ? 'default' : 'outline'}
-                onClick={() => setActiveTab('trade')}
-                className={activeTab === 'trade'
-                  ? 'bg-green-600 hover:bg-green-700'
-                  : 'border-slate-600 text-slate-300 hover:bg-slate-700'}
-              >
-                <ArrowRightLeft className="w-4 h-4 mr-2" />
-                Trade BTC
-              </Button>
-              <Button
-                variant={activeTab === 'transfer' ? 'default' : 'outline'}
-                onClick={() => setActiveTab('transfer')}
-                className={activeTab === 'transfer'
-                  ? 'bg-purple-600 hover:bg-purple-700'
-                  : 'border-slate-600 text-slate-300 hover:bg-slate-700'}
-              >
-                <Send className="w-4 h-4 mr-2" />
-                Transfer BTC
-              </Button>
+          {/* Welcome Banner for New Users */}
+          {showWelcome && (
+            <div className="mb-8">
+              <JourneyProgress currentStep={hasViewedTrace ? 4 : hasCompletedFirstTrade ? 3 : 2} />
+
+              <Card className="bg-gradient-to-r from-cyan-900/40 via-blue-900/40 to-indigo-900/40 border-cyan-500/30 relative overflow-hidden">
+                <button
+                  onClick={() => {
+                    setShowWelcome(false);
+                    localStorage.removeItem('isNewUser');
+                  }}
+                  className="absolute top-3 right-3 text-slate-400 hover:text-white transition-colors"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+
+                <CardContent className="py-6">
+                  <div className="flex items-start gap-4">
+                    <div className="p-3 rounded-xl bg-gradient-to-br from-cyan-500 to-blue-600 shadow-lg shadow-cyan-500/25">
+                      <Sparkles className="w-6 h-6 text-white" />
+                    </div>
+                    <div className="flex-1">
+                      {!hasCompletedFirstTrade ? (
+                        <>
+                          <h3 className="text-xl font-bold text-white mb-1">Welcome to Krystaline! 🎉</h3>
+                          <p className="text-cyan-100/70 mb-4">
+                            You have <span className="text-cyan-400 font-semibold">$10,000 demo balance</span> to explore.
+                            Make your first trade below and watch it get traced in real-time on the right.
+                          </p>
+                          <div className="flex items-center gap-3 text-sm">
+                            <span className="flex items-center gap-1 text-emerald-400">
+                              <CheckCircle2 className="w-4 h-4" /> Account verified
+                            </span>
+                            <span className="flex items-center gap-1 text-cyan-400 animate-pulse">
+                              <Zap className="w-4 h-4" /> Ready to trade
+                            </span>
+                          </div>
+                        </>
+                      ) : (
+                        <>
+                          <h3 className="text-xl font-bold text-white mb-1">Trade Executed! 🚀</h3>
+                          <p className="text-cyan-100/70 mb-4">
+                            Your trade was captured with full observability. Check the <span className="text-cyan-400 font-semibold">Trace Viewer</span> on the right
+                            to see every step - from order to settlement. Click any trace to open it in Jaeger.
+                          </p>
+                          <div className="flex items-center gap-3 text-sm">
+                            <span className="flex items-center gap-1 text-emerald-400">
+                              <CheckCircle2 className="w-4 h-4" /> First trade complete
+                            </span>
+                            <span className="flex items-center gap-1 text-purple-400">
+                              <Eye className="w-4 h-4" /> Traces available
+                            </span>
+                          </div>
+                        </>
+                      )}
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+          )}
+
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 items-start">
+
+            {/* Left Column - Trade/Transfer */}
+            <div className="space-y-6">
+              {/* Trade/Transfer Card with integrated tabs */}
+              <Card className="bg-slate-900 border-slate-700">
+                {/* Tab Header */}
+                <div className="flex border-b border-slate-700">
+                  <button
+                    onClick={() => setActiveTab('trade')}
+                    className={`flex-1 flex items-center justify-center gap-2 py-3 px-4 text-sm font-medium transition-colors ${activeTab === 'trade'
+                      ? 'bg-green-600/20 text-green-400 border-b-2 border-green-400'
+                      : 'text-slate-400 hover:text-white hover:bg-slate-800'
+                      }`}
+                  >
+                    <ArrowRightLeft className="w-4 h-4" />
+                    Trade BTC
+                  </button>
+                  <button
+                    onClick={() => setActiveTab('transfer')}
+                    className={`flex-1 flex items-center justify-center gap-2 py-3 px-4 text-sm font-medium transition-colors ${activeTab === 'transfer'
+                      ? 'bg-purple-600/20 text-purple-400 border-b-2 border-purple-400'
+                      : 'text-slate-400 hover:text-white hover:bg-slate-800'
+                      }`}
+                  >
+                    <Send className="w-4 h-4" />
+                    Transfer BTC
+                  </button>
+                </div>
+
+                {/* Active Form Content */}
+                <div className="p-0">
+                  {!currentUser ? (
+                    <div className="p-8">
+                      <Skeleton className="h-32 w-full bg-slate-800" />
+                    </div>
+                  ) : activeTab === 'trade' ? (
+                    <TradeForm currentUser={currentUser} />
+                  ) : (
+                    <TransferForm />
+                  )}
+                </div>
+              </Card>
+
+              {/* Recent Activity */}
+              <Card className="bg-slate-900 border-slate-700">
+                <CardHeader>
+                  <CardTitle className="text-lg font-semibold text-white flex items-center gap-2">
+                    <TrendingUp className="w-5 h-5 text-green-400" />
+                    Recent Activity
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  {(ordersLoading || transfersLoading) ? (
+                    <div className="space-y-3">
+                      {[...Array(3)].map((_, i) => (
+                        <Skeleton key={i} className="h-16 w-full bg-slate-800" />
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="space-y-3">
+                      {/* Orders */}
+                      {orders?.slice(0, 3).map((order) => (
+                        <div
+                          key={order.orderId}
+                          className="flex items-center justify-between p-3 bg-slate-800 rounded-lg group hover:bg-slate-750 transition-colors"
+                        >
+                          <div className="flex items-center gap-3">
+                            {order.side === 'BUY' ? (
+                              <ArrowUpRight className="w-5 h-5 text-green-400" />
+                            ) : (
+                              <ArrowDownRight className="w-5 h-5 text-red-400" />
+                            )}
+                            <div>
+                              <p className={`font-medium ${order.side === 'BUY' ? 'text-green-400' : 'text-red-400'}`}>
+                                {order.side} {order.quantity?.toFixed(6)} BTC
+                              </p>
+                              <p className="text-sm text-slate-400">
+                                {formatTimeAgo(new Date(order.createdAt))}
+                              </p>
+                            </div>
+                          </div>
+                          <div className="flex items-center gap-3">
+                            <div className="text-right">
+                              <p className="text-sm font-mono text-slate-300">
+                                ${order.fillPrice?.toLocaleString() || 'Market'}
+                              </p>
+                              <p className={`text-sm font-medium ${getStatusColor(order.status, order.side)}`}>
+                                {order.status}
+                              </p>
+                            </div>
+                            {order.traceId && (
+                              <a
+                                href={`http://localhost:16686/trace/${order.traceId}`}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="p-2 bg-purple-500/20 hover:bg-purple-500/30 rounded-lg text-purple-400 hover:text-purple-300 transition-colors opacity-0 group-hover:opacity-100"
+                                title="View trace in Jaeger"
+                              >
+                                <Eye className="w-4 h-4" />
+                              </a>
+                            )}
+                          </div>
+                        </div>
+                      ))}
+
+                      {/* Transfers */}
+                      {transfers?.slice(0, 2).map((transfer) => (
+                        <div
+                          key={transfer.transferId}
+                          className="flex items-center justify-between p-3 bg-slate-800 rounded-lg border-l-2 border-purple-500"
+                        >
+                          <div className="flex items-center gap-3">
+                            <Send className="w-5 h-5 text-purple-400" />
+                            <div>
+                              <p className="font-medium text-purple-400">
+                                Transfer {transfer.amount?.toFixed(6)} BTC
+                              </p>
+                              <p className="text-sm text-slate-400">
+                                {transfer.fromUserId} → {transfer.toUserId}
+                              </p>
+                            </div>
+                          </div>
+                          <div className="text-right">
+                            <p className={`text-sm font-medium ${getStatusColor(transfer.status)}`}>
+                              {transfer.status}
+                            </p>
+                          </div>
+                        </div>
+                      ))}
+
+                      {(!orders?.length && !transfers?.length) && (
+                        <div className="text-center py-10">
+                          <div className="relative inline-block mb-4">
+                            <Wallet className="w-12 h-12 text-cyan-500/40" />
+                            <div className="absolute inset-0 animate-ping">
+                              <Wallet className="w-12 h-12 text-cyan-500/20" />
+                            </div>
+                          </div>
+                          <p className="text-lg font-medium text-slate-300 mb-1">Ready to Start Trading</p>
+                          <p className="text-sm text-slate-500 mb-4 max-w-xs mx-auto">
+                            Use the form on the left to make your first trade. Each transaction is traced with OpenTelemetry.
+                          </p>
+                          <div className="flex items-center justify-center gap-2 text-xs text-purple-400/60">
+                            <Eye className="w-3 h-3" />
+                            <span>Traces will appear in real-time</span>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
             </div>
 
-            {/* Active Form */}
-            {!currentUser ? (
-              <Card className="bg-slate-900 border-slate-700 p-8 text-center">
-                <Skeleton className="h-32 w-full bg-slate-800" />
-              </Card>
-            ) : activeTab === 'trade' ? (
-              <TradeForm currentUser={currentUser} />
-            ) : (
-              <TransferForm />
-            )}
-
-            {/* Recent Activity */}
-            <Card className="bg-slate-900 border-slate-700">
-              <CardHeader>
-                <CardTitle className="text-lg font-semibold text-white flex items-center gap-2">
-                  <TrendingUp className="w-5 h-5 text-green-400" />
-                  Recent Activity
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                {(ordersLoading || transfersLoading) ? (
-                  <div className="space-y-3">
-                    {[...Array(3)].map((_, i) => (
-                      <Skeleton key={i} className="h-16 w-full bg-slate-800" />
-                    ))}
-                  </div>
-                ) : (
-                  <div className="space-y-3">
-                    {/* Orders */}
-                    {orders?.slice(0, 3).map((order) => (
-                      <div
-                        key={order.orderId}
-                        className="flex items-center justify-between p-3 bg-slate-800 rounded-lg group hover:bg-slate-750 transition-colors"
-                      >
-                        <div className="flex items-center gap-3">
-                          {order.side === 'BUY' ? (
-                            <ArrowUpRight className="w-5 h-5 text-green-400" />
-                          ) : (
-                            <ArrowDownRight className="w-5 h-5 text-red-400" />
-                          )}
-                          <div>
-                            <p className={`font-medium ${order.side === 'BUY' ? 'text-green-400' : 'text-red-400'}`}>
-                              {order.side} {order.quantity?.toFixed(6)} BTC
-                            </p>
-                            <p className="text-sm text-slate-400">
-                              {formatTimeAgo(new Date(order.createdAt))}
-                            </p>
-                          </div>
-                        </div>
-                        <div className="flex items-center gap-3">
-                          <div className="text-right">
-                            <p className="text-sm font-mono text-slate-300">
-                              ${order.fillPrice?.toLocaleString() || 'Market'}
-                            </p>
-                            <p className={`text-sm font-medium ${getStatusColor(order.status, order.side)}`}>
-                              {order.status}
-                            </p>
-                          </div>
-                          {order.traceId && (
-                            <a
-                              href={`http://localhost:16686/trace/${order.traceId}`}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className="p-2 bg-purple-500/20 hover:bg-purple-500/30 rounded-lg text-purple-400 hover:text-purple-300 transition-colors opacity-0 group-hover:opacity-100"
-                              title="View trace in Jaeger"
-                            >
-                              <Eye className="w-4 h-4" />
-                            </a>
-                          )}
-                        </div>
-                      </div>
-                    ))}
-
-                    {/* Transfers */}
-                    {transfers?.slice(0, 2).map((transfer) => (
-                      <div
-                        key={transfer.transferId}
-                        className="flex items-center justify-between p-3 bg-slate-800 rounded-lg border-l-2 border-purple-500"
-                      >
-                        <div className="flex items-center gap-3">
-                          <Send className="w-5 h-5 text-purple-400" />
-                          <div>
-                            <p className="font-medium text-purple-400">
-                              Transfer {transfer.amount?.toFixed(6)} BTC
-                            </p>
-                            <p className="text-sm text-slate-400">
-                              {transfer.fromUserId} → {transfer.toUserId}
-                            </p>
-                          </div>
-                        </div>
-                        <div className="text-right">
-                          <p className={`text-sm font-medium ${getStatusColor(transfer.status)}`}>
-                            {transfer.status}
-                          </p>
-                        </div>
-                      </div>
-                    ))}
-
-                    {(!orders?.length && !transfers?.length) && (
-                      <div className="text-center py-10">
-                        <div className="relative inline-block mb-4">
-                          <Wallet className="w-12 h-12 text-cyan-500/40" />
-                          <div className="absolute inset-0 animate-ping">
-                            <Wallet className="w-12 h-12 text-cyan-500/20" />
-                          </div>
-                        </div>
-                        <p className="text-lg font-medium text-slate-300 mb-1">Ready to Start Trading</p>
-                        <p className="text-sm text-slate-500 mb-4 max-w-xs mx-auto">
-                          Use the form on the left to make your first trade. Each transaction is traced with OpenTelemetry.
-                        </p>
-                        <div className="flex items-center justify-center gap-2 text-xs text-purple-400/60">
-                          <Eye className="w-3 h-3" />
-                          <span>Traces will appear in real-time</span>
-                        </div>
+            {/* Right Column - Portfolio + Traces */}
+            <div className="space-y-6">
+              {/* Portfolio Panel */}
+              <Card className="bg-gradient-to-br from-cyan-900/30 via-slate-900/60 to-blue-900/30 border-cyan-500/30 backdrop-blur">
+                <CardHeader className="pb-3">
+                  <CardTitle className="text-lg font-semibold text-white flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <Wallet className="w-5 h-5 text-cyan-400" />
+                      Your Portfolio
+                    </div>
+                    {priceData && (
+                      <div className="flex items-center gap-2 text-sm">
+                        <span className="text-orange-400">₿</span>
+                        <span className="text-slate-300">${priceData.BTC?.toLocaleString()}</span>
                       </div>
                     )}
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  {/* Total Balance */}
+                  <div className="text-center py-4 bg-slate-800/50 rounded-xl border border-cyan-500/10">
+                    <p className="text-cyan-100/60 text-sm mb-1">Total Balance (USD)</p>
+                    <p className="text-4xl font-bold bg-gradient-to-r from-cyan-400 to-blue-400 bg-clip-text text-transparent">
+                      ${calculateTotalUSD().toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                    </p>
                   </div>
-                )}
-              </CardContent>
-            </Card>
-          </div>
 
-          {/* Right Column - Traces */}
-          <div>
-            <TraceViewer />
+                  {/* Asset Grid - Use simpleWallet to match trade form */}
+                  {simpleWalletLoading ? (
+                    <div className="grid grid-cols-2 gap-2">
+                      {[...Array(2)].map((_, i) => (
+                        <Skeleton key={i} className="h-16 bg-slate-800" />
+                      ))}
+                    </div>
+                  ) : simpleWallet ? (
+                    <div className="grid grid-cols-2 gap-2">
+                      {/* BTC Balance */}
+                      <div className="bg-slate-800/50 rounded-lg p-3 border border-slate-700/50 hover:border-orange-500/30 transition-colors">
+                        <div className="flex items-center gap-2 mb-1">
+                          <span className="text-lg text-orange-400">₿</span>
+                          <span className="font-medium text-white text-sm">BTC</span>
+                        </div>
+                        <p className="text-white font-semibold">
+                          {(simpleWallet.btc ?? 0).toLocaleString(undefined, {
+                            minimumFractionDigits: 6,
+                            maximumFractionDigits: 6,
+                          })}
+                        </p>
+                        <p className="text-slate-400 text-xs">
+                          ≈ ${((simpleWallet.btc ?? 0) * (priceData?.BTC || 0)).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                        </p>
+                      </div>
+
+                      {/* USD Balance */}
+                      <div className="bg-slate-800/50 rounded-lg p-3 border border-slate-700/50 hover:border-green-500/30 transition-colors">
+                        <div className="flex items-center gap-2 mb-1">
+                          <span className="text-lg text-green-400">$</span>
+                          <span className="font-medium text-white text-sm">USD</span>
+                        </div>
+                        <p className="text-white font-semibold">
+                          {(simpleWallet.usd ?? 0).toLocaleString(undefined, {
+                            minimumFractionDigits: 2,
+                            maximumFractionDigits: 2,
+                          })}
+                        </p>
+                        <p className="text-slate-400 text-xs">
+                          Available
+                        </p>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="text-center py-4 text-slate-400 text-sm">
+                      Loading balances...
+                    </div>
+                  )}
+
+                  {/* Quick Actions */}
+                  <div className="grid grid-cols-3 gap-2 pt-2">
+                    <Button
+                      size="sm"
+                      className="bg-emerald-600/80 hover:bg-emerald-600 text-white"
+                      onClick={() => navigate('/convert')}
+                    >
+                      <DollarSign className="w-4 h-4 mr-1" />
+                      Deposit
+                    </Button>
+                    <Button
+                      size="sm"
+                      className="bg-blue-600/80 hover:bg-blue-600 text-white"
+                      onClick={() => navigate('/convert')}
+                    >
+                      <CreditCard className="w-4 h-4 mr-1" />
+                      Withdraw
+                    </Button>
+                    <Button
+                      size="sm"
+                      className="bg-cyan-600/80 hover:bg-cyan-600 text-white"
+                      onClick={() => navigate('/convert')}
+                    >
+                      <RefreshCw className="w-4 h-4 mr-1" />
+                      Convert
+                    </Button>
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* Trace Viewer */}
+              <TraceViewer />
+            </div>
           </div>
-        </div>
-      </main>
-    </div>
+        </main>
+      </div>
     </Layout>
   );
 }

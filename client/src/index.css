@@ -23,7 +23,7 @@
   --destructive-foreground: hsl(60, 9.1%, 97.8%);
   --ring: hsl(20, 14.3%, 4.1%);
   --radius: 0.5rem;
-  
+
   /* Professional color palette */
   --otel-blue: hsl(215, 20%, 30%);
   --otel-green: hsl(160, 25%, 40%);
@@ -52,7 +52,7 @@
   --destructive-foreground: hsl(0, 0%, 98%);
   --ring: hsl(240, 4.9%, 83.9%);
   --radius: 0.5rem;
-  
+
   /* Professional colors for dark mode */
   --otel-blue: hsl(215, 30%, 60%);
   --otel-green: hsl(160, 35%, 55%);
@@ -67,21 +67,24 @@
 
   body {
     @apply font-sans antialiased bg-background text-foreground;
-    font-size: 16px; /* Base font size - ensures readability */
+    font-size: 16px;
+    /* Base font size - ensures readability */
     line-height: 1.5;
   }
 
   /* Minimum font size floor for accessibility and investor demos */
   /* Override text-xs to be 13px minimum on screens, keeping 12px for badges only */
   .text-xs {
-    font-size: 0.8125rem; /* 13px instead of 12px */
+    font-size: 0.8125rem;
+    /* 13px instead of 12px */
     line-height: 1.25rem;
   }
 
   /* Exception: Badges can stay smaller */
   .badge .text-xs,
   [class*="Badge"] .text-xs {
-    font-size: 0.75rem; /* Keep 12px for badges */
+    font-size: 0.75rem;
+    /* Keep 12px for badges */
   }
 }
 
@@ -89,48 +92,51 @@
   .bg-otel-blue {
     background-color: var(--otel-blue);
   }
-  
+
   .bg-otel-green {
     background-color: var(--otel-green);
   }
-  
+
   .bg-otel-amber {
     background-color: var(--otel-amber);
   }
-  
+
   .bg-trace-bg {
     background-color: var(--trace-bg);
   }
-  
+
   .text-otel-blue {
     color: var(--otel-blue);
   }
-  
+
   .text-otel-green {
     color: var(--otel-green);
   }
-  
+
   .text-otel-amber {
     color: var(--otel-amber);
   }
-  
+
   .border-otel-blue {
     border-color: var(--otel-blue);
   }
-  
+
   .border-otel-green {
     border-color: var(--otel-green);
   }
-  
+
   .border-otel-amber {
     border-color: var(--otel-amber);
   }
 
   /* Custom animations for hero section */
   @keyframes pulse-slow {
-    0%, 100% {
+
+    0%,
+    100% {
       opacity: 1;
     }
+
     50% {
       opacity: 0.7;
     }
@@ -145,6 +151,7 @@
       transform: translateY(20px);
       opacity: 0;
     }
+
     to {
       transform: translateY(0);
       opacity: 1;
@@ -165,6 +172,115 @@
     .container {
       padding-left: 1rem;
       padding-right: 1rem;
+    }
+  }
+
+  /* Animated gradient for hero text */
+  @keyframes gradient-shift {
+
+    0%,
+    100% {
+      background-position: 0% 50%;
+    }
+
+    50% {
+      background-position: 100% 50%;
+    }
+  }
+
+  .animate-gradient {
+    background-size: 200% 200%;
+    animation: gradient-shift 4s ease infinite;
+  }
+
+  /* Glow effect for key elements */
+  @keyframes glow-pulse {
+
+    0%,
+    100% {
+      box-shadow: 0 0 20px rgba(6, 182, 212, 0.3);
+    }
+
+    50% {
+      box-shadow: 0 0 40px rgba(6, 182, 212, 0.5), 0 0 60px rgba(6, 182, 212, 0.2);
+    }
+  }
+
+  .animate-glow {
+    animation: glow-pulse 3s ease-in-out infinite;
+  }
+
+  /* Floating animation for orbs */
+  @keyframes float {
+
+    0%,
+    100% {
+      transform: translateY(0px) scale(1);
+    }
+
+    50% {
+      transform: translateY(-20px) scale(1.05);
+    }
+  }
+
+  .animate-float {
+    animation: float 6s ease-in-out infinite;
+  }
+
+  /* Trace flow animation */
+  @keyframes trace-flow {
+    0% {
+      transform: translateX(-100%);
+    }
+
+    100% {
+      transform: translateX(100%);
+    }
+  }
+
+  .animate-trace-flow {
+    animation: trace-flow 2s linear infinite;
+  }
+
+  /* Ant swarm animation - dots flowing left to right */
+  @keyframes ant-flow {
+    0% {
+      left: 0%;
+      opacity: 0;
+    }
+
+    5% {
+      opacity: 1;
+    }
+
+    95% {
+      opacity: 1;
+    }
+
+    100% {
+      left: 95%;
+      opacity: 0;
+    }
+  }
+
+  .ant-dot {
+    animation: ant-flow linear infinite;
+  }
+
+  /* Color shift for ants as they pass through different service zones */
+  .ant-dot {
+    background: linear-gradient(90deg, #22d3ee, #10b981, #3b82f6, #818cf8);
+    background-size: 400% 100%;
+    animation: ant-flow linear infinite, ant-color-shift linear infinite;
+  }
+
+  @keyframes ant-color-shift {
+    0% {
+      background-position: 0% 50%;
+    }
+
+    100% {
+      background-position: 100% 50%;
     }
   }
 }

@@ -66,12 +66,12 @@ export interface IStorage {
   getWalletById(walletId: string): Promise<KXWallet | undefined>;
   getWalletsByOwner(ownerId: string): Promise<KXWallet[]>;
   createWallet(ownerId: string, label?: string): Promise<KXWallet>;
-  
+
   // NEW: Balance operations
   getBalance(walletId: string, asset: string): Promise<WalletBalance | undefined>;
   getAllBalances(walletId: string): Promise<WalletBalance[]>;
   updateBalance(walletId: string, asset: string, amount: number): Promise<WalletBalance | undefined>;
-  
+
   // NEW: User-Wallet mapping
   getUserWalletMapping(userId: string): Promise<UserWalletMapping | undefined>;
   getDefaultWallet(userId: string): Promise<KXWallet | undefined>;
@@ -120,7 +120,7 @@ export class MemoryStorage implements IStorage {
   private walletsByOwner: Map<string, string[]> = new Map();       // ownerId -> walletId[]
   private balances: Map<string, Map<string, WalletBalance>> = new Map(); // walletId -> asset -> balance
   private userWalletMappings: Map<string, UserWalletMapping> = new Map();
-  
+
   // Legacy storage
   private wallets: Map<string, UserWallet> = new Map();
   private transfers: Map<string, Transfer> = new Map();
@@ -144,14 +144,14 @@ export class MemoryStorage implements IStorage {
         type: 'custodial',
         createdAt: new Date(),
       };
-      
+
       this.kxWallets.set(wallet.walletId, wallet);
       this.walletsByAddress.set(wallet.address, wallet.walletId);
       this.walletsByOwner.set(wallet.ownerId, [wallet.walletId]);
-      
+
       // Initialize balances (stored as smallest units)
       const walletBalances = new Map<string, WalletBalance>();
-      
+
       if (name === 'alice') {
         walletBalances.set('BTC', { walletId: wallet.walletId, asset: 'BTC', balance: 150000000, decimals: 8, lastUpdated: new Date() }); // 1.5 BTC
         walletBalances.set('USD', { walletId: wallet.walletId, asset: 'USD', balance: 5000000, decimals: 2, lastUpdated: new Date() });   // $50,000
@@ -160,14 +160,14 @@ export class MemoryStorage implements IStorage {
         walletBalances.set('USD', { walletId: wallet.walletId, asset: 'USD', balance: 1000000, decimals: 2, lastUpdated: new Date() });   // $10,000
       }
       this.balances.set(wallet.walletId, walletBalances);
-      
+
       // User wallet mapping
       this.userWalletMappings.set(wallet.ownerId, {
         userId: wallet.ownerId,
         walletIds: [wallet.walletId],
         defaultWalletId: wallet.walletId,
       });
-      
+
       // Legacy wallet storage for backwards compatibility
       const legacyWallet: UserWallet = {
         userId: wallet.ownerId,
@@ -178,7 +178,7 @@ export class MemoryStorage implements IStorage {
       this.wallets.set(wallet.ownerId, legacyWallet);
       this.wallets.set(name, { ...legacyWallet, userId: name });
     }
-    
+
     console.log('[storage] Initialized Krystaline Exchange demo wallets:');
     console.log(`  Alice: ${DEMO_WALLETS.alice.address}`);
     console.log(`  Bob: ${DEMO_WALLETS.bob.address}`);
@@ -218,7 +218,7 @@ export class MemoryStorage implements IStorage {
   async createWallet(ownerId: string, label: string = 'Trading Wallet'): Promise<KXWallet> {
     const walletId = generateWalletId();
     const address = generateWalletAddress(`${ownerId}-${walletId}-${Date.now()}`);
-    
+
     const wallet: KXWallet = {
       walletId,
       address,
@@ -227,17 +227,17 @@ export class MemoryStorage implements IStorage {
       type: 'custodial',
       createdAt: new Date(),
     };
-    
+
     this.kxWallets.set(walletId, wallet);
     this.walletsByAddress.set(address, walletId);
-    
+
     const ownerWallets = this.walletsByOwner.get(ownerId) || [];
     ownerWallets.push(walletId);
     this.walletsByOwner.set(ownerId, ownerWallets);
-    
+
     // Initialize empty balances
     this.balances.set(walletId, new Map());
-    
+
     // Update or create user mapping
     let mapping = this.userWalletMappings.get(ownerId);
     if (mapping) {
@@ -246,7 +246,7 @@ export class MemoryStorage implements IStorage {
       mapping = { userId: ownerId, walletIds: [walletId], defaultWalletId: walletId };
       this.userWalletMappings.set(ownerId, mapping);
     }
-    
+
     console.log(`[storage] Created wallet ${address} for ${ownerId}`);
     return wallet;
   }
@@ -271,7 +271,7 @@ export class MemoryStorage implements IStorage {
       balanceMap = new Map();
       this.balances.set(walletId, balanceMap);
     }
-    
+
     const decimals = asset === 'BTC' ? 8 : asset === 'ETH' ? 18 : 2;
     const balance: WalletBalance = {
       walletId,
@@ -307,7 +307,7 @@ export class MemoryStorage implements IStorage {
     if (identifier.startsWith('kx1')) {
       return identifier;
     }
-    
+
     // Try to find by owner ID (email)
     const wallet = await this.getDefaultWallet(identifier);
     return wallet?.address;
@@ -340,7 +340,7 @@ export class MemoryStorage implements IStorage {
     // Resolve owners for legacy compatibility
     const fromWallet = await this.getWalletByAddress(data.fromAddress);
     const toWallet = await this.getWalletByAddress(data.toAddress);
-    
+
     const transfer: Transfer = {
       transferId: data.transferId,
       fromAddress: data.fromAddress,
@@ -506,7 +506,7 @@ export class MemoryStorage implements IStorage {
     this.balances.clear();
     this.userWalletMappings.clear();
     this.wallets.clear();
-    
+
     // Re-initialize demo data
     this.initializeDemoData();
   }
@@ -518,19 +518,20 @@ export class MemoryStorage implements IStorage {
 
 /**
  * Storage type configuration
- * Set via STORAGE_TYPE environment variable: 'memory' | 'postgres'
+ * Default is 'postgres' for production. Use STORAGE_TYPE=memory for testing.
  */
 export type StorageType = 'memory' | 'postgres';
 
 /**
- * Get the configured storage type
+ * Get the configured storage type - defaults to postgres
  */
 export function getStorageType(): StorageType {
   const envType = process.env.STORAGE_TYPE?.toLowerCase();
-  if (envType === 'postgres' || envType === 'postgresql') {
-    return 'postgres';
+  if (envType === 'memory') {
+    return 'memory';
   }
-  return 'memory';
+  // Default to postgres for production
+  return 'postgres';
 }
 
 /**
@@ -539,18 +540,40 @@ export function getStorageType(): StorageType {
  */
 export async function createStorage(): Promise<IStorage> {
   const storageType = getStorageType();
-  
+
   if (storageType === 'postgres') {
     // Dynamic import to avoid loading pg when not needed
     const { getPostgresStorage } = await import('./db/postgres-storage');
     console.log('[storage] Using PostgreSQL storage');
     return getPostgresStorage();
   }
-  
+
   console.log('[storage] Using in-memory storage');
   return new MemoryStorage();
 }
 
-// Default export: in-memory storage for backwards compatibility
-// For PostgreSQL, use createStorage() instead
-export const storage = new MemoryStorage();
+// Mutable storage instance - initialized on server startup
+let _storage: IStorage = new MemoryStorage(); // Fallback until initialized
+
+/**
+ * Initialize storage - MUST be called on server startup
+ */
+export async function initializeStorage(): Promise<void> {
+  _storage = await createStorage();
+  console.log('[storage] Storage initialized');
+}
+
+/**
+ * Get the current storage instance
+ */
+export function getStorage(): IStorage {
+  return _storage;
+}
+
+// Default export: proxy to the mutable storage
+// This allows code to import { storage } and get the correct backend after initialization
+export const storage: IStorage = new Proxy({} as IStorage, {
+  get(_target, prop) {
+    return (_storage as any)[prop];
+  }
+});
