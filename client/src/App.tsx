@@ -1,4 +1,4 @@
-import { Switch, Route } from "wouter";
+import { Switch, Route, Redirect } from "wouter";
 import { queryClient } from "./lib/queryClient";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
@@ -7,7 +7,6 @@ import Dashboard from "@/pages/dashboard";
 import Monitor from "@/pages/monitor";
 import Register from "@/pages/register";
 import Login from "@/pages/login";
-import Portfolio from "@/pages/portfolio";
 import Convert from "@/pages/convert";
 import Activity from "@/pages/activity";
 import TransparencyPage from "@/pages/transparency";
@@ -19,24 +18,26 @@ function Router() {
     <Switch>
       {/* Public transparency landing page */}
       <Route path="/" component={TransparencyDashboard} />
-      
+
       {/* Auth */}
       <Route path="/register" component={Register} />
       <Route path="/login" component={Login} />
-      
-      {/* Main App - requires auth */}
-      <Route path="/portfolio" component={Portfolio} />
+
+      {/* Main App - unified trade experience */}
       <Route path="/trade" component={Dashboard} />
+      <Route path="/portfolio">
+        <Redirect to="/trade" />
+      </Route>
       <Route path="/convert" component={Convert} />
       <Route path="/activity" component={Activity} />
       <Route path="/transparency" component={TransparencyPage} />
-      
+
       {/* Advanced monitoring (for power users/devs) */}
       <Route path="/monitor" component={Monitor} />
-      
+
       {/* Legacy redirect */}
       <Route path="/trading" component={Dashboard} />
-      
+
       <Route component={NotFound} />
     </Switch>
   );

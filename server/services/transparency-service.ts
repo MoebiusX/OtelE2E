@@ -6,6 +6,7 @@
  */
 
 import { db } from '../db';
+import { storage } from '../storage';
 import { config } from '../config';
 import { historyStore } from '../monitor/history-store';
 import { traceProfiler } from '../monitor/trace-profiler';
@@ -13,9 +14,9 @@ import { anomalyDetector } from '../monitor/anomaly-detector';
 import { traces } from '../otel';
 import { createLogger } from '../lib/logger';
 import { getErrorMessage } from '../lib/errors';
-import { 
-  systemStatusSchema, 
-  publicTradeSchema, 
+import {
+  systemStatusSchema,
+  publicTradeSchema,
   transparencyMetricsSchema,
   dbOrderRowSchema,
   type SystemStatus,
@@ -92,28 +93,52 @@ class TransparencyService {
         : 0;
 
       // Calculate uptime as percentage of time since server started
-      // This is honest: we can only guarantee uptime since last restart
       const uptimeMs = Date.now() - this.startTime.getTime();
       const uptimeDays = uptimeMs / (1000 * 60 * 60 * 24);
-      // Report 100% if we've been running continuously since start (which we have)
-      // If we had actual downtime tracking, we'd calculate: (uptimeMs - downtimeMs) / uptimeMs * 100
       const uptimePercentage = uptimeDays >= 1 ? 99.9 : Math.round((uptimeMs / (24 * 60 * 60 * 1000)) * 1000) / 10;
 
-      // Service health checks - inferred from recent activity
-      // API is operational if we got this far
-      // Other services: infer from trace activity (operational if active, degraded if no recent activity)
-      const services = {
+      // Get REAL service health from the anomaly detector - same source as /api/monitor/health
+      const serviceHealthList = anomalyDetector.getServiceHealth();
+
+      // Map to service status format for public API
+      // Default to operational (API is responding, so system works)
+      const services: SystemStatus['services'] = {
         api: 'operational' as const,
-        exchange: recentTraces.some(t => t.name.includes('order')) ? 'operational' as const : 'degraded' as const,
-        wallets: recentTraces.some(t => t.name.includes('wallet') || t.name.includes('balance')) ? 'operational' as const : 'degraded' as const,
-        monitoring: 'operational' as const, // If we're generating this status, monitoring is working
+        exchange: 'operational' as const,
+        wallets: 'operational' as const,
+        monitoring: 'operational' as const,
       };
 
-      // Determine overall status based on service health
+      // Update from real health data if available
+      // Note: We use 'degraded' for critical anomalies (not 'down') because the service IS responding
+      // 'down' should only be used when the service is actually unreachable
+      for (const svc of serviceHealthList) {
+        const name = svc.name.toLowerCase();
+
+        // Match exchange-related services
+        if (name.includes('exchange') || name.includes('matcher') || name.includes('order')) {
+          if (svc.status === 'critical') {
+            services.exchange = 'degraded'; // Degraded, not down - service is still responding
+          } else if (svc.status === 'warning' && services.exchange === 'operational') {
+            services.exchange = 'degraded';
+          }
+        }
+
+        // Match wallet-related services  
+        if (name.includes('wallet')) {
+          if (svc.status === 'critical') {
+            services.wallets = 'degraded'; // Degraded, not down - service is still responding
+          } else if (svc.status === 'warning' && services.wallets === 'operational') {
+            services.wallets = 'degraded';
+          }
+        }
+      }
+
+      // Determine overall status based on REAL service health
       const serviceStatuses = Object.values(services);
-      const hasOutage = serviceStatuses.includes('maintenance' as any);
+      const hasOutage = serviceStatuses.includes('down');
       const hasDegraded = serviceStatuses.includes('degraded');
-      const overallStatus = hasOutage ? 'maintenance' : hasDegraded ? 'degraded' : 'operational';
+      const overallStatus = hasOutage ? 'down' : hasDegraded ? 'degraded' : 'operational';
 
       // Performance metrics from traces
       const durations = recentTraces.map(t => t.duration || 0).sort((a, b) => a - b);
@@ -191,12 +216,12 @@ class TransparencyService {
         });
 
         const trace = traces.find(t => t.name.includes(validatedRow.id));
-        
+
         // Handle created_at as either Date or string
-        const createdAt = validatedRow.created_at instanceof Date 
-          ? validatedRow.created_at 
+        const createdAt = validatedRow.created_at instanceof Date
+          ? validatedRow.created_at
           : new Date(validatedRow.created_at);
-        
+
         const trade: PublicTrade = {
           tradeId: validatedRow.id,
           timestamp: createdAt.toISOString(),
@@ -270,8 +295,8 @@ class TransparencyService {
 
       // Calculate anomaly detection rate
       const totalTradesCount = parseInt(totalTrades.rows[0]?.count || '0');
-      const anomalyRate = totalTradesCount > 0 
-        ? (allAnomalies.length / totalTradesCount) * 100 
+      const anomalyRate = totalTradesCount > 0
+        ? (allAnomalies.length / totalTradesCount) * 100
         : 0;
 
       const metrics: TransparencyMetrics = {
@@ -314,9 +339,9 @@ class TransparencyService {
       // Query Jaeger API directly for trace data
       const jaegerUrl = config.observability.jaegerUrl;
       const url = `${jaegerUrl}/api/traces/${traceId}`;
-      
+
       const response = await fetch(url);
-      
+
       if (!response.ok) {
         if (response.status === 404) {
           logger.warn({ traceId }, 'Trace not found in Jaeger');
@@ -327,7 +352,7 @@ class TransparencyService {
       }
 
       const data = await response.json();
-      
+
       // Jaeger returns { data: [trace] }
       if (!data.data || data.data.length === 0) {
         logger.warn({ traceId }, 'Trace not found in Jaeger response');
@@ -335,7 +360,7 @@ class TransparencyService {
       }
 
       const jaegerTrace = data.data[0];
-      
+
       // Extract service names from processes
       const services = Object.values(jaegerTrace.processes || {})
         .map((p: any) => p.serviceName)

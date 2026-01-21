@@ -28,7 +28,7 @@ export function registerRoutes(app: Express) {
       const result = await db.query(
         `SELECT id, email, status FROM users WHERE status = 'verified' ORDER BY created_at DESC LIMIT 50`
       );
-      
+
       // Map to expected format for transfer form
       const users = result.rows.map(user => ({
         id: user.id,
@@ -36,7 +36,7 @@ export function registerRoutes(app: Express) {
         email: user.email,
         avatar: '👤'
       }));
-      
+
       res.json(users);
     } catch (error: unknown) {
       logger.error({ error: getErrorMessage(error) }, 'Failed to fetch users');
@@ -48,16 +48,44 @@ export function registerRoutes(app: Express) {
   // WALLET & PRICE ENDPOINTS
   // ============================================
 
-  // Get current BTC price
+  // Get current BTC price (real from Binance)
   app.get("/api/price", async (req: Request, res: Response) => {
     try {
-      const price = getPrice();
-      res.json({
-        pair: "BTC/USD",
-        price,
-        change24h: (Math.random() - 0.5) * 5,
-        timestamp: new Date()
-      });
+      // Import priceService for real Binance prices
+      const { priceService } = await import('../services/price-service');
+
+      // Try to get real BTC price from Binance
+      const btcPrice = priceService.getPrice('BTC');
+      const ethPrice = priceService.getPrice('ETH');
+      const status = priceService.getStatus();
+
+      if (btcPrice) {
+        // Return real Binance price
+        res.json({
+          pair: "BTC/USD",
+          price: btcPrice.price,
+          BTC: btcPrice.price,
+          ETH: ethPrice?.price || 0,
+          change24h: 0, // Binance mini ticker doesn't include 24h change
+          timestamp: btcPrice.timestamp,
+          source: btcPrice.source,
+          connected: status.connected
+        });
+      } else {
+        // No price available - do NOT return fake prices
+        res.json({
+          pair: "BTC/USD",
+          price: null,
+          BTC: null,
+          ETH: null,
+          change24h: 0,
+          timestamp: new Date(),
+          source: 'none',
+          connected: false,
+          available: false,
+          message: 'Waiting for pricing feed...'
+        });
+      }
     } catch (error: unknown) {
       res.status(500).json({ error: "Failed to fetch price" });
     }
@@ -190,7 +218,7 @@ export function registerRoutes(app: Express) {
       }
 
       const transferData = validation.data;
-      
+
       // fromUserId and toUserId are optional - provide defaults if needed
       const fromUserId = transferData.fromUserId || 'unknown';
       const toUserId = transferData.toUserId || 'unknown';

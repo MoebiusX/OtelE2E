@@ -601,199 +601,448 @@
       "analyzedAt": "2026-01-19T07:07:07.672Z",
       "prompt": "You are an expert in distributed systems and observability. Analyze this performance anomaly:\n\n## Anomaly Details\n- Service: kx-exchange\n- Operation: GET\n- Duration: 431.98ms (expected: 31.59ms ± 110.08ms)\n- Deviation: 3.64σ (standard deviations from mean)\n- Severity: SEV1 (Critical)\n- Timestamp: Mon Jan 19 2026 08:06:23 GMT+0100 (Central European Standard Time)\n\n## Span Attributes\n{\n  \"http.request.method\": \"GET\",\n  \"http.request.method_original\": \"GET\",\n  \"http.response.status_code\": 200,\n  \"network.peer.address\": \"127.0.0.1\",\n  \"network.peer.port\": 16686,\n  \"otel.scope.name\": \"@opentelemetry/instrumentation-undici\",\n  \"otel.scope.version\": \"0.13.1\",\n  \"server.address\": \"localhost\",\n  \"server.port\": 16686,\n  \"span.kind\": \"client\",\n  \"url.full\": \"http://localhost:16686/api/traces?service=kx-exchange&lookback=1h&limit=100\",\n  \"url.path\": \"/api/traces\",\n  \"url.query\": \"?service=kx-exchange&lookback=1h&limit=100\",\n  \"url.scheme\": \"http\",\n  \"user_agent.original\": \"node\"\n}\n\n## Correlated System Metrics (at time of anomaly)\n- CPU Usage: 0.6%\n- Memory: 22MB\n- Request Rate: 0.1 req/s\n- Error Rate: 2.8%\n- P99 Latency: 395ms\n- Active Connections: 0\n\n## Auto-Detected Issues\n- 📊 Notable error rate (2.8%)\n\n## Trace Context\nThe full trace contains 2 spans:\n- kx-exchange: GET (431.98ms)\n- jaeger-all-in-one: /api/traces (98.44ms)\n\n\nBased on the trace data AND correlated metrics, provide:\n1. A brief summary (1-2 sentences) of what likely caused this anomaly\n2. 2-3 possible root causes (consider resource utilization if metrics show issues)\n3. 2-3 actionable recommendations\n\nFormat your response as:\nSUMMARY: [your summary]\nCAUSES:\n- [cause 1]\n- [cause 2]\nRECOMMENDATIONS:\n- [recommendation 1]\n- [recommendation 2]\nCONFIDENCE: [low/medium/high]",
       "rawResponse": "SUMMARY: The given anomaly in the kx-exchange service indicates a critical issue with the GET request, which resulted in an unexpected latency of 395ms. This delay is likely due to increased CPU usage and memory consumption caused by resource-intensive code or high traffic.\n\nCAUSES:\n- Elevated CPU Usage (0.6%): High CPU utilization could be attributed to complex calculations, long-running operations, or thread density issues.\n- Increased Memory Consumption: The spike in memory usage might be related to the execution of resource-hungry data processing scripts or inefficient caching mechanisms.\nRECOMMENDATIONS:\n- Optimize Database Queries and Reduce Complexity\n- Implement Efficient Caching Strategies\n- Monitor and Analyze Resource Utilization for Performance Bottlenecks"
+    },
+    {
+      "traceId": "80bd3a57a75c373c75737ca52f38e9fa",
+      "summary": "The DNS lookup operation on the kx-exchange service experienced an unexpected latency deviation of 4.02 standard deviations from its expected value, prompting a critical Severity SEV1 (Critical) alert.",
+      "possibleCauses": [
+        "Resource utilization issues in the network, which could have resulted in increased latency for the DNS lookup operation.",
+        "A potential issue with the DNS server or its configuration, causing it to take longer than usual to resolve domain names.",
+        "Overhead from monitoring and logging systems consuming system resources during this period."
+      ],
+      "recommendations": [
+        "Reviewing the network infrastructure and ensuring that there are no bottlenecks or unexpected load on the DNS server during this time frame.",
+        "Monitoring the system's performance logs to identify any signs of resource utilization spikes or unusual behavior from DNS servers, which may be contributing to the observed latency deviation."
+      ],
+      "confidence": "low",
+      "analyzedAt": "2026-01-19T16:29:36.785Z",
+      "prompt": "You are an expert in distributed systems and observability. Analyze this performance anomaly:\n\n## Anomaly Details\n- Service: kx-exchange\n- Operation: dns.lookup\n- Duration: 5.59ms (expected: 1.48ms ± 1.02ms)\n- Deviation: 4.02σ (standard deviations from mean)\n- Severity: SEV1 (Critical)\n- Timestamp: Mon Jan 19 2026 17:24:21 GMT+0100 (Central European Standard Time)\n\n## Span Attributes\n{\n  \"otel.scope.name\": \"@opentelemetry/instrumentation-dns\",\n  \"otel.scope.version\": \"0.46.0\",\n  \"peer.ipv6\": \"::1\",\n  \"peer[1].ipv4\": \"127.0.0.1\",\n  \"span.kind\": \"client\"\n}\n\n## Correlated System Metrics (at time of anomaly)\n- CPU Usage: 0.4%\n- Memory: 21MB\n- Request Rate: 0.0 req/s\n- Error Rate: 0.0%\n- P99 Latency: 210ms\n- Active Connections: 0\n\n## Trace Context\nThe full trace contains 1 spans:\n- kx-exchange: dns.lookup (5.58ms)\n\n\nBased on the trace data AND correlated metrics, provide:\n1. A brief summary (1-2 sentences) of what likely caused this anomaly\n2. 2-3 possible root causes (consider resource utilization if metrics show issues)\n3. 2-3 actionable recommendations\n\nFormat your response as:\nSUMMARY: [your summary]\nCAUSES:\n- [cause 1]\n- [cause 2]\nRECOMMENDATIONS:\n- [recommendation 1]\n- [recommendation 2]\nCONFIDENCE: [low/medium/high]",
+      "rawResponse": "SUMMARY: The DNS lookup operation on the kx-exchange service experienced an unexpected latency deviation of 4.02 standard deviations from its expected value, prompting a critical Severity SEV1 (Critical) alert.\n\nCAUSES:\n- Resource utilization issues in the network, which could have resulted in increased latency for the DNS lookup operation.\n- A potential issue with the DNS server or its configuration, causing it to take longer than usual to resolve domain names.\n- Overhead from monitoring and logging systems consuming system resources during this period.\n\nRECOMMENDATIONS:\n- Reviewing the network infrastructure and ensuring that there are no bottlenecks or unexpected load on the DNS server during this time frame.\n- Monitoring the system's performance logs to identify any signs of resource utilization spikes or unusual behavior from DNS servers, which may be contributing to the observed latency deviation."
+    },
+    {
+      "traceId": "bdca9bfc520a8e8c013fe3dd965ce38a",
+      "summary": "The anomaly is likely caused by a delay in processing the GET request, resulting in a significant deviation from the expected latency of 29.71ms. This could be due to an issue with network connectivity or resource utilization.",
+      "possibleCauses": [
+        "High CPU usage on the server (0.6%) may indicate that some critical system tasks are running at a high priority.",
+        "Low active connections (0) might suggest that there is not enough traffic being handled by the system, potentially leading to resource starvation.",
+        "Resource utilization: The P99 Latency metric suggests that there may be issues with request processing times, which could be exacerbated by other factors such as network latency or server load."
+      ],
+      "recommendations": [
+        "Monitor CPU usage and adjust resource allocation if necessary to prevent critical tasks from running at high priority.",
+        "Increase the number of active connections on the system to ensure that it can handle a sufficient amount of traffic without resource starvation.",
+        "Investigate the P99 Latency metric further to identify specific causes and optimize request processing times."
+      ],
+      "confidence": "low",
+      "analyzedAt": "2026-01-19T16:33:03.270Z",
+      "prompt": "You are an expert in distributed systems and observability. Analyze this performance anomaly:\n\n## Anomaly Details\n- Service: jaeger-all-in-one\n- Operation: /api/traces\n- Duration: 87.47ms (expected: 29.71ms ± 17.04ms)\n- Deviation: 3.39σ (standard deviations from mean)\n- Severity: SEV1 (Critical)\n- Timestamp: Mon Jan 19 2026 17:27:55 GMT+0100 (Central European Standard Time)\n\n## Span Attributes\n{\n  \"client.address\": \"172.21.0.1\",\n  \"http.request.method\": \"GET\",\n  \"http.response.body.size\": 1015557,\n  \"http.response.status_code\": 200,\n  \"http.route\": \"/api/traces\",\n  \"network.peer.address\": \"172.21.0.1\",\n  \"network.peer.port\": 59998,\n  \"network.protocol.version\": \"1.1\",\n  \"otel.scope.name\": \"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp\",\n  \"otel.scope.version\": \"0.63.0\",\n  \"server.address\": \"localhost\",\n  \"server.port\": 16686,\n  \"span.kind\": \"server\",\n  \"url.path\": \"/api/traces\",\n  \"url.scheme\": \"http\",\n  \"user_agent.original\": \"node\"\n}\n\n## Correlated System Metrics (at time of anomaly)\n- CPU Usage: 0.6%\n- Memory: 22MB\n- Request Rate: 0.0 req/s\n- Error Rate: 0.0%\n- P99 Latency: NaNms\n- Active Connections: 0\n\n## Trace Context\nThe full trace contains 2 spans:\n- kx-exchange: GET (396.97ms)\n- jaeger-all-in-one: /api/traces (87.47ms)\n\n\nBased on the trace data AND correlated metrics, provide:\n1. A brief summary (1-2 sentences) of what likely caused this anomaly\n2. 2-3 possible root causes (consider resource utilization if metrics show issues)\n3. 2-3 actionable recommendations\n\nFormat your response as:\nSUMMARY: [your summary]\nCAUSES:\n- [cause 1]\n- [cause 2]\nRECOMMENDATIONS:\n- [recommendation 1]\n- [recommendation 2]\nCONFIDENCE: [low/medium/high]",
+      "rawResponse": "SUMMARY: The anomaly is likely caused by a delay in processing the GET request, resulting in a significant deviation from the expected latency of 29.71ms. This could be due to an issue with network connectivity or resource utilization.\n\nCAUSES:\n- High CPU usage on the server (0.6%) may indicate that some critical system tasks are running at a high priority.\n- Low active connections (0) might suggest that there is not enough traffic being handled by the system, potentially leading to resource starvation.\n- Resource utilization: The P99 Latency metric suggests that there may be issues with request processing times, which could be exacerbated by other factors such as network latency or server load.\n\nRECOMMENDATIONS:\n- Monitor CPU usage and adjust resource allocation if necessary to prevent critical tasks from running at high priority.\n- Increase the number of active connections on the system to ensure that it can handle a sufficient amount of traffic without resource starvation.\n- Investigate the P99 Latency metric further to identify specific causes and optimize request processing times."
+    },
+    {
+      "traceId": "d730687e0c91e1636b43bd61963a95e3",
+      "summary": "The given anomaly likely resulted from an unexpected surge in CPU usage, possibly due to the service's sudden demand for resources or an overload of incoming requests.",
+      "possibleCauses": [
+        "Resource Utilization: High CPU usage could be a sign of excessive computation requirements or a temporary spike in system load.",
+        "Overwhelming Incoming Requests: Too many users or applications sending requests simultaneously might have overwhelmed the service's capacity, leading to increased CPU utilization and latency."
+      ],
+      "recommendations": [
+        "Monitor System Load and Performance Metrics More Diversely: Implementing metrics that cover multiple aspects of system performance, such as memory usage and request rates, could help identify potential issues before they escalate into anomalies like this one.",
+        "Implement Rate Limiting or Caching: Introducing rate limiting or caching mechanisms to manage incoming requests might help prevent similar surges in CPU usage and ensure smoother system operation."
+      ],
+      "confidence": "low",
+      "analyzedAt": "2026-01-20T09:04:25.443Z",
+      "prompt": "You are an expert in distributed systems and observability. Analyze this performance anomaly:\n\n## Anomaly Details\n- Service: unknown\n- Operation: unknown\n- Duration: 0ms (expected: 0ms ± 0ms)\n- Deviation: 0σ (standard deviations from mean)\n- Severity: SEV5 (Low)\n- Timestamp: Tue Jan 20 2026 10:04:04 GMT+0100 (Central European Standard Time)\n\n## Span Attributes\n{}\n\n## Correlated System Metrics (at time of anomaly)\n- CPU Usage: 0.3%\n- Memory: 18MB\n- Request Rate: 0.0 req/s\n- Error Rate: 0.0%\n- P99 Latency: 417ms\n- Active Connections: 1\n\n\n\nBased on the trace data AND correlated metrics, provide:\n1. A brief summary (1-2 sentences) of what likely caused this anomaly\n2. 2-3 possible root causes (consider resource utilization if metrics show issues)\n3. 2-3 actionable recommendations\n\nFormat your response as:\nSUMMARY: [your summary]\nCAUSES:\n- [cause 1]\n- [cause 2]\nRECOMMENDATIONS:\n- [recommendation 1]\n- [recommendation 2]\nCONFIDENCE: [low/medium/high]",
+      "rawResponse": "SUMMARY: The given anomaly likely resulted from an unexpected surge in CPU usage, possibly due to the service's sudden demand for resources or an overload of incoming requests.\n\nCAUSES:\n- Resource Utilization: High CPU usage could be a sign of excessive computation requirements or a temporary spike in system load.\n- Overwhelming Incoming Requests: Too many users or applications sending requests simultaneously might have overwhelmed the service's capacity, leading to increased CPU utilization and latency.\nRECOMMENDATIONS:\n- Monitor System Load and Performance Metrics More Diversely: Implementing metrics that cover multiple aspects of system performance, such as memory usage and request rates, could help identify potential issues before they escalate into anomalies like this one.\n- Implement Rate Limiting or Caching: Introducing rate limiting or caching mechanisms to manage incoming requests might help prevent similar surges in CPU usage and ensure smoother system operation.\nCONFIDENCE: Low"
+    },
+    {
+      "traceId": "2bcd9fb59215c932e0b4c6b2e8f8d734",
+      "summary": "The observed anomaly is likely caused by an issue with the TCP connection to kx-exchange, resulting in a significant deviation from the expected latency of 4.36ms. This discrepancy may be due to excessive network usage or resource contention.",
+      "possibleCauses": [
+        "High CPU Usage: A spike in CPU utilization might indicate that the system is struggling to handle requests efficiently.",
+        "Insufficient Memory: The 21MB memory usage could be a sign of temporary memory exhaustion, which might be caused by an increased number of concurrent connections.",
+        "Resource Contention: Overloaded network resources or competing traffic might have led to excessive latency."
+      ],
+      "recommendations": [
+        "Optimize CPU Usage: Consider implementing resource allocation strategies to prevent sudden spikes in CPU utilization.",
+        "Memory Reallocation: Ensure that the system has sufficient memory available to handle incoming requests without experiencing memory exhaustion.",
+        "Network Optimization: Review and adjust network configurations to reduce contention among concurrent connections."
+      ],
+      "confidence": "low",
+      "analyzedAt": "2026-01-21T06:52:07.028Z",
+      "prompt": "You are an expert in distributed systems and observability. Analyze this performance anomaly:\n\n## Anomaly Details\n- Service: kx-exchange\n- Operation: tcp.connect\n- Duration: 7.74ms (expected: 4.36ms ± 1.73ms)\n- Deviation: 1.95σ (standard deviations from mean)\n- Severity: SEV4 (Minor)\n- Timestamp: Wed Jan 21 2026 07:51:55 GMT+0100 (Central European Standard Time)\n\n## Span Attributes\n{\n  \"net.host.ip\": \"::1\",\n  \"net.host.port\": 3969,\n  \"net.peer.ip\": \"::1\",\n  \"net.peer.name\": \"localhost\",\n  \"net.peer.port\": \"16686\",\n  \"net.transport\": \"ip_tcp\",\n  \"otel.scope.name\": \"@opentelemetry/instrumentation-net\",\n  \"otel.scope.version\": \"0.46.1\",\n  \"span.kind\": \"internal\"\n}\n\n## Correlated System Metrics (at time of anomaly)\n- CPU Usage: 0.5%\n- Memory: 21MB\n- Request Rate: 0.0 req/s\n- Error Rate: 0.0%\n- P99 Latency: 10ms\n- Active Connections: 0\n\n## Trace Context\nThe full trace contains 1 spans:\n- kx-exchange: tcp.connect (7.74ms)\n\n\nBased on the trace data AND correlated metrics, provide:\n1. A brief summary (1-2 sentences) of what likely caused this anomaly\n2. 2-3 possible root causes (consider resource utilization if metrics show issues)\n3. 2-3 actionable recommendations\n\nFormat your response as:\nSUMMARY: [your summary]\nCAUSES:\n- [cause 1]\n- [cause 2]\nRECOMMENDATIONS:\n- [recommendation 1]\n- [recommendation 2]\nCONFIDENCE: [low/medium/high]",
+      "rawResponse": "SUMMARY: The observed anomaly is likely caused by an issue with the TCP connection to kx-exchange, resulting in a significant deviation from the expected latency of 4.36ms. This discrepancy may be due to excessive network usage or resource contention.\n\nCAUSES:\n- High CPU Usage: A spike in CPU utilization might indicate that the system is struggling to handle requests efficiently.\n- Insufficient Memory: The 21MB memory usage could be a sign of temporary memory exhaustion, which might be caused by an increased number of concurrent connections.\n- Resource Contention: Overloaded network resources or competing traffic might have led to excessive latency.\n\nRECOMMENDATIONS:\n- Optimize CPU Usage: Consider implementing resource allocation strategies to prevent sudden spikes in CPU utilization.\n- Memory Reallocation: Ensure that the system has sufficient memory available to handle incoming requests without experiencing memory exhaustion.\n- Network Optimization: Review and adjust network configurations to reduce contention among concurrent connections."
     }
   ],
   "lastUpdated": "2026-01-15T09:09:39.700Z",
   "timeBaselines": [
     {
-      "spanKey": "exchange-api:GET",
-      "service": "exchange-api",
-      "operation": "GET",
-      "dayOfWeek": 6,
-      "hourOfDay": 0,
-      "mean": 4.75,
-      "stdDev": 4.44,
-      "sampleCount": 101,
-      "thresholds": {
-        "sev5": 3.024736573794713,
-        "sev4": 3.0458896217159013,
-        "sev3": 3.6759804108576755,
-        "sev2": 3.6759804108576755,
-        "sev1": 3.6759804108576755
-      },
-      "lastUpdated": "2026-01-16T23:25:37.809Z"
-    },
-    {
       "spanKey": "api-gateway:kong",
       "service": "api-gateway",
       "operation": "kong",
-      "dayOfWeek": 6,
-      "hourOfDay": 0,
-      "mean": 313.12,
-      "stdDev": 954.3,
-      "sampleCount": 109,
+      "dayOfWeek": 2,
+      "hourOfDay": 19,
+      "mean": 11.39,
+      "stdDev": 13.29,
+      "sampleCount": 2917,
       "thresholds": {
-        "sev5": 4.3339081702661995,
-        "sev4": 4.334973870912843,
-        "sev3": 4.336062625064132,
-        "sev2": 4.336062625064132,
-        "sev1": 4.336062625064132
+        "sev5": 0.8953291876756972,
+        "sev4": 1.4174284485173807,
+        "sev3": 2.1006713140741775,
+        "sev2": 9.168195097902988,
+        "sev1": 14.76112700683874
       },
-      "lastUpdated": "2026-01-16T23:25:37.809Z"
-    },
-    {
-      "spanKey": "api-gateway:kong.dns",
-      "service": "api-gateway",
-      "operation": "kong.dns",
-      "dayOfWeek": 6,
-      "hourOfDay": 0,
-      "mean": 4.52,
-      "stdDev": 8.31,
-      "sampleCount": 100,
-      "thresholds": {
-        "sev5": 3.059848365603597,
-        "sev4": 3.4264970067588543,
-        "sev3": 4.179648908626512,
-        "sev2": 4.179648908626512,
-        "sev1": 4.179648908626512
-      },
-      "lastUpdated": "2026-01-16T23:25:37.809Z"
-    },
-    {
-      "spanKey": "api-gateway:kong.header_filter.plugin.cors",
-      "service": "api-gateway",
-      "operation": "kong.header_filter.plugin.cors",
-      "dayOfWeek": 6,
-      "hourOfDay": 0,
-      "mean": 1.12,
-      "stdDev": 1.77,
-      "sampleCount": 104,
-      "thresholds": {
-        "sev5": 1.686664038879527,
-        "sev4": 3.943260418309053,
-        "sev3": 4.127541585567076,
-        "sev2": 4.127541585567076,
-        "sev1": 4.127541585567076
-      },
-      "lastUpdated": "2026-01-16T23:25:37.809Z"
-    },
-    {
-      "spanKey": "api-gateway:kong.balancer",
-      "service": "api-gateway",
-      "operation": "kong.balancer",
-      "dayOfWeek": 6,
-      "hourOfDay": 0,
-      "mean": 315.66,
-      "stdDev": 995.87,
-      "sampleCount": 100,
-      "thresholds": {
-        "sev5": 4.140993103902962,
-        "sev4": 4.141031261595893,
-        "sev3": 4.141061386090312,
-        "sev2": 4.141061386090312,
-        "sev1": 4.141061386090312
-      },
-      "lastUpdated": "2026-01-16T23:25:37.809Z"
-    },
-    {
-      "spanKey": "kx-wallet:HTTP GET",
-      "service": "kx-wallet",
-      "operation": "HTTP GET",
-      "dayOfWeek": 6,
-      "hourOfDay": 0,
-      "mean": 97.5,
-      "stdDev": 94.04,
-      "sampleCount": 62,
-      "thresholds": {
-        "sev5": 3.1740791678546603,
-        "sev4": 3.227246323095107,
-        "sev3": 3.227246323095107,
-        "sev2": 3.227246323095107,
-        "sev1": 3.227246323095107
-      },
-      "lastUpdated": "2026-01-16T23:25:37.810Z"
+      "lastUpdated": "2026-01-21T06:34:30.681Z"
     },
     {
       "spanKey": "api-gateway:kong.router",
       "service": "api-gateway",
       "operation": "kong.router",
-      "dayOfWeek": 6,
-      "hourOfDay": 0,
-      "mean": 1.63,
-      "stdDev": 2.15,
-      "sampleCount": 109,
+      "dayOfWeek": 2,
+      "hourOfDay": 19,
+      "mean": 0.1,
+      "stdDev": 0.2,
+      "sampleCount": 2917,
       "thresholds": {
-        "sev5": 2.0999047858101254,
-        "sev4": 2.642599714184051,
-        "sev3": 4.182176313562442,
-        "sev2": 4.434657559209366,
-        "sev1": 4.434657559209366
+        "sev5": 1.8107152360447183,
+        "sev4": 3.187972255622247,
+        "sev3": 5.0646741284531664,
+        "sev2": 8.545653408704062,
+        "sev1": 16.950452656382314
       },
-      "lastUpdated": "2026-01-16T23:25:37.810Z"
+      "lastUpdated": "2026-01-21T06:34:30.682Z"
     },
     {
       "spanKey": "api-gateway:kong.access.plugin.cors",
       "service": "api-gateway",
       "operation": "kong.access.plugin.cors",
-      "dayOfWeek": 6,
-      "hourOfDay": 0,
-      "mean": 0.71,
-      "stdDev": 1.21,
-      "sampleCount": 109,
+      "dayOfWeek": 2,
+      "hourOfDay": 19,
+      "mean": 0.05,
+      "stdDev": 0.08,
+      "sampleCount": 2917,
       "thresholds": {
-        "sev5": 1.757890423282911,
-        "sev4": 2.8773284057488775,
-        "sev3": 3.794954537071237,
-        "sev2": 7.126909385544259,
-        "sev1": 7.126909385544259
+        "sev5": 1.5281845689404967,
+        "sev4": 2.782119721205612,
+        "sev3": 5.340147431826447,
+        "sev2": 12.01108244187686,
+        "sev1": 13.741512952002719
       },
-      "lastUpdated": "2026-01-16T23:25:37.810Z"
+      "lastUpdated": "2026-01-21T06:34:30.682Z"
     },
     {
       "spanKey": "api-gateway:kong.access.plugin.opentelemetry",
       "service": "api-gateway",
       "operation": "kong.access.plugin.opentelemetry",
-      "dayOfWeek": 6,
-      "hourOfDay": 0,
-      "mean": 9.63,
-      "stdDev": 17.55,
-      "sampleCount": 100,
+      "dayOfWeek": 2,
+      "hourOfDay": 19,
+      "mean": 0.39,
+      "stdDev": 0.99,
+      "sampleCount": 2909,
       "thresholds": {
-        "sev5": 3.1025302453867725,
-        "sev4": 5.0383381701994585,
-        "sev3": 5.0383381701994585,
-        "sev2": 5.0383381701994585,
-        "sev1": 5.0383381701994585
+        "sev5": 0.5,
+        "sev4": 1,
+        "sev3": 1.6211699399208381,
+        "sev2": 5.267006329289748,
+        "sev1": 33.20535113384433
       },
-      "lastUpdated": "2026-01-16T23:25:37.810Z"
+      "lastUpdated": "2026-01-21T06:34:30.683Z"
+    },
+    {
+      "spanKey": "api-gateway:kong.dns",
+      "service": "api-gateway",
+      "operation": "kong.dns",
+      "dayOfWeek": 2,
+      "hourOfDay": 19,
+      "mean": 0.14,
+      "stdDev": 0.62,
+      "sampleCount": 2913,
+      "thresholds": {
+        "sev5": 1.367185538550302,
+        "sev4": 2.658995029241964,
+        "sev3": 4.081763930128901,
+        "sev2": 11.020995887636552,
+        "sev1": 24.14927256400238
+      },
+      "lastUpdated": "2026-01-21T06:34:30.684Z"
     },
     {
       "spanKey": "api-gateway:kong.header_filter.plugin.opentelemetry",
       "service": "api-gateway",
       "operation": "kong.header_filter.plugin.opentelemetry",
-      "dayOfWeek": 6,
-      "hourOfDay": 0,
-      "mean": 0.25,
-      "stdDev": 0.83,
-      "sampleCount": 104,
+      "dayOfWeek": 2,
+      "hourOfDay": 19,
+      "mean": 0.03,
+      "stdDev": 0.14,
+      "sampleCount": 2917,
       "thresholds": {
-        "sev5": 4.818806867560538,
-        "sev4": 4.818806867560538,
-        "sev3": 6.673567762462393,
-        "sev2": 6.673567762462393,
-        "sev1": 6.673567762462393
+        "sev5": 2.5095674681860984,
+        "sev4": 4.628511132456671,
+        "sev3": 6.641859597511102,
+        "sev2": 9.739318774517917,
+        "sev1": 26.374082491034073
       },
-      "lastUpdated": "2026-01-16T23:25:37.810Z"
+      "lastUpdated": "2026-01-21T06:34:30.684Z"
     },
     {
-      "spanKey": "crypto-wallet:HTTP GET",
-      "service": "crypto-wallet",
+      "spanKey": "kx-exchange:GET",
+      "service": "kx-exchange",
+      "operation": "GET",
+      "dayOfWeek": 2,
+      "hourOfDay": 19,
+      "mean": 3.13,
+      "stdDev": 2.44,
+      "sampleCount": 3085,
+      "thresholds": {
+        "sev5": 0.9571617498912762,
+        "sev4": 1.3253506681590799,
+        "sev3": 1.8938114229485252,
+        "sev2": 3.937075620098773,
+        "sev1": 16.604576445486057
+      },
+      "lastUpdated": "2026-01-21T06:34:30.684Z"
+    },
+    {
+      "spanKey": "kx-wallet:HTTP GET",
+      "service": "kx-wallet",
       "operation": "HTTP GET",
-      "dayOfWeek": 6,
-      "hourOfDay": 0,
-      "mean": 258.5,
-      "stdDev": 499.04,
-      "sampleCount": 34,
+      "dayOfWeek": 2,
+      "hourOfDay": 19,
+      "mean": 31.52,
+      "stdDev": 24.7,
+      "sampleCount": 3079,
+      "thresholds": {
+        "sev5": 1.558022513036881,
+        "sev4": 2.529736865504099,
+        "sev3": 3.501451217971317,
+        "sev2": 4.837558452613742,
+        "sev1": 5.120975138750013
+      },
+      "lastUpdated": "2026-01-21T06:34:30.685Z"
+    },
+    {
+      "spanKey": "api-gateway:kong.header_filter.plugin.cors",
+      "service": "api-gateway",
+      "operation": "kong.header_filter.plugin.cors",
+      "dayOfWeek": 2,
+      "hourOfDay": 19,
+      "mean": 0.17,
+      "stdDev": 0.35,
+      "sampleCount": 2917,
+      "thresholds": {
+        "sev5": 2.745704408303623,
+        "sev4": 4.685777394305218,
+        "sev3": 5.394868397960772,
+        "sev2": 7.048468618485524,
+        "sev1": 8.968687056384763
+      },
+      "lastUpdated": "2026-01-21T06:34:30.685Z"
+    },
+    {
+      "spanKey": "api-gateway:kong.balancer",
+      "service": "api-gateway",
+      "operation": "kong.balancer",
+      "dayOfWeek": 2,
+      "hourOfDay": 19,
+      "mean": 9.44,
+      "stdDev": 12.78,
+      "sampleCount": 2913,
+      "thresholds": {
+        "sev5": 0.782719070883119,
+        "sev4": 1.34377625855075,
+        "sev3": 1.877833204937124,
+        "sev2": 9.585032513279756,
+        "sev1": 15.356666698816436
+      },
+      "lastUpdated": "2026-01-21T06:34:30.686Z"
+    },
+    {
+      "spanKey": "kx-exchange:GET",
+      "service": "kx-exchange",
+      "operation": "GET",
+      "dayOfWeek": 3,
+      "hourOfDay": 7,
+      "mean": 43.9,
+      "stdDev": 217.14,
+      "sampleCount": 1299,
+      "thresholds": {
+        "sev5": 1.6592745528474393,
+        "sev4": 1.9769650138637374,
+        "sev3": 3.107271033509877,
+        "sev2": 21.470011792965867,
+        "sev1": 21.96682971449692
+      },
+      "lastUpdated": "2026-01-21T06:34:30.686Z"
+    },
+    {
+      "spanKey": "kx-wallet:HTTP GET",
+      "service": "kx-wallet",
+      "operation": "HTTP GET",
+      "dayOfWeek": 3,
+      "hourOfDay": 7,
+      "mean": 36.31,
+      "stdDev": 28.21,
+      "sampleCount": 1071,
+      "thresholds": {
+        "sev5": 1.9034600900169727,
+        "sev4": 2.647968470326731,
+        "sev3": 3.2861185105922384,
+        "sev2": 4.739682491197004,
+        "sev1": 4.9169463912707565
+      },
+      "lastUpdated": "2026-01-21T06:34:30.686Z"
+    },
+    {
+      "spanKey": "api-gateway:kong",
+      "service": "api-gateway",
+      "operation": "kong",
+      "dayOfWeek": 3,
+      "hourOfDay": 7,
+      "mean": 13.34,
+      "stdDev": 9.55,
+      "sampleCount": 998,
+      "thresholds": {
+        "sev5": 1.487725434588518,
+        "sev4": 2.4380304922137412,
+        "sev3": 3.644654058109849,
+        "sev2": 4.001803744266707,
+        "sev1": 4.236238850483418
+      },
+      "lastUpdated": "2026-01-21T06:34:30.686Z"
+    },
+    {
+      "spanKey": "api-gateway:kong.access.plugin.cors",
+      "service": "api-gateway",
+      "operation": "kong.access.plugin.cors",
+      "dayOfWeek": 3,
+      "hourOfDay": 7,
+      "mean": 0.11,
+      "stdDev": 0.46,
+      "sampleCount": 998,
+      "thresholds": {
+        "sev5": 0.9474825708584139,
+        "sev4": 1.5482700373517857,
+        "sev3": 2.5207677349129995,
+        "sev2": 14.27934545142536,
+        "sev1": 14.612155774590754
+      },
+      "lastUpdated": "2026-01-21T06:34:30.687Z"
+    },
+    {
+      "spanKey": "api-gateway:kong.access.plugin.opentelemetry",
+      "service": "api-gateway",
+      "operation": "kong.access.plugin.opentelemetry",
+      "dayOfWeek": 3,
+      "hourOfDay": 7,
+      "mean": 0.89,
+      "stdDev": 1.3,
+      "sampleCount": 989,
+      "thresholds": {
+        "sev5": 1.0618811297794124,
+        "sev4": 1.9749834708416587,
+        "sev3": 2.6640304475424124,
+        "sev2": 11.37072982908301,
+        "sev1": 11.37072982908301
+      },
+      "lastUpdated": "2026-01-21T06:34:30.687Z"
+    },
+    {
+      "spanKey": "api-gateway:kong.dns",
+      "service": "api-gateway",
+      "operation": "kong.dns",
+      "dayOfWeek": 3,
+      "hourOfDay": 7,
+      "mean": 0.43,
+      "stdDev": 2.37,
+      "sampleCount": 989,
+      "thresholds": {
+        "sev5": 1.189595575177633,
+        "sev4": 4.411914266778018,
+        "sev3": 5.059243786827481,
+        "sev2": 15.473831742206595,
+        "sev1": 15.473831742206595
+      },
+      "lastUpdated": "2026-01-21T06:34:30.687Z"
+    },
+    {
+      "spanKey": "api-gateway:kong.router",
+      "service": "api-gateway",
+      "operation": "kong.router",
+      "dayOfWeek": 3,
+      "hourOfDay": 7,
+      "mean": 0.15,
+      "stdDev": 0.43,
+      "sampleCount": 998,
+      "thresholds": {
+        "sev5": 1.7600751676091466,
+        "sev4": 2.201242357313093,
+        "sev3": 3.5294123622948144,
+        "sev2": 8.33089865446951,
+        "sev1": 20.109362354184388
+      },
+      "lastUpdated": "2026-01-21T06:34:30.687Z"
+    },
+    {
+      "spanKey": "api-gateway:kong.header_filter.plugin.cors",
+      "service": "api-gateway",
+      "operation": "kong.header_filter.plugin.cors",
+      "dayOfWeek": 3,
+      "hourOfDay": 7,
+      "mean": 0.21,
+      "stdDev": 0.42,
+      "sampleCount": 998,
+      "thresholds": {
+        "sev5": 3.435881723712735,
+        "sev4": 4.292908184822287,
+        "sev3": 5.599638091184377,
+        "sev2": 5.745615125768971,
+        "sev1": 5.745615125768971
+      },
+      "lastUpdated": "2026-01-21T06:34:30.687Z"
+    },
+    {
+      "spanKey": "api-gateway:kong.header_filter.plugin.opentelemetry",
+      "service": "api-gateway",
+      "operation": "kong.header_filter.plugin.opentelemetry",
+      "dayOfWeek": 3,
+      "hourOfDay": 7,
+      "mean": 0.03,
+      "stdDev": 0.1,
+      "sampleCount": 998,
+      "thresholds": {
+        "sev5": 3.428860569745435,
+        "sev4": 5.6067286676897625,
+        "sev3": 6.730789621467481,
+        "sev2": 9.992573639126038,
+        "sev1": 9.992573639126038
+      },
+      "lastUpdated": "2026-01-21T06:34:30.687Z"
+    },
+    {
+      "spanKey": "api-gateway:kong.balancer",
+      "service": "api-gateway",
+      "operation": "kong.balancer",
+      "dayOfWeek": 3,
+      "hourOfDay": 7,
+      "mean": 9.91,
+      "stdDev": 7.32,
+      "sampleCount": 989,
+      "thresholds": {
+        "sev5": 1.566007658630658,
+        "sev4": 2.3742824454011235,
+        "sev3": 3.2676891327900157,
+        "sev2": 4.81249834064126,
+        "sev1": 4.885058596224542
+      },
+      "lastUpdated": "2026-01-21T06:34:30.687Z"
+    },
+    {
+      "spanKey": "kx-matcher:order.match",
+      "service": "kx-matcher",
+      "operation": "order.match",
+      "dayOfWeek": 2,
+      "hourOfDay": 19,
+      "mean": 88.79,
+      "stdDev": 5.53,
+      "sampleCount": 21,
       "thresholds": {
         "sev5": 1.3,
         "sev4": 1.65,
@@ -801,15 +1050,249 @@
         "sev2": 2.6,
         "sev1": 3.3
       },
-      "lastUpdated": "2026-01-16T23:25:37.810Z"
+      "lastUpdated": "2026-01-21T06:34:30.687Z"
     },
     {
-      "spanKey": "exchange-api:publish orders",
-      "service": "exchange-api",
+      "spanKey": "kx-matcher:order.response",
+      "service": "kx-matcher",
+      "operation": "order.response",
+      "dayOfWeek": 2,
+      "hourOfDay": 19,
+      "mean": 1.67,
+      "stdDev": 1.15,
+      "sampleCount": 21,
+      "thresholds": {
+        "sev5": 1.3,
+        "sev4": 1.65,
+        "sev3": 2,
+        "sev2": 2.6,
+        "sev1": 3.3
+      },
+      "lastUpdated": "2026-01-21T06:34:30.687Z"
+    },
+    {
+      "spanKey": "kx-exchange:publish <default>",
+      "service": "kx-exchange",
+      "operation": "publish <default>",
+      "dayOfWeek": 2,
+      "hourOfDay": 19,
+      "mean": 1.16,
+      "stdDev": 1.36,
+      "sampleCount": 21,
+      "thresholds": {
+        "sev5": 1.3,
+        "sev4": 1.65,
+        "sev3": 2,
+        "sev2": 2.6,
+        "sev1": 3.3
+      },
+      "lastUpdated": "2026-01-21T06:34:30.687Z"
+    },
+    {
+      "spanKey": "kx-wallet:order.response.received",
+      "service": "kx-wallet",
+      "operation": "order.response.received",
+      "dayOfWeek": 2,
+      "hourOfDay": 19,
+      "mean": 0.29,
+      "stdDev": 0.46,
+      "sampleCount": 21,
+      "thresholds": {
+        "sev5": 1.3,
+        "sev4": 1.65,
+        "sev3": 2,
+        "sev2": 2.6,
+        "sev1": 3.3
+      },
+      "lastUpdated": "2026-01-21T06:34:30.687Z"
+    },
+    {
+      "spanKey": "kx-wallet:order.submit.client",
+      "service": "kx-wallet",
+      "operation": "order.submit.client",
+      "dayOfWeek": 2,
+      "hourOfDay": 19,
+      "mean": 166.43,
+      "stdDev": 34.47,
+      "sampleCount": 21,
+      "thresholds": {
+        "sev5": 1.3,
+        "sev4": 1.65,
+        "sev3": 2,
+        "sev2": 2.6,
+        "sev1": 3.3
+      },
+      "lastUpdated": "2026-01-21T06:34:30.687Z"
+    },
+    {
+      "spanKey": "kx-wallet:HTTP POST",
+      "service": "kx-wallet",
+      "operation": "HTTP POST",
+      "dayOfWeek": 2,
+      "hourOfDay": 19,
+      "mean": 267.77,
+      "stdDev": 448.95,
+      "sampleCount": 26,
+      "thresholds": {
+        "sev5": 1.3,
+        "sev4": 1.65,
+        "sev3": 2,
+        "sev2": 2.6,
+        "sev1": 3.3
+      },
+      "lastUpdated": "2026-01-21T06:34:30.687Z"
+    },
+    {
+      "spanKey": "kx-exchange:publish orders",
+      "service": "kx-exchange",
       "operation": "publish orders",
-      "dayOfWeek": 6,
-      "hourOfDay": 0,
-      "mean": 19.75,
+      "dayOfWeek": 2,
+      "hourOfDay": 19,
+      "mean": 8.78,
+      "stdDev": 9.58,
+      "sampleCount": 21,
+      "thresholds": {
+        "sev5": 1.3,
+        "sev4": 1.65,
+        "sev3": 2,
+        "sev2": 2.6,
+        "sev1": 3.3
+      },
+      "lastUpdated": "2026-01-21T06:34:30.687Z"
+    },
+    {
+      "spanKey": "kx-exchange:payment_response process",
+      "service": "kx-exchange",
+      "operation": "payment_response process",
+      "dayOfWeek": 2,
+      "hourOfDay": 19,
+      "mean": 0.61,
+      "stdDev": 0.64,
+      "sampleCount": 21,
+      "thresholds": {
+        "sev5": 1.3,
+        "sev4": 1.65,
+        "sev3": 2,
+        "sev2": 2.6,
+        "sev1": 3.3
+      },
+      "lastUpdated": "2026-01-21T06:34:30.687Z"
+    },
+    {
+      "spanKey": "kx-exchange:POST",
+      "service": "kx-exchange",
+      "operation": "POST",
+      "dayOfWeek": 2,
+      "hourOfDay": 19,
+      "mean": 173.72,
+      "stdDev": 162.74,
+      "sampleCount": 26,
+      "thresholds": {
+        "sev5": 1.3,
+        "sev4": 1.65,
+        "sev3": 2,
+        "sev2": 2.6,
+        "sev1": 3.3
+      },
+      "lastUpdated": "2026-01-21T06:34:30.687Z"
+    },
+    {
+      "spanKey": "kx-exchange:dns.lookup",
+      "service": "kx-exchange",
+      "operation": "dns.lookup",
+      "dayOfWeek": 2,
+      "hourOfDay": 19,
+      "mean": 8,
+      "stdDev": 8.68,
+      "sampleCount": 3,
+      "thresholds": {
+        "sev5": 1.3,
+        "sev4": 1.65,
+        "sev3": 2,
+        "sev2": 2.6,
+        "sev1": 3.3
+      },
+      "lastUpdated": "2026-01-21T06:34:30.687Z"
+    },
+    {
+      "spanKey": "kx-exchange:pg.connect",
+      "service": "kx-exchange",
+      "operation": "pg.connect",
+      "dayOfWeek": 2,
+      "hourOfDay": 19,
+      "mean": 59.65,
+      "stdDev": 28.2,
+      "sampleCount": 3,
+      "thresholds": {
+        "sev5": 1.3,
+        "sev4": 1.65,
+        "sev3": 2,
+        "sev2": 2.6,
+        "sev1": 3.3
+      },
+      "lastUpdated": "2026-01-21T06:34:30.687Z"
+    },
+    {
+      "spanKey": "kx-exchange:tcp.connect",
+      "service": "kx-exchange",
+      "operation": "tcp.connect",
+      "dayOfWeek": 2,
+      "hourOfDay": 19,
+      "mean": 25.27,
+      "stdDev": 31.67,
+      "sampleCount": 3,
+      "thresholds": {
+        "sev5": 1.3,
+        "sev4": 1.65,
+        "sev3": 2,
+        "sev2": 2.6,
+        "sev1": 3.3
+      },
+      "lastUpdated": "2026-01-21T06:34:30.687Z"
+    },
+    {
+      "spanKey": "kx-exchange:pg-pool.connect",
+      "service": "kx-exchange",
+      "operation": "pg-pool.connect",
+      "dayOfWeek": 2,
+      "hourOfDay": 19,
+      "mean": 8.87,
+      "stdDev": 23.93,
+      "sampleCount": 22,
+      "thresholds": {
+        "sev5": 1.3,
+        "sev4": 1.65,
+        "sev3": 2,
+        "sev2": 2.6,
+        "sev1": 3.3
+      },
+      "lastUpdated": "2026-01-21T06:34:30.687Z"
+    },
+    {
+      "spanKey": "kx-exchange:pg.query:SELECT crypto_exchange",
+      "service": "kx-exchange:pg.query",
+      "operation": "SELECT crypto_exchange",
+      "dayOfWeek": 2,
+      "hourOfDay": 19,
+      "mean": 8.14,
+      "stdDev": 5.4,
+      "sampleCount": 23,
+      "thresholds": {
+        "sev5": 1.3,
+        "sev4": 1.65,
+        "sev3": 2,
+        "sev2": 2.6,
+        "sev1": 3.3
+      },
+      "lastUpdated": "2026-01-21T06:34:30.687Z"
+    },
+    {
+      "spanKey": "kx-exchange:pg.query:DELETE crypto_exchange",
+      "service": "kx-exchange:pg.query",
+      "operation": "DELETE crypto_exchange",
+      "dayOfWeek": 2,
+      "hourOfDay": 19,
+      "mean": 10.89,
       "stdDev": 0,
       "sampleCount": 1,
       "thresholds": {
@@ -819,17 +1302,71 @@
         "sev2": 2.6,
         "sev1": 3.3
       },
-      "lastUpdated": "2026-01-16T23:25:37.810Z"
+      "lastUpdated": "2026-01-21T06:34:30.687Z"
     },
     {
-      "spanKey": "crypto-wallet:order.response.received",
-      "service": "crypto-wallet",
-      "operation": "order.response.received",
-      "dayOfWeek": 6,
-      "hourOfDay": 0,
+      "spanKey": "kx-exchange:pg.query:UPDATE crypto_exchange",
+      "service": "kx-exchange:pg.query",
+      "operation": "UPDATE crypto_exchange",
+      "dayOfWeek": 2,
+      "hourOfDay": 19,
+      "mean": 6,
+      "stdDev": 3.37,
+      "sampleCount": 6,
+      "thresholds": {
+        "sev5": 1.3,
+        "sev4": 1.65,
+        "sev3": 2,
+        "sev2": 2.6,
+        "sev1": 3.3
+      },
+      "lastUpdated": "2026-01-21T06:34:30.687Z"
+    },
+    {
+      "spanKey": "kx-exchange:pg.query:INSERT crypto_exchange",
+      "service": "kx-exchange:pg.query",
+      "operation": "INSERT crypto_exchange",
+      "dayOfWeek": 2,
+      "hourOfDay": 19,
+      "mean": 4.02,
+      "stdDev": 2.51,
+      "sampleCount": 6,
+      "thresholds": {
+        "sev5": 1.3,
+        "sev4": 1.65,
+        "sev3": 2,
+        "sev2": 2.6,
+        "sev1": 3.3
+      },
+      "lastUpdated": "2026-01-21T06:34:30.687Z"
+    },
+    {
+      "spanKey": "kx-exchange:pg.query:COMMIT crypto_exchange",
+      "service": "kx-exchange:pg.query",
+      "operation": "COMMIT crypto_exchange",
+      "dayOfWeek": 2,
+      "hourOfDay": 19,
+      "mean": 3.95,
+      "stdDev": 0.62,
+      "sampleCount": 2,
+      "thresholds": {
+        "sev5": 1.3,
+        "sev4": 1.65,
+        "sev3": 2,
+        "sev2": 2.6,
+        "sev1": 3.3
+      },
+      "lastUpdated": "2026-01-21T06:34:30.687Z"
+    },
+    {
+      "spanKey": "kx-wallet:transfer.response.received",
+      "service": "kx-wallet",
+      "operation": "transfer.response.received",
+      "dayOfWeek": 2,
+      "hourOfDay": 19,
       "mean": 0,
       "stdDev": 0,
-      "sampleCount": 1,
+      "sampleCount": 2,
       "thresholds": {
         "sev5": 1.3,
         "sev4": 1.65,
@@ -837,17 +1374,17 @@
         "sev2": 2.6,
         "sev1": 3.3
       },
-      "lastUpdated": "2026-01-16T23:25:37.810Z"
+      "lastUpdated": "2026-01-21T06:34:30.687Z"
     },
     {
-      "spanKey": "crypto-wallet:order.submit.client",
-      "service": "crypto-wallet",
-      "operation": "order.submit.client",
-      "dayOfWeek": 6,
-      "hourOfDay": 0,
-      "mean": 587,
-      "stdDev": 0,
-      "sampleCount": 1,
+      "spanKey": "kx-wallet:transfer.submit.client",
+      "service": "kx-wallet",
+      "operation": "transfer.submit.client",
+      "dayOfWeek": 2,
+      "hourOfDay": 19,
+      "mean": 98.5,
+      "stdDev": 26.16,
+      "sampleCount": 2,
       "thresholds": {
         "sev5": 1.3,
         "sev4": 1.65,
@@ -855,17 +1392,17 @@
         "sev2": 2.6,
         "sev1": 3.3
       },
-      "lastUpdated": "2026-01-16T23:25:37.810Z"
+      "lastUpdated": "2026-01-21T06:34:30.687Z"
     },
     {
-      "spanKey": "crypto-wallet:HTTP POST",
-      "service": "crypto-wallet",
-      "operation": "HTTP POST",
-      "dayOfWeek": 6,
-      "hourOfDay": 0,
-      "mean": 581,
-      "stdDev": 0,
-      "sampleCount": 1,
+      "spanKey": "kx-exchange:pg.query:BEGIN crypto_exchange",
+      "service": "kx-exchange:pg.query",
+      "operation": "BEGIN crypto_exchange",
+      "dayOfWeek": 2,
+      "hourOfDay": 19,
+      "mean": 9.79,
+      "stdDev": 5.59,
+      "sampleCount": 2,
       "thresholds": {
         "sev5": 1.3,
         "sev4": 1.65,
@@ -873,87 +1410,159 @@
         "sev2": 2.6,
         "sev1": 3.3
       },
-      "lastUpdated": "2026-01-16T23:25:37.810Z"
+      "lastUpdated": "2026-01-21T06:34:30.687Z"
     },
     {
-      "spanKey": "order-matcher:order.response",
-      "service": "order-matcher",
-      "operation": "order.response",
-      "dayOfWeek": 6,
-      "hourOfDay": 0,
-      "mean": 1.54,
-      "stdDev": 0,
-      "sampleCount": 1,
+      "spanKey": "kx-exchange:dns.lookup",
+      "service": "kx-exchange",
+      "operation": "dns.lookup",
+      "dayOfWeek": 2,
+      "hourOfDay": 20,
+      "mean": 1.35,
+      "stdDev": 1.56,
+      "sampleCount": 1236,
       "thresholds": {
-        "sev5": 1.3,
-        "sev4": 1.65,
-        "sev3": 2,
-        "sev2": 2.6,
-        "sev1": 3.3
+        "sev5": 0.94431507083914,
+        "sev4": 2.173932045697367,
+        "sev3": 3.3677038614759165,
+        "sev2": 8.021813712696202,
+        "sev1": 13.550929500736475
       },
-      "lastUpdated": "2026-01-16T23:25:37.810Z"
+      "lastUpdated": "2026-01-21T06:34:30.688Z"
     },
     {
-      "spanKey": "exchange-api:payment_response process",
-      "service": "exchange-api",
-      "operation": "payment_response process",
-      "dayOfWeek": 6,
-      "hourOfDay": 0,
-      "mean": 0.56,
-      "stdDev": 0,
-      "sampleCount": 1,
+      "spanKey": "kx-exchange:tcp.connect",
+      "service": "kx-exchange",
+      "operation": "tcp.connect",
+      "dayOfWeek": 2,
+      "hourOfDay": 20,
+      "mean": 3.74,
+      "stdDev": 2.86,
+      "sampleCount": 1236,
       "thresholds": {
-        "sev5": 1.3,
-        "sev4": 1.65,
-        "sev3": 2,
-        "sev2": 2.6,
-        "sev1": 3.3
+        "sev5": 1.1065974808746033,
+        "sev4": 1.919746972909103,
+        "sev3": 2.364934962961511,
+        "sev2": 7.658967968686767,
+        "sev1": 13.347170560580873
       },
-      "lastUpdated": "2026-01-16T23:25:37.810Z"
+      "lastUpdated": "2026-01-21T06:34:30.688Z"
     },
     {
-      "spanKey": "order-matcher:order.match",
-      "service": "order-matcher",
-      "operation": "order.match",
-      "dayOfWeek": 6,
-      "hourOfDay": 0,
-      "mean": 89.24,
-      "stdDev": 0,
-      "sampleCount": 1,
+      "spanKey": "kx-exchange:GET",
+      "service": "kx-exchange",
+      "operation": "GET",
+      "dayOfWeek": 2,
+      "hourOfDay": 20,
+      "mean": 120.14,
+      "stdDev": 159.89,
+      "sampleCount": 1404,
       "thresholds": {
-        "sev5": 1.3,
-        "sev4": 1.65,
-        "sev3": 2,
-        "sev2": 2.6,
-        "sev1": 3.3
+        "sev5": 0.6857675153853433,
+        "sev4": 1,
+        "sev3": 1.5,
+        "sev2": 4.4565959518409235,
+        "sev1": 17.851409042521976
       },
-      "lastUpdated": "2026-01-16T23:25:37.810Z"
+      "lastUpdated": "2026-01-21T06:34:30.688Z"
     },
     {
-      "spanKey": "exchange-api:publish <default>",
-      "service": "exchange-api",
-      "operation": "publish <default>",
-      "dayOfWeek": 6,
-      "hourOfDay": 0,
-      "mean": 6.72,
-      "stdDev": 0,
-      "sampleCount": 1,
+      "spanKey": "jaeger-all-in-one:/api/traces",
+      "service": "jaeger-all-in-one",
+      "operation": "/api/traces",
+      "dayOfWeek": 2,
+      "hourOfDay": 20,
+      "mean": 135.78,
+      "stdDev": 133.16,
+      "sampleCount": 1150,
       "thresholds": {
-        "sev5": 1.3,
-        "sev4": 1.65,
-        "sev3": 2,
-        "sev2": 2.6,
-        "sev1": 3.3
+        "sev5": 0.7454065199587091,
+        "sev4": 1.0580991010385863,
+        "sev3": 1.5,
+        "sev2": 4.589261816932887,
+        "sev1": 17.65172065974735
       },
-      "lastUpdated": "2026-01-16T23:25:37.810Z"
+      "lastUpdated": "2026-01-21T06:34:30.688Z"
     },
     {
-      "spanKey": "exchange-api:POST",
-      "service": "exchange-api",
+      "spanKey": "kx-exchange:POST",
+      "service": "kx-exchange",
       "operation": "POST",
-      "dayOfWeek": 6,
-      "hourOfDay": 0,
-      "mean": 557.25,
+      "dayOfWeek": 2,
+      "hourOfDay": 20,
+      "mean": 36.97,
+      "stdDev": 198.03,
+      "sampleCount": 97,
+      "thresholds": {
+        "sev5": 1.3,
+        "sev4": 1.65,
+        "sev3": 2,
+        "sev2": 2.6,
+        "sev1": 3.3
+      },
+      "lastUpdated": "2026-01-21T06:34:30.688Z"
+    },
+    {
+      "spanKey": "kx-exchange:GET",
+      "service": "kx-exchange",
+      "operation": "GET",
+      "dayOfWeek": 2,
+      "hourOfDay": 23,
+      "mean": 762.01,
+      "stdDev": 661.8,
+      "sampleCount": 7,
+      "thresholds": {
+        "sev5": 1.3,
+        "sev4": 1.65,
+        "sev3": 2,
+        "sev2": 2.6,
+        "sev1": 3.3
+      },
+      "lastUpdated": "2026-01-21T06:34:30.688Z"
+    },
+    {
+      "spanKey": "kx-exchange:tcp.connect",
+      "service": "kx-exchange",
+      "operation": "tcp.connect",
+      "dayOfWeek": 2,
+      "hourOfDay": 23,
+      "mean": 11.77,
+      "stdDev": 7.39,
+      "sampleCount": 8,
+      "thresholds": {
+        "sev5": 1.3,
+        "sev4": 1.65,
+        "sev3": 2,
+        "sev2": 2.6,
+        "sev1": 3.3
+      },
+      "lastUpdated": "2026-01-21T06:34:30.688Z"
+    },
+    {
+      "spanKey": "kx-exchange:dns.lookup",
+      "service": "kx-exchange",
+      "operation": "dns.lookup",
+      "dayOfWeek": 2,
+      "hourOfDay": 23,
+      "mean": 6.2,
+      "stdDev": 6.94,
+      "sampleCount": 8,
+      "thresholds": {
+        "sev5": 1.3,
+        "sev4": 1.65,
+        "sev3": 2,
+        "sev2": 2.6,
+        "sev1": 3.3
+      },
+      "lastUpdated": "2026-01-21T06:34:30.688Z"
+    },
+    {
+      "spanKey": "kx-exchange:POST",
+      "service": "kx-exchange",
+      "operation": "POST",
+      "dayOfWeek": 2,
+      "hourOfDay": 23,
+      "mean": 1348.75,
       "stdDev": 0,
       "sampleCount": 1,
       "thresholds": {
@@ -963,7 +1572,97 @@
         "sev2": 2.6,
         "sev1": 3.3
       },
-      "lastUpdated": "2026-01-16T23:25:37.810Z"
+      "lastUpdated": "2026-01-21T06:34:30.688Z"
+    },
+    {
+      "spanKey": "kx-exchange:tcp.connect",
+      "service": "kx-exchange",
+      "operation": "tcp.connect",
+      "dayOfWeek": 3,
+      "hourOfDay": 7,
+      "mean": 5.21,
+      "stdDev": 4.23,
+      "sampleCount": 198,
+      "thresholds": {
+        "sev5": 1.5748677580410977,
+        "sev4": 1.9300349610644254,
+        "sev3": 4.229175844465436,
+        "sev2": 5.543577873739267,
+        "sev1": 5.543577873739267
+      },
+      "lastUpdated": "2026-01-21T06:34:30.688Z"
+    },
+    {
+      "spanKey": "kx-exchange:dns.lookup",
+      "service": "kx-exchange",
+      "operation": "dns.lookup",
+      "dayOfWeek": 3,
+      "hourOfDay": 7,
+      "mean": 1.6,
+      "stdDev": 1.63,
+      "sampleCount": 198,
+      "thresholds": {
+        "sev5": 1.2438021861032897,
+        "sev4": 2.7173055119214853,
+        "sev3": 4.683409782844388,
+        "sev2": 7.769843385277249,
+        "sev1": 7.769843385277249
+      },
+      "lastUpdated": "2026-01-21T06:34:30.688Z"
+    },
+    {
+      "spanKey": "kx-exchange:POST",
+      "service": "kx-exchange",
+      "operation": "POST",
+      "dayOfWeek": 3,
+      "hourOfDay": 7,
+      "mean": 125.06,
+      "stdDev": 418.5,
+      "sampleCount": 14,
+      "thresholds": {
+        "sev5": 1.3,
+        "sev4": 1.65,
+        "sev3": 2,
+        "sev2": 2.6,
+        "sev1": 3.3
+      },
+      "lastUpdated": "2026-01-21T06:34:30.688Z"
+    },
+    {
+      "spanKey": "jaeger-all-in-one:/api/traces",
+      "service": "jaeger-all-in-one",
+      "operation": "/api/traces",
+      "dayOfWeek": 3,
+      "hourOfDay": 7,
+      "mean": 216.04,
+      "stdDev": 179.24,
+      "sampleCount": 180,
+      "thresholds": {
+        "sev5": 1.0939461454768846,
+        "sev4": 1.3796454999822412,
+        "sev3": 1.7565963657900951,
+        "sev2": 6.112003774324397,
+        "sev1": 6.112003774324397
+      },
+      "lastUpdated": "2026-01-21T06:34:30.688Z"
+    },
+    {
+      "spanKey": "kx-matcher:tcp.connect",
+      "service": "kx-matcher",
+      "operation": "tcp.connect",
+      "dayOfWeek": 2,
+      "hourOfDay": 19,
+      "mean": 25.86,
+      "stdDev": 0,
+      "sampleCount": 1,
+      "thresholds": {
+        "sev5": 1.3,
+        "sev4": 1.65,
+        "sev3": 2,
+        "sev2": 2.6,
+        "sev1": 3.3
+      },
+      "lastUpdated": "2026-01-21T06:34:30.688Z"
     }
   ]
 }

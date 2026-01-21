@@ -215,5 +215,64 @@
     "completion": "SUMMARY: The given anomaly in the kx-exchange service indicates a critical issue with the GET request, which resulted in an unexpected latency of 395ms. This delay is likely due to increased CPU usage and memory consumption caused by resource-intensive code or high traffic.\n\nCAUSES:\n- Elevated CPU Usage (0.6%): High CPU utilization could be attributed to complex calculations, long-running operations, or thread density issues.\n- Increased Memory Consumption: The spike in memory usage might be related to the execution of resource-hungry data processing scripts or inefficient caching mechanisms.\nRECOMMENDATIONS:\n- Optimize Database Queries and Reduce Complexity\n- Implement Efficient Caching Strategies\n- Monitor and Analyze Resource Utilization for Performance Bottlenecks",
     "rating": "bad",
     "correction": "There is no High CPU utilization"
+  },
+  {
+    "id": "train_1768840358721_horo5m",
+    "timestamp": "2026-01-19T16:32:38.721Z",
+    "anomaly": {
+      "id": "80bd3a57a75c373c75737ca52f38e9fa-12c47664b9e533f5",
+      "traceId": "80bd3a57a75c373c75737ca52f38e9fa",
+      "service": "kx-exchange",
+      "operation": "dns.lookup",
+      "duration": 5.59,
+      "expectedMean": 1.48,
+      "deviation": 4.02,
+      "severity": 1,
+      "severityName": "Critical",
+      "timestamp": "2026-01-19T16:24:21.306Z"
+    },
+    "prompt": "You are an expert in distributed systems and observability. Analyze this performance anomaly:\n\n## Anomaly Details\n- Service: kx-exchange\n- Operation: dns.lookup\n- Duration: 5.59ms (expected: 1.48ms ± 1.02ms)\n- Deviation: 4.02σ (standard deviations from mean)\n- Severity: SEV1 (Critical)\n- Timestamp: Mon Jan 19 2026 17:24:21 GMT+0100 (Central European Standard Time)\n\n## Span Attributes\n{\n  \"otel.scope.name\": \"@opentelemetry/instrumentation-dns\",\n  \"otel.scope.version\": \"0.46.0\",\n  \"peer.ipv6\": \"::1\",\n  \"peer[1].ipv4\": \"127.0.0.1\",\n  \"span.kind\": \"client\"\n}\n\n## Correlated System Metrics (at time of anomaly)\n- CPU Usage: 0.4%\n- Memory: 21MB\n- Request Rate: 0.0 req/s\n- Error Rate: 0.0%\n- P99 Latency: 210ms\n- Active Connections: 0\n\n## Trace Context\nThe full trace contains 1 spans:\n- kx-exchange: dns.lookup (5.58ms)\n\n\nBased on the trace data AND correlated metrics, provide:\n1. A brief summary (1-2 sentences) of what likely caused this anomaly\n2. 2-3 possible root causes (consider resource utilization if metrics show issues)\n3. 2-3 actionable recommendations\n\nFormat your response as:\nSUMMARY: [your summary]\nCAUSES:\n- [cause 1]\n- [cause 2]\nRECOMMENDATIONS:\n- [recommendation 1]\n- [recommendation 2]\nCONFIDENCE: [low/medium/high]",
+    "completion": "SUMMARY: The DNS lookup operation on the kx-exchange service experienced an unexpected latency deviation of 4.02 standard deviations from its expected value, prompting a critical Severity SEV1 (Critical) alert.\n\nCAUSES:\n- Resource utilization issues in the network, which could have resulted in increased latency for the DNS lookup operation.\n- A potential issue with the DNS server or its configuration, causing it to take longer than usual to resolve domain names.\n- Overhead from monitoring and logging systems consuming system resources during this period.\n\nRECOMMENDATIONS:\n- Reviewing the network infrastructure and ensuring that there are no bottlenecks or unexpected load on the DNS server during this time frame.\n- Monitoring the system's performance logs to identify any signs of resource utilization spikes or unusual behavior from DNS servers, which may be contributing to the observed latency deviation.",
+    "rating": "good"
+  },
+  {
+    "id": "train_1768840405867_1qyp72",
+    "timestamp": "2026-01-19T16:33:25.867Z",
+    "anomaly": {
+      "id": "bdca9bfc520a8e8c013fe3dd965ce38a-08444ebb2c783848",
+      "traceId": "bdca9bfc520a8e8c013fe3dd965ce38a",
+      "service": "jaeger-all-in-one",
+      "operation": "/api/traces",
+      "duration": 87.47,
+      "expectedMean": 29.71,
+      "deviation": 3.39,
+      "severity": 1,
+      "severityName": "Critical",
+      "timestamp": "2026-01-19T16:27:55.958Z"
+    },
+    "prompt": "You are an expert in distributed systems and observability. Analyze this performance anomaly:\n\n## Anomaly Details\n- Service: jaeger-all-in-one\n- Operation: /api/traces\n- Duration: 87.47ms (expected: 29.71ms ± 17.04ms)\n- Deviation: 3.39σ (standard deviations from mean)\n- Severity: SEV1 (Critical)\n- Timestamp: Mon Jan 19 2026 17:27:55 GMT+0100 (Central European Standard Time)\n\n## Span Attributes\n{\n  \"client.address\": \"172.21.0.1\",\n  \"http.request.method\": \"GET\",\n  \"http.response.body.size\": 1015557,\n  \"http.response.status_code\": 200,\n  \"http.route\": \"/api/traces\",\n  \"network.peer.address\": \"172.21.0.1\",\n  \"network.peer.port\": 59998,\n  \"network.protocol.version\": \"1.1\",\n  \"otel.scope.name\": \"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp\",\n  \"otel.scope.version\": \"0.63.0\",\n  \"server.address\": \"localhost\",\n  \"server.port\": 16686,\n  \"span.kind\": \"server\",\n  \"url.path\": \"/api/traces\",\n  \"url.scheme\": \"http\",\n  \"user_agent.original\": \"node\"\n}\n\n## Correlated System Metrics (at time of anomaly)\n- CPU Usage: 0.6%\n- Memory: 22MB\n- Request Rate: 0.0 req/s\n- Error Rate: 0.0%\n- P99 Latency: NaNms\n- Active Connections: 0\n\n## Trace Context\nThe full trace contains 2 spans:\n- kx-exchange: GET (396.97ms)\n- jaeger-all-in-one: /api/traces (87.47ms)\n\n\nBased on the trace data AND correlated metrics, provide:\n1. A brief summary (1-2 sentences) of what likely caused this anomaly\n2. 2-3 possible root causes (consider resource utilization if metrics show issues)\n3. 2-3 actionable recommendations\n\nFormat your response as:\nSUMMARY: [your summary]\nCAUSES:\n- [cause 1]\n- [cause 2]\nRECOMMENDATIONS:\n- [recommendation 1]\n- [recommendation 2]\nCONFIDENCE: [low/medium/high]",
+    "completion": "SUMMARY: The anomaly is likely caused by a delay in processing the GET request, resulting in a significant deviation from the expected latency of 29.71ms. This could be due to an issue with network connectivity or resource utilization.\n\nCAUSES:\n- High CPU usage on the server (0.6%) may indicate that some critical system tasks are running at a high priority.\n- Low active connections (0) might suggest that there is not enough traffic being handled by the system, potentially leading to resource starvation.\n- Resource utilization: The P99 Latency metric suggests that there may be issues with request processing times, which could be exacerbated by other factors such as network latency or server load.\n\nRECOMMENDATIONS:\n- Monitor CPU usage and adjust resource allocation if necessary to prevent critical tasks from running at high priority.\n- Increase the number of active connections on the system to ensure that it can handle a sufficient amount of traffic without resource starvation.\n- Investigate the P99 Latency metric further to identify specific causes and optimize request processing times.",
+    "rating": "bad",
+    "correction": "High CPU usage on the server (0.6%): not correct"
+  },
+  {
+    "id": "train_1768978371260_xap7gu",
+    "timestamp": "2026-01-21T06:52:51.260Z",
+    "anomaly": {
+      "id": "2bcd9fb59215c932e0b4c6b2e8f8d734-d1aad22720895ceb",
+      "traceId": "2bcd9fb59215c932e0b4c6b2e8f8d734",
+      "service": "kx-exchange",
+      "operation": "tcp.connect",
+      "duration": 7.74,
+      "expectedMean": 4.36,
+      "deviation": 1.95,
+      "severity": 4,
+      "severityName": "Minor",
+      "timestamp": "2026-01-21T06:51:55.983Z"
+    },
+    "prompt": "You are an expert in distributed systems and observability. Analyze this performance anomaly:\n\n## Anomaly Details\n- Service: kx-exchange\n- Operation: tcp.connect\n- Duration: 7.74ms (expected: 4.36ms ± 1.73ms)\n- Deviation: 1.95σ (standard deviations from mean)\n- Severity: SEV4 (Minor)\n- Timestamp: Wed Jan 21 2026 07:51:55 GMT+0100 (Central European Standard Time)\n\n## Span Attributes\n{\n  \"net.host.ip\": \"::1\",\n  \"net.host.port\": 3969,\n  \"net.peer.ip\": \"::1\",\n  \"net.peer.name\": \"localhost\",\n  \"net.peer.port\": \"16686\",\n  \"net.transport\": \"ip_tcp\",\n  \"otel.scope.name\": \"@opentelemetry/instrumentation-net\",\n  \"otel.scope.version\": \"0.46.1\",\n  \"span.kind\": \"internal\"\n}\n\n## Correlated System Metrics (at time of anomaly)\n- CPU Usage: 0.5%\n- Memory: 21MB\n- Request Rate: 0.0 req/s\n- Error Rate: 0.0%\n- P99 Latency: 10ms\n- Active Connections: 0\n\n## Trace Context\nThe full trace contains 1 spans:\n- kx-exchange: tcp.connect (7.74ms)\n\n\nBased on the trace data AND correlated metrics, provide:\n1. A brief summary (1-2 sentences) of what likely caused this anomaly\n2. 2-3 possible root causes (consider resource utilization if metrics show issues)\n3. 2-3 actionable recommendations\n\nFormat your response as:\nSUMMARY: [your summary]\nCAUSES:\n- [cause 1]\n- [cause 2]\nRECOMMENDATIONS:\n- [recommendation 1]\n- [recommendation 2]\nCONFIDENCE: [low/medium/high]",
+    "completion": "SUMMARY: The observed anomaly is likely caused by an issue with the TCP connection to kx-exchange, resulting in a significant deviation from the expected latency of 4.36ms. This discrepancy may be due to excessive network usage or resource contention.\n\nCAUSES:\n- High CPU Usage: A spike in CPU utilization might indicate that the system is struggling to handle requests efficiently.\n- Insufficient Memory: The 21MB memory usage could be a sign of temporary memory exhaustion, which might be caused by an increased number of concurrent connections.\n- Resource Contention: Overloaded network resources or competing traffic might have led to excessive latency.\n\nRECOMMENDATIONS:\n- Optimize CPU Usage: Consider implementing resource allocation strategies to prevent sudden spikes in CPU utilization.\n- Memory Reallocation: Ensure that the system has sufficient memory available to handle incoming requests without experiencing memory exhaustion.\n- Network Optimization: Review and adjust network configurations to reduce contention among concurrent connections.",
+    "rating": "bad",
+    "correction": "memory allocation was very low, so not significant  "
   }
 ]

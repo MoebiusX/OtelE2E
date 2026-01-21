@@ -58,14 +58,11 @@ export default function Layout({ children, showAuth = true }: LayoutProps) {
                             {user ? (
                                 <>
                                     <a
-                                        href="/portfolio"
-                                        className={`px-3 py-2 rounded-lg text-sm font-medium transition-all ${location === '/portfolio' ? 'bg-cyan-500/10 text-cyan-400' : 'text-cyan-100/70 hover:text-cyan-100 hover:bg-slate-800/50'}`}
-                                    >
-                                        Portfolio
-                                    </a>
-                                    <a
                                         href="/trade"
-                                        className={`px-3 py-2 rounded-lg text-sm font-medium transition-all ${location === '/trade' || location === '/trading' ? 'bg-cyan-500/10 text-cyan-400' : 'text-cyan-100/70 hover:text-cyan-100 hover:bg-slate-800/50'}`}
+                                        className={`px-4 py-2 rounded-lg text-sm font-semibold transition-all ${location === '/trade' || location === '/portfolio' || location === '/trading'
+                                                ? 'bg-gradient-to-r from-cyan-500 to-blue-500 text-white shadow-lg shadow-cyan-500/25'
+                                                : 'bg-cyan-500/10 text-cyan-400 hover:bg-cyan-500/20 border border-cyan-500/30'
+                                            }`}
                                     >
                                         Trade
                                     </a>

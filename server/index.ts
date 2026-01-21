@@ -4,15 +4,14 @@ import "./otel";
 // Initialize configuration and logging
 import { config } from "./config";
 import { createLogger } from "./lib/logger";
-const logger = createLogger('server');
 import { requestLogger } from "./middleware/request-logger";
 import { errorHandler, notFoundHandler, handleUnhandledRejection, handleUncaughtException } from "./middleware/error-handler";
-import { 
-  generalRateLimiter, 
-  authRateLimiter, 
-  securityHeaders, 
-  corsMiddleware, 
-  requestTimeout 
+import {
+  generalRateLimiter,
+  authRateLimiter,
+  securityHeaders,
+  corsMiddleware,
+  requestTimeout
 } from "./middleware/security";
 
 import express, { type Request, Response, NextFunction } from "express";
@@ -30,6 +29,7 @@ import publicRoutes from "./api/public-routes";
 import healthRoutes from "./api/health-routes";
 import { binanceFeed } from "./services/binance-feed";
 
+const logger = createLogger('server');
 const app = express();
 
 // Setup global error handlers for unhandled errors
@@ -64,6 +64,10 @@ app.use(express.urlencoded({ extended: false }));
 app.use(corsMiddleware);
 
 (async () => {
+  // Initialize PostgreSQL storage FIRST (before any routes use it)
+  const { initializeStorage } = await import('./storage');
+  await initializeStorage();
+
   // Initialize external services
   logger.info('Initializing external services...');
 
@@ -82,26 +86,26 @@ app.use(corsMiddleware);
   try {
     await rabbitMQClient.connect();
     await rabbitMQClient.startConsumer();
-    logger.info({ component: 'rabbitmq' }, 'RabbitMQ connected and consumer started');
+    console.log('[INIT] RabbitMQ connected and consumer started');
   } catch (error) {
-    logger.warn({ component: 'rabbitmq', err: error }, 'RabbitMQ initialization failed - continuing without message queue');
+    console.warn('[INIT] RabbitMQ initialization failed - continuing without message queue');
   }
 
   // Start real-time price feed (Binance public WebSocket - no API key needed)
   try {
     binanceFeed.start();
-    logger.info({ component: 'binance' }, 'Binance price feed started - real-time prices enabled');
+    console.log('[INIT] Binance price feed started - real-time prices enabled');
   } catch (error) {
-    logger.warn({ component: 'binance', err: error }, 'Binance price feed failed to start - trading will show prices unavailable');
+    console.warn('[INIT] Binance price feed failed to start - trading will show prices unavailable');
   }
 
   // Check Kong Gateway health
   const kongHealthy = await kongClient.checkHealth();
   if (kongHealthy) {
-    logger.info({ component: 'kong' }, 'Kong Gateway available');
+    console.log('[INIT] Kong Gateway available');
     await kongClient.configureService();
   } else {
-    logger.warn({ component: 'kong' }, 'Kong Gateway not available - continuing without proxy');
+    console.warn('[INIT] Kong Gateway not available - continuing without proxy');
   }
 
   // Register API routes
@@ -155,7 +159,7 @@ app.use(corsMiddleware);
   // Start server
   const port = config.server.port;
   const host = config.server.host;
-  
+
   server.listen(port, host, () => {
     logger.info({
       port,
@@ -169,16 +173,16 @@ app.use(corsMiddleware);
 
   // Graceful shutdown
   let isShuttingDown = false;
-  
+
   const shutdown = async (signal: string) => {
     if (isShuttingDown) {
       logger.warn('Shutdown already in progress');
       return;
     }
     isShuttingDown = true;
-    
+
     logger.info({ signal }, 'Received shutdown signal, closing gracefully...');
-    
+
     // Stop accepting new connections
     server.close(() => {
       logger.info('HTTP server closed');

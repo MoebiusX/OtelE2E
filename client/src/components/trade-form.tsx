@@ -13,7 +13,7 @@ import { ArrowUpRight, ArrowDownRight, Wallet, TrendingUp, Loader2, Bitcoin, Che
 
 // Type-safe error message extraction
 const getErrorMessage = (error: unknown): string =>
-  error instanceof Error ? error.message : 'An error occurred';
+    error instanceof Error ? error.message : 'An error occurred';
 
 // Order schema
 const orderSchema = z.object({
@@ -68,7 +68,7 @@ export function TradeForm({ currentUser: propUser, walletAddress: propAddress }:
     // Get user and wallet address from props or localStorage
     const [currentUser, setCurrentUser] = useState<string>(propUser || 'alice');
     const [walletAddress, setWalletAddress] = useState<string | undefined>(propAddress);
-    
+
     useEffect(() => {
         if (!propUser) {
             const userData = localStorage.getItem('user');
@@ -79,7 +79,7 @@ export function TradeForm({ currentUser: propUser, walletAddress: propAddress }:
                     setCurrentUser(parsed.email || parsed.id || 'alice');
                     // Get wallet address if stored
                     setWalletAddress(parsed.walletAddress);
-                } catch {}
+                } catch { }
             }
         }
     }, [propUser]);
@@ -244,9 +244,11 @@ export function TradeForm({ currentUser: propUser, walletAddress: propAddress }:
         orderMutation.mutate(data);
     };
 
-    const currentPrice = priceData?.price || 42500;
+    // Handle null prices (Binance disconnected)
+    const priceAvailable = priceData?.price !== null && priceData?.price !== undefined;
+    const currentPrice = priceAvailable ? priceData.price : 0;
     const quantity = form.watch("quantity") || 0;
-    const estimatedValue = quantity * currentPrice;
+    const estimatedValue = priceAvailable ? quantity * currentPrice : 0;
 
     return (
         <Card className="w-full bg-slate-900 border-slate-700 text-white">
@@ -257,10 +259,18 @@ export function TradeForm({ currentUser: propUser, walletAddress: propAddress }:
                         BTC/USD Trade
                     </CardTitle>
                     <div className="flex items-center gap-2">
-                        <TrendingUp className="w-4 h-4 text-green-400" />
-                        <span className="text-lg font-mono font-bold text-green-400">
-                            ${currentPrice.toLocaleString()}
-                        </span>
+                        {priceAvailable ? (
+                            <>
+                                <TrendingUp className="w-4 h-4 text-green-400" />
+                                <span className="text-lg font-mono font-bold text-green-400">
+                                    ${currentPrice.toLocaleString()}
+                                </span>
+                            </>
+                        ) : (
+                            <span className="text-sm text-amber-400 animate-pulse">
+                                Waiting for pricing feed...
+                            </span>
+                        )}
                     </div>
                 </div>
             </CardHeader>
@@ -385,10 +395,10 @@ export function TradeForm({ currentUser: propUser, walletAddress: propAddress }:
                         {/* Submit Button */}
                         <Button
                             type="submit"
-                            disabled={orderMutation.isPending}
+                            disabled={orderMutation.isPending || !priceAvailable}
                             className={`w-full h-14 text-lg font-bold ${side === "BUY"
-                                ? "bg-green-600 hover:bg-green-700"
-                                : "bg-red-600 hover:bg-red-700"
+                                ? "bg-green-600 hover:bg-green-700 disabled:bg-green-600/50"
+                                : "bg-red-600 hover:bg-red-700 disabled:bg-red-600/50"
                                 }`}
                         >
                             {orderMutation.isPending ? (
@@ -396,6 +406,8 @@ export function TradeForm({ currentUser: propUser, walletAddress: propAddress }:
                                     <Loader2 className="w-5 h-5 mr-2 animate-spin" />
                                     Processing...
                                 </>
+                            ) : !priceAvailable ? (
+                                <>Waiting for prices...</>
                             ) : (
                                 <>
                                     {side === "BUY" ? "Buy" : "Sell"} {quantity.toFixed(4)} BTC
