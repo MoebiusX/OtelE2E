@@ -8,7 +8,7 @@
 import db from '../db';
 import { createLogger } from '../lib/logger';
 import { WalletError, ValidationError, NotFoundError, InsufficientFundsError } from '../lib/errors';
-import { generateWalletAddress, generateWalletId, storage, SEED_WALLETS } from '../storage';
+import { generateWalletAddress, generateWalletId, SEED_WALLETS } from '../storage';
 
 const logger = createLogger('wallet');
 
@@ -114,14 +114,6 @@ export const walletService = {
             }
         });
 
-        // Also register in the in-memory storage for the trading system
-        try {
-            await storage.createWallet(userId, 'Main Trading Wallet');
-        } catch (err) {
-            // Non-fatal - in-memory storage may already have this user
-            logger.debug({ userId, error: err }, 'In-memory wallet may already exist');
-        }
-
         logger.info({
             userId,
             kxAddress,
@@ -135,16 +127,34 @@ export const walletService = {
      * Get Krystaline wallet address for a user
      */
     async getKXAddress(userId: string): Promise<string | null> {
-        const wallet = await storage.getDefaultWallet(userId);
-        return wallet?.address || null;
+        const resolvedId = await resolveUserId(userId);
+        if (!resolvedId) return null;
+
+        const result = await db.query(
+            `SELECT address FROM wallets WHERE user_id = $1 AND address IS NOT NULL LIMIT 1`,
+            [resolvedId]
+        );
+
+        if (result.rows.length > 0 && result.rows[0].address) {
+            return result.rows[0].address;
+        }
+
+        // Fallback to seed wallets
+        const seedEntry = Object.values(SEED_WALLETS).find(s => s.ownerId === userId);
+        return seedEntry?.address || null;
     },
 
     /**
      * Resolve a wallet address from userId/email
      */
     async resolveAddress(identifier: string): Promise<string | null> {
-        const address = await storage.resolveAddress(identifier);
-        return address || null;
+        // If already a kx1 address, return as-is
+        if (identifier.startsWith('kx1')) {
+            return identifier;
+        }
+
+        // Otherwise resolve from userId/email
+        return this.getKXAddress(identifier);
     },
 
     /**
