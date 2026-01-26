@@ -35,6 +35,20 @@ vi.mock('../../server/services/rabbitmq-client', () => ({
   },
 }));
 
+vi.mock('../../server/wallet/wallet-service', () => ({
+  walletService: {
+    getWallet: vi.fn().mockResolvedValue({
+      id: 'test-wallet-id',
+      user_id: 'alice',
+      asset: 'USD',
+      balance: '500000',
+      available: '500000',
+      locked: '0',
+    }),
+    getWallets: vi.fn().mockResolvedValue([]),
+  },
+}));
+
 vi.mock('../../server/lib/logger', () => ({
   createLogger: () => ({
     info: vi.fn(),
@@ -89,14 +103,14 @@ describe('Order API Integration', () => {
   beforeEach(() => {
     app = createApp();
     vi.clearAllMocks();
-    
+
     // Default mock for getWallet (sufficient funds)
     vi.mocked(storage.getWallet).mockResolvedValue({
       btc: 10.0,
       usd: 500000,
       lastUpdated: new Date(),
     });
-    
+
     // Default mock for createOrder
     vi.mocked(storage.createOrder).mockResolvedValue({
       orderId: 'ORD-test-123',
@@ -107,7 +121,7 @@ describe('Order API Integration', () => {
       status: 'PENDING',
       createdAt: new Date(),
     } as any);
-    
+
     vi.mocked(storage.updateWallet).mockResolvedValue(undefined);
   });
 

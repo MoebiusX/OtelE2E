@@ -78,6 +78,7 @@ CREATE TABLE transactions (
 
 CREATE TABLE orders (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    order_id VARCHAR(50) UNIQUE,  -- Application-level ID (ORD-xxx-x)
     user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
     pair VARCHAR(20) NOT NULL,  -- BTC/USDT, ETH/USD
     side VARCHAR(4) NOT NULL CHECK (side IN ('buy', 'sell')),
@@ -86,6 +87,7 @@ CREATE TABLE orders (
     quantity DECIMAL(24, 8) NOT NULL,
     filled DECIMAL(24, 8) DEFAULT 0,
     status VARCHAR(20) DEFAULT 'open' CHECK (status IN ('open', 'partial', 'filled', 'cancelled')),
+    trace_id VARCHAR(64),  -- OpenTelemetry trace ID for observability
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );

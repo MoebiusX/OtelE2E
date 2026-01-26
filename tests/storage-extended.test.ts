@@ -5,12 +5,12 @@
  */
 
 import { describe, it, expect, beforeEach } from 'vitest';
-import { 
-    MemoryStorage, 
-    generateWalletAddress, 
+import {
+    MemoryStorage,
+    generateWalletAddress,
     generateWalletId,
     USERS,
-    DEMO_WALLETS
+    SEED_WALLETS
 } from '../server/storage';
 
 describe('Storage', () => {
@@ -76,20 +76,20 @@ describe('Storage', () => {
     });
 
     // ============================================
-    // Demo Data
+    // Seed Data
     // ============================================
-    describe('Demo Data', () => {
-        it('should have alice and bob users', () => {
+    describe('Seed Data', () => {
+        it('should have seed users', () => {
             expect(USERS).toHaveLength(2);
-            expect(USERS.find(u => u.id === 'alice')).toBeDefined();
-            expect(USERS.find(u => u.id === 'bob')).toBeDefined();
+            expect(USERS.find(u => u.id === 'user_seed_001')).toBeDefined();
+            expect(USERS.find(u => u.id === 'user_seed_002')).toBeDefined();
         });
 
-        it('should have demo wallets for alice and bob', () => {
-            expect(DEMO_WALLETS.alice).toBeDefined();
-            expect(DEMO_WALLETS.bob).toBeDefined();
-            expect(DEMO_WALLETS.alice.address).toMatch(/^kx1/);
-            expect(DEMO_WALLETS.bob.address).toMatch(/^kx1/);
+        it('should have seed wallets for primary and secondary', () => {
+            expect(SEED_WALLETS.primary).toBeDefined();
+            expect(SEED_WALLETS.secondary).toBeDefined();
+            expect(SEED_WALLETS.primary.address).toMatch(/^kx1/);
+            expect(SEED_WALLETS.secondary.address).toMatch(/^kx1/);
         });
     });
 
@@ -104,10 +104,10 @@ describe('Storage', () => {
         });
 
         it('should get user by ID', async () => {
-            const alice = await storage.getUser('alice');
+            const user = await storage.getUser('user_seed_001');
 
-            expect(alice).toBeDefined();
-            expect(alice?.name).toBe('Alice');
+            expect(user).toBeDefined();
+            expect(user?.name).toBe('Primary User');
         });
 
         it('should return undefined for unknown user', async () => {
@@ -122,10 +122,10 @@ describe('Storage', () => {
     // ============================================
     describe('Wallet Operations', () => {
         it('should get wallet by address', async () => {
-            const wallet = await storage.getWalletByAddress(DEMO_WALLETS.alice.address);
+            const wallet = await storage.getWalletByAddress(SEED_WALLETS.primary.address);
 
             expect(wallet).toBeDefined();
-            expect(wallet?.ownerId).toBe('alice@demo.com');
+            expect(wallet?.ownerId).toBe('seed.user.primary@krystaline.io');
         });
 
         it('should return undefined for unknown address', async () => {
@@ -135,17 +135,17 @@ describe('Storage', () => {
         });
 
         it('should get wallet by ID', async () => {
-            const wallet = await storage.getWalletById(DEMO_WALLETS.alice.walletId);
+            const wallet = await storage.getWalletById(SEED_WALLETS.primary.walletId);
 
             expect(wallet).toBeDefined();
-            expect(wallet?.address).toBe(DEMO_WALLETS.alice.address);
+            expect(wallet?.address).toBe(SEED_WALLETS.primary.address);
         });
 
         it('should get wallets by owner', async () => {
-            const wallets = await storage.getWalletsByOwner('alice@demo.com');
+            const wallets = await storage.getWalletsByOwner('seed.user.primary@krystaline.io');
 
             expect(wallets.length).toBeGreaterThan(0);
-            expect(wallets[0].ownerId).toBe('alice@demo.com');
+            expect(wallets[0].ownerId).toBe('seed.user.primary@krystaline.io');
         });
 
         it('should return empty array for owner with no wallets', async () => {
@@ -178,8 +178,8 @@ describe('Storage', () => {
     // Balance Operations
     // ============================================
     describe('Balance Operations', () => {
-        it('should get balance for demo wallet', async () => {
-            const balance = await storage.getBalance(DEMO_WALLETS.alice.walletId, 'BTC');
+        it('should get balance for seed wallet', async () => {
+            const balance = await storage.getBalance(SEED_WALLETS.primary.walletId, 'BTC');
 
             expect(balance).toBeDefined();
             expect(balance?.asset).toBe('BTC');
@@ -187,13 +187,13 @@ describe('Storage', () => {
         });
 
         it('should return undefined for non-existent balance', async () => {
-            const balance = await storage.getBalance(DEMO_WALLETS.alice.walletId, 'ETH');
+            const balance = await storage.getBalance(SEED_WALLETS.primary.walletId, 'ETH');
 
             expect(balance).toBeUndefined();
         });
 
         it('should get all balances for wallet', async () => {
-            const balances = await storage.getAllBalances(DEMO_WALLETS.alice.walletId);
+            const balances = await storage.getAllBalances(SEED_WALLETS.primary.walletId);
 
             expect(balances.length).toBeGreaterThan(0);
             expect(balances.some(b => b.asset === 'BTC')).toBe(true);
@@ -219,7 +219,7 @@ describe('Storage', () => {
 
         it('should use correct decimals for different assets', async () => {
             const wallet = await storage.createWallet('decimals@test.com');
-            
+
             await storage.updateBalance(wallet.walletId, 'BTC', 100);
             await storage.updateBalance(wallet.walletId, 'ETH', 100);
             await storage.updateBalance(wallet.walletId, 'USD', 100);
@@ -239,18 +239,18 @@ describe('Storage', () => {
     // ============================================
     describe('User-Wallet Mapping', () => {
         it('should get user wallet mapping', async () => {
-            const mapping = await storage.getUserWalletMapping('alice@demo.com');
+            const mapping = await storage.getUserWalletMapping('seed.user.primary@krystaline.io');
 
             expect(mapping).toBeDefined();
-            expect(mapping?.userId).toBe('alice@demo.com');
+            expect(mapping?.userId).toBe('seed.user.primary@krystaline.io');
             expect(mapping?.walletIds.length).toBeGreaterThan(0);
         });
 
         it('should get default wallet', async () => {
-            const wallet = await storage.getDefaultWallet('alice@demo.com');
+            const wallet = await storage.getDefaultWallet('seed.user.primary@krystaline.io');
 
             expect(wallet).toBeDefined();
-            expect(wallet?.ownerId).toBe('alice@demo.com');
+            expect(wallet?.ownerId).toBe('seed.user.primary@krystaline.io');
         });
 
         it('should return undefined for user with no wallet', async () => {
@@ -271,9 +271,9 @@ describe('Storage', () => {
         });
 
         it('should resolve email to address', async () => {
-            const address = await storage.resolveAddress('alice@demo.com');
+            const address = await storage.resolveAddress('seed.user.primary@krystaline.io');
 
-            expect(address).toBe(DEMO_WALLETS.alice.address);
+            expect(address).toBe(SEED_WALLETS.primary.address);
         });
 
         it('should return undefined for unknown identifier', async () => {
@@ -288,7 +288,7 @@ describe('Storage', () => {
     // ============================================
     describe('Legacy Wallet Operations', () => {
         it('should get legacy wallet', async () => {
-            const wallet = await storage.getWallet('alice');
+            const wallet = await storage.getWallet('primary');
 
             expect(wallet).toBeDefined();
             expect(wallet?.btc).toBe(1.5);
@@ -296,8 +296,8 @@ describe('Storage', () => {
         });
 
         it('should update legacy wallet', async () => {
-            await storage.updateWallet('alice', { btc: 2.0 });
-            const wallet = await storage.getWallet('alice');
+            await storage.updateWallet('primary', { btc: 2.0 });
+            const wallet = await storage.getWallet('primary');
 
             expect(wallet?.btc).toBe(2.0);
         });
@@ -309,9 +309,9 @@ describe('Storage', () => {
         });
 
         it('should update only specified fields', async () => {
-            const before = await storage.getWallet('bob');
-            await storage.updateWallet('bob', { usd: 20000 });
-            const after = await storage.getWallet('bob');
+            const before = await storage.getWallet('secondary');
+            await storage.updateWallet('secondary', { usd: 20000 });
+            const after = await storage.getWallet('secondary');
 
             expect(after?.btc).toBe(before?.btc);
             expect(after?.usd).toBe(20000);
@@ -325,8 +325,8 @@ describe('Storage', () => {
         it('should create transfer', async () => {
             const transfer = await storage.createTransfer({
                 transferId: 'txf-123',
-                fromAddress: DEMO_WALLETS.alice.address,
-                toAddress: DEMO_WALLETS.bob.address,
+                fromAddress: SEED_WALLETS.primary.address,
+                toAddress: SEED_WALLETS.secondary.address,
                 amount: 0.5,
                 traceId: 'trace-1',
                 spanId: 'span-1',
@@ -334,8 +334,8 @@ describe('Storage', () => {
 
             expect(transfer.transferId).toBe('txf-123');
             expect(transfer.status).toBe('PENDING');
-            expect(transfer.fromUserId).toBe('alice@demo.com');
-            expect(transfer.toUserId).toBe('bob@demo.com');
+            expect(transfer.fromUserId).toBe('seed.user.primary@krystaline.io');
+            expect(transfer.toUserId).toBe('seed.user.secondary@krystaline.io');
         });
 
         it('should get transfers with limit', async () => {
@@ -343,8 +343,8 @@ describe('Storage', () => {
             for (let i = 0; i < 5; i++) {
                 await storage.createTransfer({
                     transferId: `txf-${i}`,
-                    fromAddress: DEMO_WALLETS.alice.address,
-                    toAddress: DEMO_WALLETS.bob.address,
+                    fromAddress: SEED_WALLETS.primary.address,
+                    toAddress: SEED_WALLETS.secondary.address,
                     amount: 0.1,
                     traceId: `trace-${i}`,
                     spanId: `span-${i}`,
@@ -359,8 +359,8 @@ describe('Storage', () => {
         it('should update transfer status', async () => {
             await storage.createTransfer({
                 transferId: 'txf-update',
-                fromAddress: DEMO_WALLETS.alice.address,
-                toAddress: DEMO_WALLETS.bob.address,
+                fromAddress: SEED_WALLETS.primary.address,
+                toAddress: SEED_WALLETS.secondary.address,
                 amount: 1,
                 traceId: 'trace-u',
                 spanId: 'span-u',
@@ -614,8 +614,8 @@ describe('Storage', () => {
             });
             await storage.createTransfer({
                 transferId: 'txf-clear',
-                fromAddress: DEMO_WALLETS.alice.address,
-                toAddress: DEMO_WALLETS.bob.address,
+                fromAddress: SEED_WALLETS.primary.address,
+                toAddress: SEED_WALLETS.secondary.address,
                 amount: 1,
                 traceId: 'trace',
                 spanId: 'span',
@@ -630,15 +630,15 @@ describe('Storage', () => {
             expect(transfers.length).toBe(0);
         });
 
-        it('should reset demo wallets', async () => {
-            // Modify alice's balance
-            await storage.updateWallet('alice', { btc: 100 });
-            
+        it('should reset seed wallets', async () => {
+            // Modify primary's balance
+            await storage.updateWallet('primary', { btc: 100 });
+
             await storage.clearAllData();
 
-            // Demo data should be re-initialized
-            const alice = await storage.getWallet('alice');
-            expect(alice?.btc).toBe(1.5);
+            // Seed data should be re-initialized
+            const primary = await storage.getWallet('primary');
+            expect(primary?.btc).toBe(1.5);
         });
     });
 });

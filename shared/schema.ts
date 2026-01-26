@@ -249,11 +249,12 @@ export const systemStatusSchema = z.object({
 // Public Trade - anonymized trade for transparency feed
 export const publicTradeSchema = z.object({
   tradeId: z.string(),
+  traceId: z.string().optional(), // OpenTelemetry trace ID for Jaeger links
   timestamp: z.string(),
   type: z.enum(['BUY', 'SELL']),
   asset: z.string(),
   amount: z.number().positive(),
-  price: z.number().positive(),
+  price: z.number().nonnegative(),
   executionTimeMs: z.number().nonnegative(),
   status: z.enum(['completed', 'pending', 'failed']),
   aiVerified: z.boolean(),
@@ -309,6 +310,7 @@ export const dbOrderRowSchema = z.object({
   quantity: z.string(),
   filled: z.string(),
   status: z.string(),
+  trace_id: z.string().nullable().optional(), // OpenTelemetry trace ID
   created_at: z.union([z.date(), z.string()]),
   updated_at: z.union([z.date(), z.string()]),
 });

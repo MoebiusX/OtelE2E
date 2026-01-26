@@ -19,6 +19,9 @@ const JWT_SECRET = config.server.jwtSecret;
 const JWT_EXPIRES_IN = '1h';
 const REFRESH_EXPIRES_IN = '7d';
 
+// Server startup timestamp - tokens issued before this time are invalid
+let serverStartTime = Math.floor(Date.now() / 1000);
+
 // Validation schemas
 export const registerSchema = z.object({
     email: z.string().email('Invalid email address'),
@@ -246,11 +249,19 @@ export const authService = {
 
     /**
      * Verify access token
+     * Tokens issued before server startup are rejected
      */
     verifyToken(token: string): { userId: string } | null {
         try {
-            const decoded = jwt.verify(token, JWT_SECRET) as { userId: string };
-            return decoded;
+            const decoded = jwt.verify(token, JWT_SECRET) as { userId: string; iat?: number };
+
+            // Reject tokens issued before server started
+            if (decoded.iat && decoded.iat < serverStartTime) {
+                logger.debug({ iat: decoded.iat, serverStart: serverStartTime }, 'Token rejected - issued before server restart');
+                return null;
+            }
+
+            return { userId: decoded.userId };
         } catch {
             return null;
         }
@@ -301,6 +312,18 @@ export const authService = {
     },
 
     /**
+     * Clear all sessions (called on server restart)
+     */
+    async clearAllSessions(): Promise<number> {
+        const result = await db.query('DELETE FROM sessions RETURNING id');
+        const count = result.rowCount || 0;
+        if (count > 0) {
+            logger.info({ sessionCount: count }, 'All sessions invalidated on server startup');
+        }
+        return count;
+    },
+
+    /**
      * Get user by ID
      */
     async getUserById(userId: string): Promise<User | null> {
@@ -309,11 +332,11 @@ export const authService = {
             'SELECT id, email, phone, status, kyc_level, created_at FROM users WHERE id = $1',
             [userId]
         );
-        
+
         if (result.rows.length === 0) {
             logger.warn({ userId }, 'User not found by ID');
         }
-        
+
         return result.rows[0] || null;
     },
 

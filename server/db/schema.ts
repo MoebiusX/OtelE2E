@@ -1,0 +1,266 @@
+/**
+ * Drizzle ORM Database Schema
+ * 
+ * This is the single source of truth for the database schema.
+ * TypeScript types and Zod validators are generated from this.
+ */
+
+import { pgTable, uuid, varchar, text, timestamp, integer, decimal, boolean, jsonb, index, uniqueIndex } from 'drizzle-orm/pg-core';
+import { relations } from 'drizzle-orm';
+import { createInsertSchema, createSelectSchema } from 'drizzle-zod';
+import { z } from 'zod';
+
+// ============================================
+// USERS & AUTHENTICATION
+// ============================================
+
+export const users = pgTable('users', {
+    id: uuid('id').primaryKey().defaultRandom(),
+    email: varchar('email', { length: 255 }).unique().notNull(),
+    phone: varchar('phone', { length: 20 }).unique(),
+    passwordHash: varchar('password_hash', { length: 255 }).notNull(),
+    status: varchar('status', { length: 20 }).default('pending').notNull()
+        .$type<'pending' | 'verified' | 'kyc_pending' | 'kyc_verified' | 'suspended'>(),
+    kycLevel: integer('kyc_level').default(0).notNull(),
+    // Two-Factor Authentication
+    twoFactorSecret: varchar('two_factor_secret', { length: 64 }),
+    twoFactorEnabled: boolean('two_factor_enabled').default(false).notNull(),
+    twoFactorBackupCodes: jsonb('two_factor_backup_codes').$type<string[]>(),
+    createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+    updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),
+    lastLoginAt: timestamp('last_login_at', { withTimezone: true }),
+}, (table) => [
+    index('idx_users_email').on(table.email),
+    index('idx_users_status').on(table.status),
+]);
+
+export const verificationCodes = pgTable('verification_codes', {
+    id: uuid('id').primaryKey().defaultRandom(),
+    userId: uuid('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
+    code: varchar('code', { length: 6 }).notNull(),
+    type: varchar('type', { length: 10 }).notNull()
+        .$type<'email' | 'phone' | 'password_reset'>(),
+    expiresAt: timestamp('expires_at', { withTimezone: true }).notNull(),
+    used: boolean('used').default(false).notNull(),
+    createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+}, (table) => [
+    index('idx_verification_codes_user').on(table.userId, table.type),
+]);
+
+export const sessions = pgTable('sessions', {
+    id: uuid('id').primaryKey().defaultRandom(),
+    userId: uuid('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
+    refreshTokenHash: varchar('refresh_token_hash', { length: 255 }).notNull(),
+    userAgent: text('user_agent'),
+    ipAddress: varchar('ip_address', { length: 45 }),
+    expiresAt: timestamp('expires_at', { withTimezone: true }).notNull(),
+    createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+});
+
+// ============================================
+// WALLETS & BALANCES
+// ============================================
+
+export const wallets = pgTable('wallets', {
+    id: uuid('id').primaryKey().defaultRandom(),
+    userId: uuid('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
+    asset: varchar('asset', { length: 10 }).notNull(),
+    balance: decimal('balance', { precision: 24, scale: 8 }).default('0').notNull(),
+    available: decimal('available', { precision: 24, scale: 8 }).default('0').notNull(),
+    locked: decimal('locked', { precision: 24, scale: 8 }).default('0').notNull(),
+    createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+    updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),
+}, (table) => [
+    index('idx_wallets_user').on(table.userId),
+    uniqueIndex('wallets_user_asset_unique').on(table.userId, table.asset),
+]);
+
+export const transactions = pgTable('transactions', {
+    id: uuid('id').primaryKey().defaultRandom(),
+    userId: uuid('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
+    walletId: uuid('wallet_id').notNull().references(() => wallets.id, { onDelete: 'cascade' }),
+    type: varchar('type', { length: 20 }).notNull()
+        .$type<'deposit' | 'withdrawal' | 'trade_buy' | 'trade_sell' | 'fee' | 'bonus'>(),
+    amount: decimal('amount', { precision: 24, scale: 8 }).notNull(),
+    fee: decimal('fee', { precision: 24, scale: 8 }).default('0').notNull(),
+    status: varchar('status', { length: 20 }).default('completed').notNull()
+        .$type<'pending' | 'completed' | 'failed' | 'cancelled'>(),
+    referenceId: varchar('reference_id', { length: 255 }),
+    description: text('description'),
+    createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+}, (table) => [
+    index('idx_transactions_user').on(table.userId),
+    index('idx_transactions_wallet').on(table.walletId),
+]);
+
+// ============================================
+// TRADING
+// ============================================
+
+export const orders = pgTable('orders', {
+    id: uuid('id').primaryKey().defaultRandom(),
+    orderId: varchar('order_id', { length: 50 }).unique(),
+    userId: uuid('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
+    pair: varchar('pair', { length: 20 }).notNull(),
+    side: varchar('side', { length: 4 }).notNull().$type<'buy' | 'sell'>(),
+    type: varchar('type', { length: 10 }).notNull().$type<'market' | 'limit'>(),
+    price: decimal('price', { precision: 24, scale: 8 }),
+    quantity: decimal('quantity', { precision: 24, scale: 8 }).notNull(),
+    filled: decimal('filled', { precision: 24, scale: 8 }).default('0').notNull(),
+    status: varchar('status', { length: 20 }).default('open').notNull()
+        .$type<'open' | 'partial' | 'filled' | 'cancelled'>(),
+    traceId: varchar('trace_id', { length: 64 }),
+    createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+    updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),
+}, (table) => [
+    index('idx_orders_user').on(table.userId),
+    index('idx_orders_pair_status').on(table.pair, table.status),
+]);
+
+export const trades = pgTable('trades', {
+    id: uuid('id').primaryKey().defaultRandom(),
+    buyerOrderId: uuid('buyer_order_id').references(() => orders.id),
+    sellerOrderId: uuid('seller_order_id').references(() => orders.id),
+    pair: varchar('pair', { length: 20 }).notNull(),
+    price: decimal('price', { precision: 24, scale: 8 }).notNull(),
+    quantity: decimal('quantity', { precision: 24, scale: 8 }).notNull(),
+    buyerFee: decimal('buyer_fee', { precision: 24, scale: 8 }).default('0').notNull(),
+    sellerFee: decimal('seller_fee', { precision: 24, scale: 8 }).default('0').notNull(),
+    createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+}, (table) => [
+    index('idx_trades_pair').on(table.pair),
+]);
+
+// ============================================
+// KYC
+// ============================================
+
+export const kycSubmissions = pgTable('kyc_submissions', {
+    id: uuid('id').primaryKey().defaultRandom(),
+    userId: uuid('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
+    level: integer('level').notNull(),
+    status: varchar('status', { length: 20 }).default('pending').notNull()
+        .$type<'pending' | 'approved' | 'rejected'>(),
+    data: jsonb('data'),
+    documents: jsonb('documents'),
+    submittedAt: timestamp('submitted_at', { withTimezone: true }).defaultNow().notNull(),
+    reviewedAt: timestamp('reviewed_at', { withTimezone: true }),
+    reviewerNotes: text('reviewer_notes'),
+});
+
+// ============================================
+// RELATIONS
+// ============================================
+
+export const usersRelations = relations(users, ({ many }) => ({
+    verificationCodes: many(verificationCodes),
+    sessions: many(sessions),
+    wallets: many(wallets),
+    transactions: many(transactions),
+    orders: many(orders),
+    kycSubmissions: many(kycSubmissions),
+}));
+
+export const verificationCodesRelations = relations(verificationCodes, ({ one }) => ({
+    user: one(users, { fields: [verificationCodes.userId], references: [users.id] }),
+}));
+
+export const sessionsRelations = relations(sessions, ({ one }) => ({
+    user: one(users, { fields: [sessions.userId], references: [users.id] }),
+}));
+
+export const walletsRelations = relations(wallets, ({ one, many }) => ({
+    user: one(users, { fields: [wallets.userId], references: [users.id] }),
+    transactions: many(transactions),
+}));
+
+export const transactionsRelations = relations(transactions, ({ one }) => ({
+    user: one(users, { fields: [transactions.userId], references: [users.id] }),
+    wallet: one(wallets, { fields: [transactions.walletId], references: [wallets.id] }),
+}));
+
+export const ordersRelations = relations(orders, ({ one }) => ({
+    user: one(users, { fields: [orders.userId], references: [users.id] }),
+}));
+
+export const kycSubmissionsRelations = relations(kycSubmissions, ({ one }) => ({
+    user: one(users, { fields: [kycSubmissions.userId], references: [users.id] }),
+}));
+
+// ============================================
+// GENERATED ZOD SCHEMAS
+// ============================================
+
+// User schemas
+export const insertUserSchema = createInsertSchema(users);
+export const selectUserSchema = createSelectSchema(users);
+export type User = typeof users.$inferSelect;
+export type NewUser = typeof users.$inferInsert;
+
+// Verification code schemas
+export const insertVerificationCodeSchema = createInsertSchema(verificationCodes);
+export const selectVerificationCodeSchema = createSelectSchema(verificationCodes);
+export type VerificationCode = typeof verificationCodes.$inferSelect;
+export type NewVerificationCode = typeof verificationCodes.$inferInsert;
+
+// Session schemas
+export const insertSessionSchema = createInsertSchema(sessions);
+export const selectSessionSchema = createSelectSchema(sessions);
+export type Session = typeof sessions.$inferSelect;
+export type NewSession = typeof sessions.$inferInsert;
+
+// Wallet schemas
+export const insertWalletSchema = createInsertSchema(wallets);
+export const selectWalletSchema = createSelectSchema(wallets);
+export type Wallet = typeof wallets.$inferSelect;
+export type NewWallet = typeof wallets.$inferInsert;
+
+// Transaction schemas
+export const insertTransactionSchema = createInsertSchema(transactions);
+export const selectTransactionSchema = createSelectSchema(transactions);
+export type Transaction = typeof transactions.$inferSelect;
+export type NewTransaction = typeof transactions.$inferInsert;
+
+// Order schemas
+export const insertOrderSchema = createInsertSchema(orders);
+export const selectOrderSchema = createSelectSchema(orders);
+export type Order = typeof orders.$inferSelect;
+export type NewOrder = typeof orders.$inferInsert;
+
+// Trade schemas
+export const insertTradeSchema = createInsertSchema(trades);
+export const selectTradeSchema = createSelectSchema(trades);
+export type Trade = typeof trades.$inferSelect;
+export type NewTrade = typeof trades.$inferInsert;
+
+// KYC schemas
+export const insertKycSubmissionSchema = createInsertSchema(kycSubmissions);
+export const selectKycSubmissionSchema = createSelectSchema(kycSubmissions);
+export type KycSubmission = typeof kycSubmissions.$inferSelect;
+export type NewKycSubmission = typeof kycSubmissions.$inferInsert;
+
+// ============================================
+// ADDITIONAL FORM SCHEMAS
+// ============================================
+
+export const changePasswordSchema = z.object({
+    currentPassword: z.string().min(8, 'Password must be at least 8 characters'),
+    newPassword: z.string().min(8, 'Password must be at least 8 characters'),
+    confirmPassword: z.string().min(8, 'Password must be at least 8 characters'),
+}).refine(data => data.newPassword === data.confirmPassword, {
+    message: 'Passwords do not match',
+    path: ['confirmPassword'],
+});
+
+export const forgotPasswordSchema = z.object({
+    email: z.string().email('Invalid email address'),
+});
+
+export const resetPasswordSchema = z.object({
+    token: z.string().min(32),
+    newPassword: z.string().min(8, 'Password must be at least 8 characters'),
+    confirmPassword: z.string().min(8, 'Password must be at least 8 characters'),
+}).refine(data => data.newPassword === data.confirmPassword, {
+    message: 'Passwords do not match',
+    path: ['confirmPassword'],
+});

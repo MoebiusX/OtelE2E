@@ -5,18 +5,19 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import Layout from "@/components/Layout";
-import { 
-    ArrowUpRight, 
-    ArrowDownRight, 
-    Send, 
-    Eye, 
-    Clock, 
-    CheckCircle2, 
+import {
+    ArrowUpRight,
+    ArrowDownRight,
+    Send,
+    Eye,
+    Clock,
+    CheckCircle2,
     XCircle,
     Filter,
     RefreshCw
 } from "lucide-react";
 import type { Order, Transfer } from "@shared/schema";
+import { getJaegerTraceUrl } from "@/lib/trace-utils";
 
 interface User {
     id: string;
@@ -136,8 +137,8 @@ export default function Activity() {
                         variant={filter === 'all' ? 'default' : 'outline'}
                         size="sm"
                         onClick={() => setFilter('all')}
-                        className={filter === 'all' 
-                            ? 'bg-cyan-600 hover:bg-cyan-700' 
+                        className={filter === 'all'
+                            ? 'bg-cyan-600 hover:bg-cyan-700'
                             : 'border-cyan-500/30 text-cyan-100 hover:bg-cyan-500/10'}
                     >
                         <Filter className="w-4 h-4 mr-2" />
@@ -147,8 +148,8 @@ export default function Activity() {
                         variant={filter === 'trades' ? 'default' : 'outline'}
                         size="sm"
                         onClick={() => setFilter('trades')}
-                        className={filter === 'trades' 
-                            ? 'bg-green-600 hover:bg-green-700' 
+                        className={filter === 'trades'
+                            ? 'bg-green-600 hover:bg-green-700'
                             : 'border-cyan-500/30 text-cyan-100 hover:bg-cyan-500/10'}
                     >
                         <ArrowUpRight className="w-4 h-4 mr-2" />
@@ -158,8 +159,8 @@ export default function Activity() {
                         variant={filter === 'transfers' ? 'default' : 'outline'}
                         size="sm"
                         onClick={() => setFilter('transfers')}
-                        className={filter === 'transfers' 
-                            ? 'bg-purple-600 hover:bg-purple-700' 
+                        className={filter === 'transfers'
+                            ? 'bg-purple-600 hover:bg-purple-700'
                             : 'border-cyan-500/30 text-cyan-100 hover:bg-cyan-500/10'}
                     >
                         <Send className="w-4 h-4 mr-2" />
@@ -211,25 +212,23 @@ export default function Activity() {
                             const traceId = order?.traceId || transfer?.traceId;
 
                             return (
-                                <Card 
+                                <Card
                                     key={isOrder ? order?.orderId : transfer?.transferId}
-                                    className={`bg-slate-800/50 border-cyan-500/20 hover:border-cyan-400/40 transition-all ${
-                                        selectedTrace === traceId ? 'ring-2 ring-cyan-500' : ''
-                                    }`}
+                                    className={`bg-slate-800/50 border-cyan-500/20 hover:border-cyan-400/40 transition-all ${selectedTrace === traceId ? 'ring-2 ring-cyan-500' : ''
+                                        }`}
                                 >
                                     <CardContent className="p-4 md:p-6">
                                         <div className="flex flex-col md:flex-row md:items-center gap-4">
                                             {/* Icon & Type */}
                                             <div className="flex items-center gap-4 flex-1">
-                                                <div className={`p-3 rounded-xl ${
-                                                    isOrder 
-                                                        ? order?.side === 'BUY' 
-                                                            ? 'bg-emerald-500/20' 
+                                                <div className={`p-3 rounded-xl ${isOrder
+                                                        ? order?.side === 'BUY'
+                                                            ? 'bg-emerald-500/20'
                                                             : 'bg-red-500/20'
                                                         : 'bg-purple-500/20'
-                                                }`}>
+                                                    }`}>
                                                     {isOrder ? (
-                                                        order?.side === 'BUY' 
+                                                        order?.side === 'BUY'
                                                             ? <ArrowUpRight className="w-6 h-6 text-emerald-400" />
                                                             : <ArrowDownRight className="w-6 h-6 text-red-400" />
                                                     ) : (
@@ -239,20 +238,19 @@ export default function Activity() {
 
                                                 <div className="flex-1">
                                                     <div className="flex items-center gap-2 flex-wrap">
-                                                        <span className={`font-semibold ${
-                                                            isOrder 
-                                                                ? order?.side === 'BUY' 
-                                                                    ? 'text-emerald-400' 
+                                                        <span className={`font-semibold ${isOrder
+                                                                ? order?.side === 'BUY'
+                                                                    ? 'text-emerald-400'
                                                                     : 'text-red-400'
                                                                 : 'text-purple-400'
-                                                        }`}>
-                                                            {isOrder 
+                                                            }`}>
+                                                            {isOrder
                                                                 ? `${order?.side} ${order?.pair}`
                                                                 : 'Transfer BTC'
                                                             }
                                                         </span>
-                                                        <Badge 
-                                                            variant="outline" 
+                                                        <Badge
+                                                            variant="outline"
                                                             className={getStatusBadge(
                                                                 isOrder ? order?.status || '' : transfer?.status || ''
                                                             )}
@@ -272,7 +270,7 @@ export default function Activity() {
                                                             </>
                                                         ) : (
                                                             <>
-                                                                {transfer?.amount?.toFixed(6)} BTC • 
+                                                                {transfer?.amount?.toFixed(6)} BTC •
                                                                 {transfer?.fromUserId} → {transfer?.toUserId}
                                                             </>
                                                         )}
@@ -288,7 +286,7 @@ export default function Activity() {
                                             <div className="flex items-center gap-4 md:gap-6">
                                                 <div className="text-right">
                                                     <div className="font-mono text-lg text-cyan-100">
-                                                        {isOrder 
+                                                        {isOrder
                                                             ? `$${((order?.quantity || 0) * (order?.fillPrice || priceData?.BTC || 0)).toLocaleString(undefined, { maximumFractionDigits: 2 })}`
                                                             : `${transfer?.amount?.toFixed(6)} BTC`
                                                         }
@@ -302,7 +300,7 @@ export default function Activity() {
                                                         size="sm"
                                                         onClick={() => {
                                                             setSelectedTrace(traceId);
-                                                            window.open(`http://localhost:16686/trace/${traceId}`, '_blank');
+                                                            window.open(getJaegerTraceUrl(traceId), '_blank');
                                                         }}
                                                         className="border-cyan-500/40 text-cyan-400 hover:bg-cyan-500/20 hover:border-cyan-400"
                                                     >
@@ -343,8 +341,8 @@ export default function Activity() {
                                     Proof of Observability™
                                 </h3>
                                 <p className="text-cyan-100/60 text-sm">
-                                    Every transaction has a unique Trace ID. Click "View Trace" to see 
-                                    exactly how your order was processed - from API gateway to database. 
+                                    Every transaction has a unique Trace ID. Click "View Trace" to see
+                                    exactly how your order was processed - from API gateway to database.
                                     This is real-time transparency, not just a promise.
                                 </p>
                                 <Button

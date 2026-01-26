@@ -36,6 +36,20 @@ vi.mock('../../server/services/rabbitmq-client', () => ({
   },
 }));
 
+vi.mock('../../server/wallet/wallet-service', () => ({
+  walletService: {
+    getWallet: vi.fn().mockResolvedValue({
+      id: 'test-wallet-id',
+      user_id: 'alice',
+      asset: 'USD',
+      balance: '500000',
+      available: '500000',
+      locked: '0',
+    }),
+    getWallets: vi.fn().mockResolvedValue([]),
+  },
+}));
+
 vi.mock('../../server/lib/logger', () => ({
   createLogger: () => ({
     info: vi.fn(),
@@ -94,14 +108,14 @@ describe('Transfer API Integration', () => {
   beforeEach(() => {
     app = createApp();
     vi.clearAllMocks();
-    
+
     // Default mocks for transfer operations
     vi.mocked(storage.getWallet).mockResolvedValue({
       btc: 5.0,
       usd: 100000,
       lastUpdated: new Date(),
     });
-    
+
     vi.mocked(storage.createTransfer).mockResolvedValue({
       id: 'TXF-test-123',
       fromUserId: 'alice',
@@ -110,7 +124,7 @@ describe('Transfer API Integration', () => {
       status: 'PENDING',
       createdAt: new Date(),
     } as any);
-    
+
     vi.mocked(storage.updateTransfer).mockResolvedValue(undefined);
     vi.mocked(storage.updateWallet).mockResolvedValue(undefined);
   });
@@ -143,7 +157,7 @@ describe('Transfer API Integration', () => {
     it('should return updated wallets for both users', async () => {
       // Reset and set up proper mock sequence for this specific test
       vi.clearAllMocks();
-      
+
       // First call: sender wallet (for validation)
       // Second call: sender wallet after transfer 
       // Third call: recipient wallet after transfer
@@ -151,7 +165,7 @@ describe('Transfer API Integration', () => {
         .mockResolvedValueOnce({ btc: 5.0, usd: 100000, lastUpdated: new Date() })  // initial check
         .mockResolvedValueOnce({ btc: 4.5, usd: 100000, lastUpdated: new Date() })  // alice after
         .mockResolvedValueOnce({ btc: 0.5, usd: 0, lastUpdated: new Date() });      // bob after
-      
+
       vi.mocked(storage.createTransfer).mockResolvedValue({
         id: 'TXF-test-123',
         fromUserId: 'alice',

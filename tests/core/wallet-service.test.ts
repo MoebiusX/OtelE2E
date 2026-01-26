@@ -19,6 +19,10 @@ vi.mock('../../server/db', () => ({
 vi.mock('../../server/storage', () => ({
   generateWalletAddress: vi.fn((userId: string) => `kx1${userId}mock123456789abcdefgh`),
   generateWalletId: vi.fn(() => 'wal_mock123456789abcdefgh'),
+  SEED_WALLETS: {
+    primary: { ownerId: 'primary-user-id', address: 'kx1testprimary' },
+    secondary: { ownerId: 'secondary-user-id', address: 'kx1testsecondary' },
+  },
   storage: {
     createWallet: vi.fn(),
     getDefaultWallet: vi.fn(),
@@ -174,8 +178,8 @@ describe('Wallet Service', () => {
 
   describe('getKXAddress', () => {
     it('should return kx1 address from storage', async () => {
-      vi.mocked(storage.getDefaultWallet).mockResolvedValue({ 
-        address: 'kx1testaddress12345' 
+      vi.mocked(storage.getDefaultWallet).mockResolvedValue({
+        address: 'kx1testaddress12345'
       } as any);
 
       const address = await walletService.getKXAddress('alice');

@@ -11,12 +11,22 @@ services:
       - kong_data:/var/lib/postgresql/data
     networks:
       - kong-net
+    restart: unless-stopped
+    # No dependencies - databases should start immediately
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U kong -d kong"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+      start_period: 10s
 
   kong-migrations:
     image: kong/kong-gateway:latest
     command: kong migrations bootstrap
     depends_on:
-      - kong-database
+      kong-database:
+        condition: service_healthy
+      # Removed payment-processor dependency - kong-migrations doesn't need it
     environment:
       KONG_DATABASE: postgres
       KONG_PG_HOST: kong-database
@@ -30,8 +40,11 @@ services:
   kong-gateway:
     image: kong/kong-gateway:latest
     depends_on:
-      - kong-database
-      - kong-migrations
+      kong-database:
+        condition: service_healthy
+      kong-migrations:
+        condition: service_completed_successfully
+      # Removed payment-processor dependency - kong-gateway doesn't need it
     environment:
       KONG_DATABASE: postgres
       KONG_PG_HOST: kong-database
@@ -59,6 +72,12 @@ services:
     networks:
       - kong-net
     restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "kong", "health"]
+      interval: 10s
+      timeout: 10s
+      retries: 10
+      start_period: 30s
 
   rabbitmq:
     image: rabbitmq:3.12-management
@@ -75,6 +94,13 @@ services:
     networks:
       - kong-net
     restart: unless-stopped
+    # No dependencies - rabbitmq should start immediately
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "-q", "ping"]
+      interval: 10s
+      timeout: 10s
+      retries: 10
+      start_period: 30s
     # Enable Prometheus plugin on startup
     command: >
       bash -c "rabbitmq-plugins enable --offline rabbitmq_prometheus && rabbitmq-server"
@@ -82,6 +108,9 @@ services:
   # OpenTelemetry Collector for browser traces (with CORS support)
   otel-collector:
     image: otel/opentelemetry-collector-contrib:latest
+    depends_on:
+      jaeger:
+        condition: service_healthy
     volumes:
       - ./config/otel-collector-config.yaml:/etc/otelcol-contrib/config.yaml
     ports:
@@ -89,6 +118,12 @@ services:
     networks:
       - kong-net
     restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "-q", "http://localhost:13133/"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
 
   # Jaeger UI for trace visualization (standalone for now)
   jaeger:
@@ -103,6 +138,12 @@ services:
     networks:
       - kong-net
     restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "-q", "http://localhost:16686/"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 10s
 
   # Ollama - Local LLM for trace analysis
   ollama:
@@ -113,8 +154,14 @@ services:
       - ollama_data:/root/.ollama
     networks:
       - kong-net
-    # Note: GPU support removed for stability. Add back 'deploy' section if NVIDIA GPU available.
     restart: unless-stopped
+    # Note: GPU support removed for stability. Add back 'deploy' section if NVIDIA GPU available.
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:11434/"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
 
   # Prometheus - Metrics collection and storage
   prometheus:
@@ -149,6 +196,7 @@ services:
     networks:
       - kong-net
     restart: unless-stopped
+    # No dependencies - app-database should start immediately
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U exchange -d crypto_exchange"]
       interval: 10s
@@ -213,6 +261,10 @@ services:
     networks:
       - kong-net
     restart: unless-stopped
+
+  # NOTE: Node.js services (kx-exchange, payment-processor, frontend) run natively on the host.
+  # Start them with: npm run dev (or individual scripts)
+  # This avoids Docker overhead and enables faster development iteration.
 
 volumes:
   kong_data:

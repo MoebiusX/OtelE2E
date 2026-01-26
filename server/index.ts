@@ -108,6 +108,10 @@ app.use(corsMiddleware);
     console.warn('[INIT] Kong Gateway not available - continuing without proxy');
   }
 
+  // Clear all sessions on server restart (invalidate cached tokens)
+  const { authService } = await import('./auth/auth-service');
+  await authService.clearAllSessions();
+
   // Register API routes
   registerRoutes(app);
 

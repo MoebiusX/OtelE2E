@@ -6,25 +6,25 @@
  */
 
 import { Pool, PoolClient, PoolConfig } from 'pg';
-import { 
-  type IStorage, 
-  generateWalletAddress, 
-  generateWalletId, 
-  USERS, 
-  DEMO_WALLETS 
+import {
+  type IStorage,
+  generateWalletAddress,
+  generateWalletId,
+  USERS,
+  SEED_WALLETS
 } from '../storage';
-import { 
-  type Order, 
-  type Trace, 
-  type InsertTrace, 
-  type Span, 
-  type InsertSpan, 
-  type User, 
-  type UserWallet, 
-  type Transfer, 
-  type KXWallet, 
-  type WalletBalance, 
-  type UserWalletMapping 
+import {
+  type Order,
+  type Trace,
+  type InsertTrace,
+  type Span,
+  type InsertSpan,
+  type User,
+  type UserWallet,
+  type Transfer,
+  type KXWallet,
+  type WalletBalance,
+  type UserWalletMapping
 } from '@shared/schema';
 import { config } from '../config';
 import { logger } from '../lib/logger';
@@ -52,11 +52,11 @@ let pool: Pool | null = null;
 export function getPool(): Pool {
   if (!pool) {
     pool = new Pool(poolConfig);
-    
+
     pool.on('error', (err) => {
       logger.error({ err }, 'Unexpected PostgreSQL pool error');
     });
-    
+
     pool.on('connect', () => {
       logger.debug('New PostgreSQL connection established');
     });
@@ -105,16 +105,16 @@ export class PostgresStorage implements IStorage {
   }
 
   /**
-   * Initialize demo data if tables are empty
+   * Initialize seed data if tables are empty
    */
   async initialize(): Promise<void> {
     if (this.initialized) return;
-    
+
     try {
       // Check if users exist
       const { rows } = await this.pool.query('SELECT COUNT(*) as count FROM users');
       if (parseInt(rows[0].count) === 0) {
-        await this.initializeDemoData();
+        await this.initializeSeedData();
       }
       this.initialized = true;
       logger.info('[PostgresStorage] Initialized successfully');
@@ -125,16 +125,16 @@ export class PostgresStorage implements IStorage {
     }
   }
 
-  private async initializeDemoData(): Promise<void> {
+  private async initializeSeedData(): Promise<void> {
     const client = await this.pool.connect();
-    
+
     try {
       await client.query('BEGIN');
-      
-      // Create demo users
-      for (const [name, demo] of Object.entries(DEMO_WALLETS)) {
-        const userId = await this.createDemoUser(client, demo.ownerId, name);
-        
+
+      // Create seed users
+      for (const [name, seed] of Object.entries(SEED_WALLETS)) {
+        const userId = await this.createSeedUser(client, seed.ownerId, name);
+
         // Create wallet for user
         await client.query(
           `INSERT INTO wallets (id, user_id, asset, balance, available, locked)
@@ -142,17 +142,17 @@ export class PostgresStorage implements IStorage {
                   ($4, $2, 'USD', $5, $5, 0)
            ON CONFLICT DO NOTHING`,
           [
-            demo.walletId + '_btc',
+            seed.walletId + '_btc',
             userId,
-            name === 'alice' ? 150000000 : 50000000,  // 1.5 or 0.5 BTC in satoshis
-            demo.walletId + '_usd',
-            name === 'alice' ? 5000000 : 1000000,     // $50k or $10k in cents
+            name === 'primary' ? 150000000 : 50000000,  // 1.5 or 0.5 BTC in satoshis
+            seed.walletId + '_usd',
+            name === 'primary' ? 5000000 : 1000000,     // $50k or $10k in cents
           ]
         );
       }
-      
+
       await client.query('COMMIT');
-      logger.info('[PostgresStorage] Demo data initialized');
+      logger.info('[PostgresStorage] Seed data initialized');
     } catch (error) {
       await client.query('ROLLBACK');
       throw error;
@@ -161,10 +161,10 @@ export class PostgresStorage implements IStorage {
     }
   }
 
-  private async createDemoUser(client: PoolClient, email: string, name: string): Promise<string> {
+  private async createSeedUser(client: PoolClient, email: string, name: string): Promise<string> {
     const { rows } = await client.query(
       `INSERT INTO users (email, password_hash, status)
-       VALUES ($1, 'demo_password_hash', 'verified')
+       VALUES ($1, 'seed_password_hash', 'verified')
        ON CONFLICT (email) DO UPDATE SET email = $1
        RETURNING id`,
       [email]
@@ -177,7 +177,7 @@ export class PostgresStorage implements IStorage {
   // ============================================
 
   async getUsers(): Promise<User[]> {
-    // Return static demo users for now (matches MemoryStorage behavior)
+    // Return static seed users for now (matches MemoryStorage behavior)
     return USERS;
   }
 
@@ -191,18 +191,18 @@ export class PostgresStorage implements IStorage {
 
   async getWalletByAddress(address: string): Promise<KXWallet | undefined> {
     // For kx1 addresses, we need a mapping table
-    // For now, use the demo wallet lookup
-    for (const demo of Object.values(DEMO_WALLETS)) {
-      if (demo.address === address) {
+    // For now, use the seed wallet lookup
+    for (const seed of Object.values(SEED_WALLETS)) {
+      if (seed.address === address) {
         const { rows } = await this.pool.query(
           `SELECT u.id as user_id FROM users u WHERE u.email = $1`,
-          [demo.ownerId]
+          [seed.ownerId]
         );
         if (rows.length > 0) {
           return {
-            walletId: demo.walletId,
-            address: demo.address,
-            ownerId: demo.ownerId,
+            walletId: seed.walletId,
+            address: seed.address,
+            ownerId: seed.ownerId,
             label: 'Main Wallet',
             type: 'custodial',
             createdAt: new Date(),
@@ -222,15 +222,15 @@ export class PostgresStorage implements IStorage {
        LIMIT 1`,
       [walletId]
     );
-    
+
     if (rows.length === 0) return undefined;
-    
+
     const row = rows[0];
-    const demoEntry = Object.values(DEMO_WALLETS).find(d => d.ownerId === row.email);
-    
+    const seedEntry = Object.values(SEED_WALLETS).find(d => d.ownerId === row.email);
+
     return {
       walletId: walletId,
-      address: demoEntry?.address || generateWalletAddress(row.email),
+      address: seedEntry?.address || generateWalletAddress(row.email),
       ownerId: row.email,
       label: 'Main Wallet',
       type: 'custodial',
@@ -246,14 +246,14 @@ export class PostgresStorage implements IStorage {
        WHERE u.email = $1`,
       [ownerId]
     );
-    
+
     if (rows.length === 0) return [];
-    
-    const demoEntry = Object.values(DEMO_WALLETS).find(d => d.ownerId === ownerId);
-    
+
+    const seedEntry = Object.values(SEED_WALLETS).find(d => d.ownerId === ownerId);
+
     return [{
-      walletId: demoEntry?.walletId || generateWalletId(),
-      address: demoEntry?.address || generateWalletAddress(ownerId),
+      walletId: seedEntry?.walletId || generateWalletId(),
+      address: seedEntry?.address || generateWalletAddress(ownerId),
       ownerId: ownerId,
       label: 'Main Wallet',
       type: 'custodial',
@@ -264,14 +264,14 @@ export class PostgresStorage implements IStorage {
   async createWallet(ownerId: string, label: string = 'Trading Wallet'): Promise<KXWallet> {
     const walletId = generateWalletId();
     const address = generateWalletAddress(`${ownerId}-${walletId}-${Date.now()}`);
-    
+
     // Get or create user
     let userId: string;
     const { rows: userRows } = await this.pool.query(
       `SELECT id FROM users WHERE email = $1`,
       [ownerId]
     );
-    
+
     if (userRows.length === 0) {
       const { rows } = await this.pool.query(
         `INSERT INTO users (email, password_hash, status) VALUES ($1, 'pending', 'pending') RETURNING id`,
@@ -281,7 +281,7 @@ export class PostgresStorage implements IStorage {
     } else {
       userId = userRows[0].id;
     }
-    
+
     // Create wallet entries for common assets
     await this.pool.query(
       `INSERT INTO wallets (id, user_id, asset, balance, available, locked)
@@ -289,9 +289,9 @@ export class PostgresStorage implements IStorage {
               ($3, $2, 'USD', 0, 0, 0)`,
       [walletId + '_btc', userId, walletId + '_usd']
     );
-    
+
     logger.info({ walletId, address, ownerId }, 'Created new wallet');
-    
+
     return {
       walletId,
       address,
@@ -314,11 +314,11 @@ export class PostgresStorage implements IStorage {
        WHERE w.id LIKE $1 AND w.asset = $2`,
       [walletId + '%', asset]
     );
-    
+
     if (rows.length === 0) return undefined;
-    
+
     const decimals = asset === 'BTC' ? 8 : asset === 'ETH' ? 18 : 2;
-    
+
     return {
       walletId,
       asset: asset as 'BTC' | 'USD' | 'ETH',
@@ -336,7 +336,7 @@ export class PostgresStorage implements IStorage {
        WHERE w.id LIKE $1`,
       [walletId + '%']
     );
-    
+
     return rows.map(row => ({
       walletId,
       asset: row.asset as 'BTC' | 'USD' | 'ETH',
@@ -353,11 +353,11 @@ export class PostgresStorage implements IStorage {
        RETURNING id, balance, updated_at`,
       [Math.round(amount), walletId + '%', asset]
     );
-    
+
     if (rows.length === 0) return undefined;
-    
+
     const decimals = asset === 'BTC' ? 8 : asset === 'ETH' ? 18 : 2;
-    
+
     return {
       walletId,
       asset: asset as 'BTC' | 'USD' | 'ETH',
@@ -374,7 +374,7 @@ export class PostgresStorage implements IStorage {
   async getUserWalletMapping(userId: string): Promise<UserWalletMapping | undefined> {
     const wallets = await this.getWalletsByOwner(userId);
     if (wallets.length === 0) return undefined;
-    
+
     return {
       userId,
       walletIds: wallets.map(w => w.walletId),
@@ -395,7 +395,7 @@ export class PostgresStorage implements IStorage {
     if (identifier.startsWith('kx1')) {
       return identifier;
     }
-    
+
     const wallet = await this.getDefaultWallet(identifier);
     return wallet?.address;
   }
@@ -412,27 +412,31 @@ export class PostgresStorage implements IStorage {
        WHERE u.email = $1 OR u.id::text = $1`,
       [userId]
     );
-    
+
     if (rows.length === 0) {
-      // Check demo users
-      const demoEntry = Object.values(DEMO_WALLETS).find(
-        d => d.ownerId === userId || d.ownerId.split('@')[0] === userId
+      // Check seed users - match by ownerId, email prefix, or key name (primary/secondary)
+      const seedEntries = Object.entries(SEED_WALLETS);
+      const matchedEntry = seedEntries.find(([key, seed]) =>
+        seed.ownerId === userId ||
+        seed.ownerId.split('@')[0] === userId ||
+        key === userId  // Match 'primary' or 'secondary' directly
       );
-      if (demoEntry) {
+      if (matchedEntry) {
+        const [key, seed] = matchedEntry;
         return {
           userId,
-          btc: demoEntry.ownerId.includes('alice') ? 1.5 : 0.5,
-          usd: demoEntry.ownerId.includes('alice') ? 50000 : 10000,
+          btc: key === 'primary' ? 1.5 : 0.5,
+          usd: key === 'primary' ? 50000 : 10000,
           lastUpdated: new Date(),
         };
       }
       return undefined;
     }
-    
+
     let btc = 0;
     let usd = 0;
     let lastUpdated = new Date();
-    
+
     for (const row of rows) {
       if (row.asset === 'BTC') {
         btc = parseInt(row.balance) / 100000000; // Convert from satoshis
@@ -441,7 +445,7 @@ export class PostgresStorage implements IStorage {
       }
       lastUpdated = row.updated_at;
     }
-    
+
     return { userId, btc, usd, lastUpdated };
   }
 
@@ -450,10 +454,10 @@ export class PostgresStorage implements IStorage {
       `SELECT id FROM users WHERE email = $1 OR id::text = $1`,
       [userId]
     );
-    
+
     if (userRows.length === 0) return undefined;
     const dbUserId = userRows[0].id;
-    
+
     if (updates.btc !== undefined) {
       await this.pool.query(
         `UPDATE wallets SET balance = $1, available = $1, updated_at = NOW()
@@ -461,7 +465,7 @@ export class PostgresStorage implements IStorage {
         [Math.round(updates.btc * 100000000), dbUserId]
       );
     }
-    
+
     if (updates.usd !== undefined) {
       await this.pool.query(
         `UPDATE wallets SET balance = $1, available = $1, updated_at = NOW()
@@ -469,7 +473,7 @@ export class PostgresStorage implements IStorage {
         [Math.round(updates.usd * 100), dbUserId]
       );
     }
-    
+
     return this.getWallet(userId);
   }
 
@@ -477,29 +481,29 @@ export class PostgresStorage implements IStorage {
   // TRANSFER OPERATIONS
   // ============================================
 
-  async createTransfer(data: { 
-    transferId: string; 
-    fromAddress: string; 
-    toAddress: string; 
-    amount: number; 
-    traceId: string; 
-    spanId: string 
+  async createTransfer(data: {
+    transferId: string;
+    fromAddress: string;
+    toAddress: string;
+    amount: number;
+    traceId: string;
+    spanId: string
   }): Promise<Transfer> {
     const fromWallet = await this.getWalletByAddress(data.fromAddress);
     const toWallet = await this.getWalletByAddress(data.toAddress);
-    
+
     // Store in transactions table
     const { rows: userRows } = await this.pool.query(
       `SELECT u.id FROM users u WHERE u.email = $1`,
       [fromWallet?.ownerId || 'system']
     );
-    
+
     if (userRows.length > 0) {
       const { rows: walletRows } = await this.pool.query(
         `SELECT id FROM wallets WHERE user_id = $1 AND asset = 'BTC' LIMIT 1`,
         [userRows[0].id]
       );
-      
+
       if (walletRows.length > 0) {
         await this.pool.query(
           `INSERT INTO transactions (id, user_id, wallet_id, type, amount, status, reference_id, description)
@@ -515,7 +519,7 @@ export class PostgresStorage implements IStorage {
         );
       }
     }
-    
+
     return {
       transferId: data.transferId,
       fromAddress: data.fromAddress,
@@ -541,7 +545,7 @@ export class PostgresStorage implements IStorage {
        LIMIT $1`,
       [limit]
     );
-    
+
     return rows.map(row => ({
       transferId: row.id,
       fromAddress: '', // Would need to join with wallet mapping
@@ -564,9 +568,9 @@ export class PostgresStorage implements IStorage {
        RETURNING id, amount, status, created_at`,
       [pgStatus, transferId]
     );
-    
+
     if (rows.length === 0) return undefined;
-    
+
     return {
       transferId: rows[0].id,
       fromAddress: '',
@@ -583,14 +587,14 @@ export class PostgresStorage implements IStorage {
   // ORDER OPERATIONS
   // ============================================
 
-  async createOrder(orderData: { 
-    orderId: string; 
-    pair: string; 
-    side: string; 
-    quantity: number; 
-    orderType: string; 
-    traceId: string; 
-    spanId: string; 
+  async createOrder(orderData: {
+    orderId: string;
+    pair: string;
+    side: string;
+    quantity: number;
+    orderType: string;
+    traceId: string;
+    spanId: string;
     userId?: string;
     walletAddress?: string;
   }): Promise<Order> {
@@ -605,25 +609,27 @@ export class PostgresStorage implements IStorage {
         dbUserId = rows[0].id;
       }
     }
-    
+
+    // Store both UUID (id) and friendly orderId (order_id) in the database
     const { rows } = await this.pool.query(
-      `INSERT INTO orders (id, user_id, pair, side, type, quantity, status)
-       VALUES ($1, $2, $3, $4, $5, $6, 'open')
-       RETURNING id, pair, side, type, quantity, status, created_at`,
+      `INSERT INTO orders (order_id, user_id, pair, side, type, quantity, status, trace_id)
+       VALUES ($1, $2, $3, $4, $5, $6, 'open', $7)
+       RETURNING id, order_id, pair, side, type, quantity, status, trace_id, created_at`,
       [
-        orderData.orderId,
+        orderData.orderId, // Friendly order ID (ORD-xxx-x)
         dbUserId || '00000000-0000-0000-0000-000000000000',
         orderData.pair || 'BTC/USD',
         orderData.side.toLowerCase(),
         orderData.orderType.toLowerCase(),
         orderData.quantity,
+        orderData.traceId, // Store trace ID for observability
       ]
     );
-    
+
     const row = rows[0];
-    
+
     return {
-      orderId: row.id,
+      orderId: orderData.orderId, // Use the application-level orderId for UI/API
       pair: 'BTC/USD' as const,
       side: row.side.toUpperCase() as 'BUY' | 'SELL',
       quantity: parseFloat(row.quantity),
@@ -637,15 +643,15 @@ export class PostgresStorage implements IStorage {
 
   async getOrders(limit: number = 10): Promise<Order[]> {
     const { rows } = await this.pool.query(
-      `SELECT id, pair, side, type, quantity, filled, status, price, created_at
+      `SELECT id, order_id, pair, side, type, quantity, filled, status, price, trace_id, created_at
        FROM orders
        ORDER BY created_at DESC
        LIMIT $1`,
       [limit]
     );
-    
+
     return rows.map(row => ({
-      orderId: row.id,
+      orderId: row.order_id || row.id, // Prefer order_id, fallback to id for legacy
       pair: 'BTC/USD' as const,
       side: row.side.toUpperCase() as 'BUY' | 'SELL',
       quantity: parseFloat(row.quantity),
@@ -653,7 +659,7 @@ export class PostgresStorage implements IStorage {
       status: this.mapOrderStatus(row.status),
       fillPrice: row.price ? parseFloat(row.price) : undefined,
       totalValue: row.price && row.filled ? parseFloat(row.price) * parseFloat(row.filled) : undefined,
-      traceId: '',
+      traceId: row.trace_id || '', // Use trace_id from database
       spanId: '',
       createdAt: row.created_at,
     }));
@@ -667,45 +673,45 @@ export class PostgresStorage implements IStorage {
     }
   }
 
-  async updateOrder(orderId: string, updates: { 
-    status?: 'PENDING' | 'FILLED' | 'REJECTED'; 
-    fillPrice?: number; 
-    totalValue?: number 
+  async updateOrder(orderId: string, updates: {
+    status?: 'PENDING' | 'FILLED' | 'REJECTED';
+    fillPrice?: number;
+    totalValue?: number
   }): Promise<Order | undefined> {
     const setClauses: string[] = ['updated_at = NOW()'];
     const values: unknown[] = [];
     let paramIndex = 1;
-    
+
     if (updates.status) {
-      const pgStatus = updates.status === 'FILLED' ? 'filled' : 
-                       updates.status === 'REJECTED' ? 'cancelled' : 'open';
+      const pgStatus = updates.status === 'FILLED' ? 'filled' :
+        updates.status === 'REJECTED' ? 'cancelled' : 'open';
       setClauses.push(`status = $${paramIndex++}`);
       values.push(pgStatus);
-      
+
       if (updates.status === 'FILLED') {
         setClauses.push(`filled = quantity`);
       }
     }
-    
+
     if (updates.fillPrice) {
       setClauses.push(`price = $${paramIndex++}`);
       values.push(updates.fillPrice);
     }
-    
+
     values.push(orderId);
-    
+
     const { rows } = await this.pool.query(
       `UPDATE orders SET ${setClauses.join(', ')}
-       WHERE id = $${paramIndex}
-       RETURNING id, pair, side, type, quantity, filled, status, price, created_at`,
+       WHERE order_id = $${paramIndex}
+       RETURNING id, order_id, pair, side, type, quantity, filled, status, price, created_at`,
       values
     );
-    
+
     if (rows.length === 0) return undefined;
-    
+
     const row = rows[0];
     return {
-      orderId: row.id,
+      orderId: row.order_id,
       pair: 'BTC/USD' as const,
       side: row.side.toUpperCase() as 'BUY' | 'SELL',
       quantity: parseFloat(row.quantity),
@@ -810,7 +816,7 @@ export class PostgresStorage implements IStorage {
     this.traces.clear();
     this.spans.clear();
     this.nextId = 1;
-    
+
     // Note: In production, you might want to truncate tables
     // For now, we'll just clear ephemeral data
     logger.info('[PostgresStorage] Cleared ephemeral data (traces/spans)');

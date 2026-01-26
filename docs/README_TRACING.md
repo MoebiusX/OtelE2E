@@ -29,7 +29,7 @@ To give on-call staff fast, reproducible steps for diagnosing tracing, anomaly, 
 ## Useful commands (copy & run)
 - Submit order (reproduce trace):
 
-  curl -s -X POST http://localhost:8000/api/orders -H 'Content-Type: application/json' -d '{"pair":"BTC/USD","side":"BUY","quantity":0.01,"orderType":"MARKET","userId":"alice"}'
+  curl -s -X POST http://localhost:8000/api/orders -H 'Content-Type: application/json' -d '{"pair":"BTC/USD","side":"BUY","quantity":0.01,"orderType":"MARKET","userId":"seed.user.primary@krystaline.io"}'
 
 - Manual baseline recalculation:
 

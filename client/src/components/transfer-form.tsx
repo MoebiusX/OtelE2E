@@ -14,7 +14,7 @@ import { ArrowRight, Loader2, Send, Bitcoin, Users } from "lucide-react";
 
 // Type-safe error message extraction
 const getErrorMessage = (error: unknown): string =>
-  error instanceof Error ? error.message : 'An error occurred';
+    error instanceof Error ? error.message : 'An error occurred';
 
 const transferSchema = z.object({
     // Support both wallet address (kx1...) and legacy userId
@@ -48,16 +48,16 @@ function isKXAddress(str: string): boolean {
 export function TransferForm() {
     const { toast } = useToast();
     const queryClient = useQueryClient();
-    
+
     // Get current user from localStorage
     const [currentUser, setCurrentUser] = useState<{ id: string; email: string; walletAddress?: string } | null>(null);
-    
+
     useEffect(() => {
         const userData = localStorage.getItem('user');
         if (userData) {
             try {
                 setCurrentUser(JSON.parse(userData));
-            } catch {}
+            } catch { }
         }
     }, []);
 
@@ -110,6 +110,14 @@ export function TransferForm() {
                     const result = await response.json();
 
                     if (!response.ok) {
+                        // Check for 401 and redirect instead of showing toast
+                        if (response.status === 401) {
+                            localStorage.removeItem('accessToken');
+                            localStorage.removeItem('refreshToken');
+                            localStorage.removeItem('user');
+                            window.location.href = '/';
+                            return;
+                        }
                         throw new Error(result.error || 'Transfer failed');
                     }
 
@@ -132,7 +140,7 @@ export function TransferForm() {
             });
         },
         onSuccess: (data) => {
-            const recipient = availableRecipients.find(u => 
+            const recipient = availableRecipients.find(u =>
                 u.walletAddress === form.getValues('toAddress') || u.id === form.getValues('toUserId')
             );
 
@@ -157,7 +165,7 @@ export function TransferForm() {
             queryClient.invalidateQueries({ queryKey: ["/api/wallet"] });
             queryClient.invalidateQueries({ queryKey: ["/api/wallet/balances"] });
             queryClient.invalidateQueries({ queryKey: ["/api/transfers"] });
-            
+
             // Reset form
             form.reset({ toUserId: "", asset: "BTC", amount: 0.01 });
         },
@@ -175,10 +183,10 @@ export function TransferForm() {
     };
 
     // Find recipient by address or userId
-    const selectedRecipient = availableRecipients.find(u => 
+    const selectedRecipient = availableRecipients.find(u =>
         u.walletAddress === form.watch('toAddress') || u.id === form.watch('toUserId')
     );
-    
+
     // Handle recipient selection - set both address and userId
     const handleRecipientSelect = (userId: string) => {
         const recipient = availableRecipients.find(u => u.id === userId);
@@ -270,7 +278,7 @@ export function TransferForm() {
                                     </FormItem>
                                 )}
                             />
-                            
+
                             {/* Quick Select Known Recipients */}
                             <FormField
                                 control={form.control}
@@ -289,12 +297,12 @@ export function TransferForm() {
                                             </FormControl>
                                             <SelectContent className="bg-slate-800 border-slate-600">
                                                 {availableRecipients.map((user) => (
-                                                    <SelectItem 
-                                                        key={user.id} 
+                                                    <SelectItem
+                                                        key={user.id}
                                                         value={user.id}
                                                         className="text-white hover:bg-slate-700"
                                                     >
-                                                        {user.avatar || '👤'} {user.name} 
+                                                        {user.avatar || '👤'} {user.name}
                                                         {user.walletAddress && (
                                                             <span className="text-slate-400 font-mono text-xs ml-2">
                                                                 {formatAddress(user.walletAddress)}

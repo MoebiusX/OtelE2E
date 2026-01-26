@@ -1,7 +1,7 @@
 /**
  * Reset Demo User Wallets Script
  *
- * Updates or creates wallets for Alice and Bob with demo balances.
+ * Updates or creates wallets for the primary and secondary seed users with demo balances.
  * Run with: npx tsx scripts/reset-demo-wallets.ts
  */
 
@@ -18,8 +18,8 @@ const pool = new Pool({
 });
 
 const DEMO_USERS = [
-    'alice@demo.com',
-    'bob@demo.com',
+    'seed.user.primary@krystaline.io',
+    'seed.user.secondary@krystaline.io',
 ];
 
 const INITIAL_BALANCES: Record<string, number> = {

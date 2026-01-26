@@ -1,7 +1,27 @@
 import { QueryClient, QueryFunction } from "@tanstack/react-query";
 
+/**
+ * Handle 401 Unauthorized responses by clearing auth state and redirecting to landing page
+ */
+function handleUnauthorized(): void {
+  // Clear all auth state
+  localStorage.removeItem('accessToken');
+  localStorage.removeItem('refreshToken');
+  localStorage.removeItem('user');
+
+  // Redirect to landing page if not already there
+  if (window.location.pathname !== '/' && window.location.pathname !== '/login') {
+    window.location.href = '/';
+  }
+}
+
 async function throwIfResNotOk(res: Response) {
   if (!res.ok) {
+    // Check for 401 and redirect instead of throwing
+    if (res.status === 401) {
+      handleUnauthorized();
+      throw new Error('Session expired - please login again');
+    }
     const text = (await res.text()) || res.statusText;
     throw new Error(`${res.status}: ${text}`);
   }
@@ -40,7 +60,7 @@ export async function apiRequest(
   return res;
 }
 
-type UnauthorizedBehavior = "returnNull" | "throw";
+type UnauthorizedBehavior = "returnNull" | "throw" | "redirect";
 export const getQueryFn: <T>(options: {
   on401: UnauthorizedBehavior;
 }) => QueryFunction<T> =
@@ -57,8 +77,16 @@ export const getQueryFn: <T>(options: {
         cache: "no-cache",
       });
 
-      if (unauthorizedBehavior === "returnNull" && res.status === 401) {
-        return null;
+      // Handle 401 based on specified behavior
+      if (res.status === 401) {
+        if (unauthorizedBehavior === "redirect") {
+          handleUnauthorized();
+          return null;
+        }
+        if (unauthorizedBehavior === "returnNull") {
+          return null;
+        }
+        // "throw" - let throwIfResNotOk handle it (which also redirects now)
       }
 
       await throwIfResNotOk(res);

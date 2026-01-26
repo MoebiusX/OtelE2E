@@ -24,8 +24,13 @@ async function checkDocker() {
 
 async function startDockerServices() {
     console.log('📦 Starting Docker services (Kong, RabbitMQ, Jaeger, OTEL Collector)...');
-    // Use the main docker-compose.yml file
-    const child = spawn('docker-compose', ['up', '-d'], {
+    // Only start infrastructure services (not kx-exchange or frontend - those run natively)
+    const services = [
+        'kong-database', 'kong-migrations', 'kong-gateway',
+        'rabbitmq', 'app-database', 'jaeger', 'otel-collector',
+        'prometheus', 'maildev', 'ollama'
+    ];
+    const child = spawn('docker-compose', ['up', '-d', ...services], {
         cwd: rootDir,
         stdio: 'inherit',
         shell: true
@@ -93,7 +98,7 @@ function startProcess(name, cmd, args, color) {
     const child = spawn(cmd, args, {
         cwd: rootDir,
         shell: true,
-        env: { ...process.env, NODE_ENV: 'development', FORCE_COLOR: '1' }
+        env: { ...process.env, NODE_ENV: 'development', FORCE_COLOR: '1', STORAGE_TYPE: 'postgres' }
     });
 
     child.stdout?.on('data', (data) => {
@@ -136,8 +141,8 @@ async function main() {
     // Wait a bit for server to start before processor
     await new Promise(r => setTimeout(r, 3000));
 
-    // Payment Processor
-    processes.push(startProcess('PROCESSOR', npxCmd, ['tsx', 'payment-processor/index.ts'], '\x1b[33m'));
+    // Payment Processor (kx-matcher) - runs natively
+    processes.push(startProcess('MATCHER', npxCmd, ['tsx', 'payment-processor/index.ts'], '\x1b[33m'));
 
     // Wait a bit more
     await new Promise(r => setTimeout(r, 2000));

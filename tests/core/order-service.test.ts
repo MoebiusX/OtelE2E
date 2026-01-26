@@ -26,6 +26,14 @@ vi.mock('../../server/services/rabbitmq-client', () => ({
   },
 }));
 
+// Mock walletService - this is now the sole source of balance data
+vi.mock('../../server/wallet/wallet-service', () => ({
+  walletService: {
+    getWallet: vi.fn(),
+    getWallets: vi.fn().mockResolvedValue([]),
+  },
+}));
+
 vi.mock('../../server/lib/logger', () => ({
   createLogger: () => ({
     info: vi.fn(),
@@ -52,6 +60,7 @@ vi.mock('@opentelemetry/api', () => ({
 import { OrderService, getPrice, type OrderRequest, type TransferRequest } from '../../server/core/order-service';
 import { storage } from '../../server/storage';
 import { rabbitMQClient } from '../../server/services/rabbitmq-client';
+import { walletService } from '../../server/wallet/wallet-service';
 
 describe('Order Service', () => {
   let orderService: OrderService;
@@ -91,24 +100,24 @@ describe('Order Service', () => {
       const mockWallet = { btc: 1.5, usd: 10000, lastUpdated: new Date() };
       vi.mocked(storage.getWallet).mockResolvedValue(mockWallet);
 
-      const wallet = await orderService.getWallet('alice');
+      const wallet = await orderService.getWallet('seed.user.primary@krystaline.io');
 
-      expect(storage.getWallet).toHaveBeenCalledWith('alice');
+      expect(storage.getWallet).toHaveBeenCalledWith('seed.user.primary@krystaline.io');
       expect(wallet).toEqual(mockWallet);
     });
 
-    it('should default to alice if no user specified', async () => {
+    it('should default to seed.user.primary@krystaline.io if no user specified', async () => {
       vi.mocked(storage.getWallet).mockResolvedValue(null);
 
       await orderService.getWallet();
 
-      expect(storage.getWallet).toHaveBeenCalledWith('alice');
+      expect(storage.getWallet).toHaveBeenCalledWith('seed.user.primary@krystaline.io');
     });
   });
 
   describe('getUsers', () => {
     it('should call storage.getUsers', async () => {
-      const mockUsers = [{ id: 'alice' }, { id: 'bob' }];
+      const mockUsers = [{ id: 'seed.user.primary@krystaline.io' }, { id: 'seed.user.secondary@krystaline.io' }];
       vi.mocked(storage.getUsers).mockResolvedValue(mockUsers as any);
 
       const users = await orderService.getUsers();
@@ -120,7 +129,7 @@ describe('Order Service', () => {
 
   describe('submitOrder', () => {
     const validBuyOrder: OrderRequest = {
-      userId: 'alice',
+      userId: 'seed.user.primary@krystaline.io',
       pair: 'BTC/USD',
       side: 'BUY',
       quantity: 0.1,
@@ -128,7 +137,7 @@ describe('Order Service', () => {
     };
 
     const validSellOrder: OrderRequest = {
-      userId: 'alice',
+      userId: 'seed.user.primary@krystaline.io',
       pair: 'BTC/USD',
       side: 'SELL',
       quantity: 0.5,
@@ -136,7 +145,7 @@ describe('Order Service', () => {
     };
 
     it('should reject order if wallet not found', async () => {
-      vi.mocked(storage.getWallet).mockResolvedValue(null);
+      vi.mocked(walletService.getWallet).mockResolvedValue(null);
 
       const result = await orderService.submitOrder(validBuyOrder);
 
@@ -145,10 +154,11 @@ describe('Order Service', () => {
     });
 
     it('should reject BUY order if insufficient USD', async () => {
-      vi.mocked(storage.getWallet).mockResolvedValue({
-        btc: 1.0,
-        usd: 100, // Not enough for any BTC at ~42k
-        lastUpdated: new Date(),
+      // Mock USD wallet with insufficient funds
+      vi.mocked(walletService.getWallet).mockImplementation(async (userId, asset) => {
+        if (asset === 'USD') return { id: '1', user_id: userId, asset: 'USD', balance: '100', available: '100', locked: '0' };
+        if (asset === 'BTC') return { id: '2', user_id: userId, asset: 'BTC', balance: '1.0', available: '1.0', locked: '0' };
+        return null;
       });
 
       const result = await orderService.submitOrder(validBuyOrder);
@@ -158,10 +168,11 @@ describe('Order Service', () => {
     });
 
     it('should reject SELL order if insufficient BTC', async () => {
-      vi.mocked(storage.getWallet).mockResolvedValue({
-        btc: 0.1, // Less than the 0.5 requested
-        usd: 100000,
-        lastUpdated: new Date(),
+      // Mock BTC wallet with insufficient funds for the 0.5 BTC sale
+      vi.mocked(walletService.getWallet).mockImplementation(async (userId, asset) => {
+        if (asset === 'USD') return { id: '1', user_id: userId, asset: 'USD', balance: '100000', available: '100000', locked: '0' };
+        if (asset === 'BTC') return { id: '2', user_id: userId, asset: 'BTC', balance: '0.1', available: '0.1', locked: '0' };
+        return null;
       });
 
       const result = await orderService.submitOrder(validSellOrder);
@@ -171,10 +182,11 @@ describe('Order Service', () => {
     });
 
     it('should create order for valid BUY with sufficient funds', async () => {
-      vi.mocked(storage.getWallet).mockResolvedValue({
-        btc: 1.0,
-        usd: 100000, // Plenty for 0.1 BTC
-        lastUpdated: new Date(),
+      // Mock wallets with sufficient funds
+      vi.mocked(walletService.getWallet).mockImplementation(async (userId, asset) => {
+        if (asset === 'USD') return { id: '1', user_id: userId, asset: 'USD', balance: '100000', available: '100000', locked: '0' };
+        if (asset === 'BTC') return { id: '2', user_id: userId, asset: 'BTC', balance: '1.0', available: '1.0', locked: '0' };
+        return null;
       });
       vi.mocked(storage.createOrder).mockResolvedValue({
         orderId: 'ORD-123',
@@ -194,10 +206,11 @@ describe('Order Service', () => {
     });
 
     it('should create order for valid SELL with sufficient BTC', async () => {
-      vi.mocked(storage.getWallet).mockResolvedValue({
-        btc: 2.0, // Plenty for 0.5 BTC sale
-        usd: 1000,
-        lastUpdated: new Date(),
+      // Mock wallets with sufficient BTC for sale
+      vi.mocked(walletService.getWallet).mockImplementation(async (userId, asset) => {
+        if (asset === 'USD') return { id: '1', user_id: userId, asset: 'USD', balance: '1000', available: '1000', locked: '0' };
+        if (asset === 'BTC') return { id: '2', user_id: userId, asset: 'BTC', balance: '2.0', available: '2.0', locked: '0' };
+        return null;
       });
       vi.mocked(storage.createOrder).mockResolvedValue({
         orderId: 'ORD-123',
@@ -217,10 +230,11 @@ describe('Order Service', () => {
     });
 
     it('should include traceId and spanId in result', async () => {
-      vi.mocked(storage.getWallet).mockResolvedValue({
-        btc: 2.0,
-        usd: 100000,
-        lastUpdated: new Date(),
+      // Mock wallets with sufficient funds
+      vi.mocked(walletService.getWallet).mockImplementation(async (userId, asset) => {
+        if (asset === 'USD') return { id: '1', user_id: userId, asset: 'USD', balance: '100000', available: '100000', locked: '0' };
+        if (asset === 'BTC') return { id: '2', user_id: userId, asset: 'BTC', balance: '2.0', available: '2.0', locked: '0' };
+        return null;
       });
       vi.mocked(storage.createOrder).mockResolvedValue({} as any);
       vi.mocked(rabbitMQClient.isConnected).mockReturnValue(false);
@@ -237,11 +251,12 @@ describe('Order Service', () => {
       // This test verifies the RabbitMQ connection check is performed
       // Full RabbitMQ integration is tested in integration tests
       vi.clearAllMocks();
-      
-      vi.mocked(storage.getWallet).mockResolvedValue({
-        btc: 2.0,
-        usd: 100000,
-        lastUpdated: new Date(),
+
+      // Mock wallets with sufficient funds
+      vi.mocked(walletService.getWallet).mockImplementation(async (userId, asset) => {
+        if (asset === 'USD') return { id: '1', user_id: userId, asset: 'USD', balance: '100000', available: '100000', locked: '0' };
+        if (asset === 'BTC') return { id: '2', user_id: userId, asset: 'BTC', balance: '2.0', available: '2.0', locked: '0' };
+        return null;
       });
       vi.mocked(storage.createOrder).mockResolvedValue({} as any);
       vi.mocked(storage.updateWallet).mockResolvedValue(undefined);
@@ -256,7 +271,7 @@ describe('Order Service', () => {
 
       // Verify isConnected was checked
       expect(rabbitMQClient.isConnected).toHaveBeenCalled();
-      
+
       // Should still return orderId even if RabbitMQ fails
       expect(result.orderId).toMatch(/^ORD-/);
       expect(result.order).toBeDefined();
@@ -267,7 +282,8 @@ describe('Order Service', () => {
 describe('Order ID Generation', () => {
   it('should generate unique order IDs', async () => {
     const service = new OrderService();
-    vi.mocked(storage.getWallet).mockResolvedValue(null);
+    // Mock wallets to return null (order will be rejected but still generates ID)
+    vi.mocked(walletService.getWallet).mockResolvedValue(null);
 
     const results = await Promise.all([
       service.submitOrder({ userId: 'a', pair: 'BTC/USD', side: 'BUY', quantity: 1, orderType: 'MARKET' }),

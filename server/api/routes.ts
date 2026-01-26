@@ -11,14 +11,19 @@ import { traces } from "../otel";
 import { createLogger } from "../lib/logger";
 import { getErrorMessage } from "../lib/errors";
 import db from "../db";
+import authRoutes from "./auth-routes";
+import twoFactorRoutes from "./2fa-routes";
 
 const logger = createLogger('api-routes');
 
 export function registerRoutes(app: Express) {
   logger.info('Registering API routes');
 
-  // ============================================
-  // USER ENDPOINTS
+  // Register auth routes (profile, sessions, password management)
+  app.use('/api/auth', authRoutes);
+
+  // Register 2FA routes
+  app.use('/api/auth/2fa', twoFactorRoutes);
   // ============================================
 
   // Get all verified users (for transfers)
@@ -91,10 +96,10 @@ export function registerRoutes(app: Express) {
     }
   });
 
-  // Get wallet balance for a user (default: alice)
+  // Get wallet balance for a user (default: seed.user.primary@krystaline.io)
   app.get("/api/wallet", async (req: Request, res: Response) => {
     try {
-      const userId = (req.query.userId as string) || 'alice';
+      const userId = (req.query.userId as string) || 'seed.user.primary@krystaline.io';
       const wallet = await orderService.getWallet(userId);
       if (!wallet) {
         return res.status(404).json({ error: "User not found" });
@@ -157,14 +162,14 @@ export function registerRoutes(app: Express) {
       const orderData = validation.data;
 
       const result = await orderService.submitOrder({
-        userId: orderData.userId || 'alice',
+        userId: orderData.userId || 'seed.user.primary@krystaline.io',
         pair: orderData.pair,
         side: orderData.side,
         quantity: orderData.quantity,
         orderType: orderData.orderType
       });
 
-      const wallet = await orderService.getWallet(orderData.userId || 'alice');
+      const wallet = await orderService.getWallet(orderData.userId || 'seed.user.primary@krystaline.io');
 
       res.json({
         success: true,
@@ -182,8 +187,9 @@ export function registerRoutes(app: Express) {
       });
 
     } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
       logger.error({ err: error }, 'Order processing failed');
-      res.status(500).json({ error: "Failed to process order" });
+      res.status(500).json({ error: "Failed to process order", details: errorMessage });
     }
   });
 
@@ -269,7 +275,7 @@ export function registerRoutes(app: Express) {
 
   app.post("/api/payments", async (req: Request, res: Response) => {
     const orderRequest = {
-      userId: 'alice',
+      userId: 'seed.user.primary@krystaline.io',
       pair: "BTC/USD" as const,
       side: "BUY" as const,
       quantity: (req.body.amount || 100) / getPrice(),
@@ -278,7 +284,7 @@ export function registerRoutes(app: Express) {
 
     try {
       const result = await orderService.submitOrder(orderRequest);
-      const wallet = await orderService.getWallet('alice');
+      const wallet = await orderService.getWallet('seed.user.primary@krystaline.io');
 
       res.json({
         success: true,
