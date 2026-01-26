@@ -74,7 +74,7 @@ export class OrderService {
 
     // Get wallet for a specific user
     async getWallet(userId: string = 'seed.user.primary@krystaline.io') {
-        return storage.getWallet(userId);
+        return walletService.getWalletSummary(userId);
     }
 
     // Get all users
@@ -296,8 +296,8 @@ export class OrderService {
 
             try {
                 // Get both wallets
-                const fromWallet = await storage.getWallet(request.fromUserId);
-                const toWallet = await storage.getWallet(request.toUserId);
+                const fromWallet = await walletService.getWalletSummary(request.fromUserId);
+                const toWallet = await walletService.getWalletSummary(request.toUserId);
 
                 if (!fromWallet || !toWallet) {
                     span.setStatus({ code: SpanStatusCode.ERROR, message: 'User not found' });
@@ -333,8 +333,8 @@ export class OrderService {
                 });
 
                 // Update wallets
-                await storage.updateWallet(request.fromUserId, { btc: fromWallet.btc - request.amount });
-                await storage.updateWallet(request.toUserId, { btc: toWallet.btc + request.amount });
+                await walletService.updateBalance(request.fromUserId, 'BTC', fromWallet.btc - request.amount);
+                await walletService.updateBalance(request.toUserId, 'BTC', toWallet.btc + request.amount);
 
                 // Update transfer status
                 await storage.updateTransfer(transferId, 'COMPLETED');
@@ -371,21 +371,17 @@ export class OrderService {
 
     // Update user's wallet after trade
     private async updateUserWallet(userId: string, side: "BUY" | "SELL", quantity: number, price: number) {
-        const wallet = await storage.getWallet(userId);
+        const wallet = await walletService.getWalletSummary(userId);
         if (!wallet) return;
 
         const totalValue = quantity * price;
 
         if (side === 'BUY') {
-            await storage.updateWallet(userId, {
-                btc: wallet.btc + quantity,
-                usd: wallet.usd - totalValue
-            });
+            await walletService.updateBalance(userId, 'BTC', wallet.btc + quantity);
+            await walletService.updateBalance(userId, 'USD', wallet.usd - totalValue);
         } else {
-            await storage.updateWallet(userId, {
-                btc: wallet.btc - quantity,
-                usd: wallet.usd + totalValue
-            });
+            await walletService.updateBalance(userId, 'BTC', wallet.btc - quantity);
+            await walletService.updateBalance(userId, 'USD', wallet.usd + totalValue);
         }
 
         logger.debug({

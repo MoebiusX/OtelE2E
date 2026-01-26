@@ -484,6 +484,85 @@ export const walletService = {
                 transferId
             };
         });
+    },
+
+    /**
+     * Get composite wallet summary (BTC + USD for legacy compatibility)
+     * Replaces storage.getWallet()
+     */
+    async getWalletSummary(userId: string): Promise<{ userId: string; btc: number; usd: number; lastUpdated: Date } | null> {
+        const resolvedId = await resolveUserId(userId);
+
+        if (!resolvedId) {
+            // Check seed users fallback
+            const seedEntries = Object.entries(SEED_WALLETS);
+            const matchedEntry = seedEntries.find(([key, seed]) =>
+                seed.ownerId === userId ||
+                seed.ownerId.split('@')[0] === userId ||
+                key === userId
+            );
+            if (matchedEntry) {
+                const [key] = matchedEntry;
+                return {
+                    userId,
+                    btc: key === 'primary' ? 1.5 : 0.5,
+                    usd: key === 'primary' ? 50000 : 10000,
+                    lastUpdated: new Date(),
+                };
+            }
+            return null;
+        }
+
+        const result = await db.query(
+            `SELECT asset, balance, updated_at FROM wallets WHERE user_id = $1`,
+            [resolvedId]
+        );
+
+        if (result.rows.length === 0) {
+            return null;
+        }
+
+        let btc = 0;
+        let usd = 0;
+        let lastUpdated = new Date();
+
+        for (const row of result.rows) {
+            if (row.asset === 'BTC') {
+                btc = parseFloat(row.balance);
+            } else if (row.asset === 'USD') {
+                usd = parseFloat(row.balance);
+            }
+            lastUpdated = row.updated_at;
+        }
+
+        return { userId, btc, usd, lastUpdated };
+    },
+
+    /**
+     * Update absolute balance for a wallet
+     * Replaces storage.updateWallet()
+     */
+    async updateBalance(userId: string, asset: string, newBalance: number): Promise<boolean> {
+        const resolvedId = await resolveUserId(userId);
+        if (!resolvedId) {
+            logger.warn({ userId, asset }, 'Cannot update balance - user not found');
+            return false;
+        }
+
+        const result = await db.query(
+            `UPDATE wallets SET balance = $1, available = $1, updated_at = NOW()
+             WHERE user_id = $2 AND asset = $3
+             RETURNING id`,
+            [newBalance, resolvedId, asset.toUpperCase()]
+        );
+
+        if (result.rows.length === 0) {
+            logger.warn({ userId, asset }, 'Wallet not found for balance update');
+            return false;
+        }
+
+        logger.debug({ userId, asset, newBalance }, 'Balance updated');
+        return true;
     }
 };
 
