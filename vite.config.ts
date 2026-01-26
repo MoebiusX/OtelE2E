@@ -39,26 +39,26 @@ export default defineConfig({
     emptyOutDir: true,
   },
   server: {
+    // Bind to all interfaces for Docker accessibility
+    host: true,
     fs: {
       strict: true,
       deny: ["**/.*"],
     },
     proxy: {
-      // Proxy all /api requests to Express server on port 5000
+      // Use Docker service name when running in container, localhost otherwise
       '/api': {
-        target: 'http://localhost:5000',
+        target: process.env.DOCKER_ENV ? 'http://kx-exchange:5000' : 'http://localhost:5000',
         changeOrigin: true,
         secure: false,
       },
-      // Also proxy /kong routes
       '/kong': {
-        target: 'http://localhost:5000',
+        target: process.env.DOCKER_ENV ? 'http://kx-exchange:5000' : 'http://localhost:5000',
         changeOrigin: true,
         secure: false,
       },
-      // WebSocket proxy for real-time monitoring
       '/ws': {
-        target: 'ws://localhost:5000',
+        target: process.env.DOCKER_ENV ? 'ws://kx-exchange:5000' : 'ws://localhost:5000',
         ws: true,
         changeOrigin: true,
       },

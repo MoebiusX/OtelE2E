@@ -1,0 +1,10 @@
+node_modules
+dist
+.vscode
+.git
+.gitignore
+coverage
+playwright-report
+*.log
+.DS_Store
+.env

@@ -9,6 +9,7 @@ import Register from "@/pages/register";
 import Login from "@/pages/login";
 import Convert from "@/pages/convert";
 import Activity from "@/pages/activity";
+import Profile from "@/pages/profile";
 import TransparencyPage from "@/pages/transparency";
 import NotFound from "@/pages/not-found";
 import { TransparencyDashboard } from "@/components/transparency-dashboard";
@@ -30,6 +31,7 @@ function Router() {
       </Route>
       <Route path="/convert" component={Convert} />
       <Route path="/activity" component={Activity} />
+      <Route path="/profile" component={Profile} />
       <Route path="/transparency" component={TransparencyPage} />
 
       {/* Advanced monitoring (for power users/devs) */}

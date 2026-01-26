@@ -19,6 +19,10 @@ vi.mock('../../server/db', () => ({
 vi.mock('../../server/storage', () => ({
     generateWalletAddress: vi.fn((userId: string) => `kx1test${userId.slice(0, 20)}`),
     generateWalletId: vi.fn(() => 'wallet-id-123'),
+    SEED_WALLETS: {
+        primary: { ownerId: 'primary-user-id', address: 'kx1testprimary' },
+        secondary: { ownerId: 'secondary-user-id', address: 'kx1testsecondary' },
+    },
     storage: {
         createWallet: vi.fn(),
         getDefaultWallet: vi.fn(),

@@ -73,7 +73,7 @@ export class OrderService {
     private transferCounter = 0;
 
     // Get wallet for a specific user
-    async getWallet(userId: string = 'alice') {
+    async getWallet(userId: string = 'seed.user.primary@krystaline.io') {
         return storage.getWallet(userId);
     }
 
@@ -91,7 +91,7 @@ export class OrderService {
         const spanId = spanContext?.spanId || this.generateSpanId();
         const correlationId = this.generateCorrelationId();
         const orderId = `ORD-${Date.now()}-${++this.orderCounter}`;
-        const userId = request.userId || 'alice';
+        const userId = request.userId || 'seed.user.primary@krystaline.io';
 
         logger.info({
             userId,
@@ -103,25 +103,14 @@ export class OrderService {
         const price = getPrice();
         const totalValue = price * request.quantity;
 
-        // Get user's actual wallet balances from database
+        // Get user's wallet balances from database
         const usdWallet = await walletService.getWallet(userId, 'USD');
         const btcWallet = await walletService.getWallet(userId, 'BTC');
 
-        // Fallback to legacy storage for demo users (alice, bob)
-        const isLegacyUser = ['alice', 'bob'].includes(userId);
-        let usdBalance = 0;
-        let btcBalance = 0;
+        const usdBalance = usdWallet ? parseFloat(usdWallet.available) : 0;
+        const btcBalance = btcWallet ? parseFloat(btcWallet.available) : 0;
 
-        if (isLegacyUser) {
-            const legacyWallet = await storage.getWallet(userId);
-            usdBalance = legacyWallet?.usd || 0;
-            btcBalance = legacyWallet?.btc || 0;
-        } else {
-            usdBalance = usdWallet ? parseFloat(usdWallet.available) : 0;
-            btcBalance = btcWallet ? parseFloat(btcWallet.available) : 0;
-        }
-
-        // Validation
+        // Validation - reject if insufficient funds
         if (request.side === 'BUY' && totalValue > usdBalance) {
             logger.warn({
                 userId,

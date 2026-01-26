@@ -2,11 +2,10 @@
  * Wallet Address Generation Tests
  * Tests for kx1 address generation and storage operations
  */
-import { describe, it, expect, beforeEach } from 'vitest';
 import {
   generateWalletAddress,
   generateWalletId,
-  DEMO_WALLETS,
+  SEED_WALLETS,
 } from '../server/storage';
 
 describe('generateWalletAddress', () => {
@@ -91,42 +90,42 @@ describe('generateWalletId', () => {
   });
 });
 
-describe('DEMO_WALLETS', () => {
-  it('should have alice wallet with kx1 address', () => {
-    expect(DEMO_WALLETS.alice.address.startsWith('kx1')).toBe(true);
+describe('SEED_WALLETS', () => {
+  it('should have primary wallet with kx1 address', () => {
+    expect(SEED_WALLETS.primary.address.startsWith('kx1')).toBe(true);
   });
 
-  it('should have bob wallet with kx1 address', () => {
-    expect(DEMO_WALLETS.bob.address.startsWith('kx1')).toBe(true);
+  it('should have secondary wallet with kx1 address', () => {
+    expect(SEED_WALLETS.secondary.address.startsWith('kx1')).toBe(true);
   });
 
-  it('should generate different addresses for alice and bob', () => {
-    expect(DEMO_WALLETS.alice.address).not.toBe(DEMO_WALLETS.bob.address);
+  it('should generate different addresses for primary and secondary', () => {
+    expect(SEED_WALLETS.primary.address).not.toBe(SEED_WALLETS.secondary.address);
   });
 
-  it('should have consistent address for alice', () => {
-    // Address should be deterministic based on email
-    const expectedAddress = generateWalletAddress('alice@demo.com');
-    expect(DEMO_WALLETS.alice.address).toBe(expectedAddress);
+  it('should have consistent address for primary', () => {
+    // Address should be deterministic based on seed identifier
+    const expectedAddress = generateWalletAddress('seed_user_primary_001');
+    expect(SEED_WALLETS.primary.address).toBe(expectedAddress);
   });
 
-  it('should have consistent address for bob', () => {
-    const expectedAddress = generateWalletAddress('bob@demo.com');
-    expect(DEMO_WALLETS.bob.address).toBe(expectedAddress);
+  it('should have consistent address for secondary', () => {
+    const expectedAddress = generateWalletAddress('seed_user_primary_002');
+    expect(SEED_WALLETS.secondary.address).toBe(expectedAddress);
   });
 
   it('should have valid wallet IDs', () => {
-    expect(DEMO_WALLETS.alice.walletId.startsWith('wal_')).toBe(true);
-    expect(DEMO_WALLETS.bob.walletId.startsWith('wal_')).toBe(true);
+    expect(SEED_WALLETS.primary.walletId.startsWith('wal_')).toBe(true);
+    expect(SEED_WALLETS.secondary.walletId.startsWith('wal_')).toBe(true);
   });
 
-  it('should have different wallet IDs for alice and bob', () => {
-    expect(DEMO_WALLETS.alice.walletId).not.toBe(DEMO_WALLETS.bob.walletId);
+  it('should have different wallet IDs for primary and secondary', () => {
+    expect(SEED_WALLETS.primary.walletId).not.toBe(SEED_WALLETS.secondary.walletId);
   });
 
-  it('should have owner IDs as demo emails', () => {
-    expect(DEMO_WALLETS.alice.ownerId).toBe('alice@demo.com');
-    expect(DEMO_WALLETS.bob.ownerId).toBe('bob@demo.com');
+  it('should have owner IDs as krystaline.io emails', () => {
+    expect(SEED_WALLETS.primary.ownerId).toBe('seed.user.primary@krystaline.io');
+    expect(SEED_WALLETS.secondary.ownerId).toBe('seed.user.secondary@krystaline.io');
   });
 });
 
@@ -151,7 +150,7 @@ describe('Address Format Validation', () => {
     const addr1 = generateWalletAddress('user1');
     const addr2 = generateWalletAddress('user2');
     const addr3 = generateWalletAddress('user11');
-    
+
     expect(addr1).not.toBe(addr2);
     expect(addr1).not.toBe(addr3);
     expect(addr2).not.toBe(addr3);

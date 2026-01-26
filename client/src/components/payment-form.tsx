@@ -12,6 +12,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
 import { useToast } from "@/hooks/use-toast";
+import { getJaegerTraceUrl } from "@/lib/trace-utils";
 import { DollarSign, User, MessageSquare, Coins, Route, Send, CheckCircle, Loader2 } from "lucide-react";
 import type { z } from "zod";
 
@@ -75,7 +76,7 @@ export function PaymentForm() {
             <p>Trace ID: <code className="bg-slate-100 px-1 rounded">{realTraceId.substring(0, 16)}...</code></p>
             <p>Processor: <span className="font-medium">{processorStatus}</span> ({processorId.split('-')[0]})</p>
             <a
-              href={`http://localhost:16686/trace/${realTraceId}`}
+              href={getJaegerTraceUrl(realTraceId)}
               target="_blank"
               rel="noopener noreferrer"
               className="text-blue-600 hover:underline text-sm"

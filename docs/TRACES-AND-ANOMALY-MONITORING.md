@@ -127,7 +127,7 @@ const responseSpan = tracer.startSpan('payment_response process', { /* ...*/ }, 
 2. Submit a BUY order via UI or curl:
 
 ```bash
-curl -X POST http://localhost:8000/api/orders -H 'Content-Type: application/json' -d '{"pair":"BTC/USD","side":"BUY","quantity":0.01,"orderType":"MARKET","userId":"alice"}'
+curl -X POST http://localhost:8000/api/orders -H 'Content-Type: application/json' -d '{"pair":"BTC/USD","side":"BUY","quantity":0.01,"orderType":"MARKET","userId":"seed.user.primary@krystaline.io"}'
 ```
 
 3. In Jaeger you should see:
@@ -259,7 +259,7 @@ Sample prompt structure:
 
 - Submit an order (example):
   ```bash
-  curl -X POST http://localhost:8000/api/orders -H 'Content-Type: application/json' -d '{"pair":"BTC/USD","side":"BUY","quantity":0.01,"orderType":"MARKET","userId":"alice"}'
+  curl -X POST http://localhost:8000/api/orders -H 'Content-Type: application/json' -d '{"pair":"BTC/USD","side":"BUY","quantity":0.01,"orderType":"MARKET","userId":"seed.user.primary@krystaline.io"}'
   ```
 - Recalculate baselines (manual):
   ```bash

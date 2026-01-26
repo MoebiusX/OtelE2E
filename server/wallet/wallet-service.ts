@@ -8,14 +8,14 @@
 import db from '../db';
 import { createLogger } from '../lib/logger';
 import { WalletError, ValidationError, NotFoundError, InsufficientFundsError } from '../lib/errors';
-import { generateWalletAddress, generateWalletId, storage } from '../storage';
+import { generateWalletAddress, generateWalletId, storage, SEED_WALLETS } from '../storage';
 
 const logger = createLogger('wallet');
 
 // Supported assets
 export const SUPPORTED_ASSETS = ['BTC', 'ETH', 'USDT', 'USD', 'EUR'];
 
-// Initial test balances for new users
+// Default balances for new user accounts
 const INITIAL_BALANCES: Record<string, number> = {
     USDT: 10000,
     BTC: 1,
@@ -47,18 +47,41 @@ export interface Transaction {
     created_at: Date;
 }
 
+/**
+ * Resolve userId (which might be an email) to database UUID
+ */
+async function resolveUserId(userId: string): Promise<string | null> {
+    if (!userId.includes('@')) {
+        // Already looks like a UUID or basic ID
+        return userId;
+    }
+
+    // Resolve email to UUID
+    const result = await db.query(
+        `SELECT id FROM users WHERE email = $1`,
+        [userId]
+    );
+
+    if (result.rows.length === 0) {
+        logger.warn({ userId }, 'User not found by email');
+        return null;
+    }
+
+    return result.rows[0].id;
+}
+
 export const walletService = {
     /**
-     * Create default wallets for a new user with test funds
+     * Create default wallets for a new user with initial funding
      * Also creates a Krystaline Exchange wallet address (kx1...)
      */
     async createDefaultWallets(userId: string): Promise<Wallet[]> {
         const wallets: Wallet[] = [];
-        
+
         // Generate Krystaline wallet address for this user
         const kxAddress = generateWalletAddress(userId);
         const kxWalletId = generateWalletId();
-        
+
         logger.info({
             userId,
             kxAddress,
@@ -84,13 +107,13 @@ export const walletService = {
                 if (balance > 0) {
                     await client.query(
                         `INSERT INTO transactions (user_id, wallet_id, type, amount, description)
-                         VALUES ($1, $2, 'bonus', $3, 'Welcome bonus - test funds')`,
+                         VALUES ($1, $2, 'bonus', $3, 'Welcome bonus - initial funding')`,
                         [userId, result.rows[0].id, balance]
                     );
                 }
             }
         });
-        
+
         // Also register in the in-memory storage for the trading system
         try {
             await storage.createWallet(userId, 'Main Trading Wallet');
@@ -128,11 +151,14 @@ export const walletService = {
      * Get all wallets for a user
      */
     async getWallets(userId: string): Promise<Wallet[]> {
+        const dbUserId = await resolveUserId(userId);
+        if (!dbUserId) return [];
+
         const result = await db.query(
             `SELECT * FROM wallets WHERE user_id = $1 ORDER BY asset`,
-            [userId]
+            [dbUserId]
         );
-        
+
         // Add kx1 address to each wallet
         const kxAddress = await this.getKXAddress(userId);
         return result.rows.map(w => ({ ...w, address: kxAddress }));
@@ -140,11 +166,34 @@ export const walletService = {
 
     /**
      * Get a specific wallet
+     * Note: userId can be either a UUID or email - we resolve it first
      */
     async getWallet(userId: string, asset: string): Promise<Wallet | null> {
+        // First resolve userId to actual database user_id (UUID)
+        let dbUserId = userId;
+
+        // Resolve seed wallet keys ('primary', 'secondary') to their ownerId emails
+        const seedWallet = SEED_WALLETS[userId as keyof typeof SEED_WALLETS];
+        if (seedWallet) {
+            dbUserId = seedWallet.ownerId;
+        }
+
+        // If it looks like an email, resolve to UUID
+        if (dbUserId.includes('@')) {
+            const userResult = await db.query(
+                `SELECT id FROM users WHERE email = $1`,
+                [dbUserId]
+            );
+            if (userResult.rows.length === 0) {
+                logger.warn({ userId, asset }, 'User not found by email in getWallet');
+                return null;
+            }
+            dbUserId = userResult.rows[0].id;
+        }
+
         const result = await db.query(
             `SELECT * FROM wallets WHERE user_id = $1 AND asset = $2`,
-            [userId, asset.toUpperCase()]
+            [dbUserId, asset.toUpperCase()]
         );
         return result.rows[0] || null;
     },
@@ -173,6 +222,11 @@ export const walletService = {
     ): Promise<Transaction> {
         return db.transaction(async (client) => {
             // Update wallet balance
+            const dbUserId = await resolveUserId(userId);
+            if (!dbUserId) {
+                throw new Error(`User not found: ${userId}`);
+            }
+
             const walletResult = await client.query(
                 `UPDATE wallets 
                  SET balance = balance + $1, available = available + $1, updated_at = NOW()
@@ -216,9 +270,14 @@ export const walletService = {
     ): Promise<Transaction> {
         return db.transaction(async (client) => {
             // Check available balance
+            const dbUserId = await resolveUserId(userId);
+            if (!dbUserId) {
+                throw new Error(`User not found: ${userId}`);
+            }
+
             const walletResult = await client.query(
                 `SELECT * FROM wallets WHERE user_id = $1 AND asset = $2 FOR UPDATE`,
-                [userId, asset.toUpperCase()]
+                [dbUserId, asset.toUpperCase()]
             );
 
             if (walletResult.rows.length === 0) {
@@ -260,11 +319,14 @@ export const walletService = {
      * Lock funds for a pending order
      */
     async lockFunds(userId: string, asset: string, amount: number): Promise<void> {
+        const dbUserId = await resolveUserId(userId);
+        if (!dbUserId) return;
+
         await db.query(
             `UPDATE wallets 
              SET available = available - $1, locked = locked + $1, updated_at = NOW()
              WHERE user_id = $2 AND asset = $3 AND available >= $1`,
-            [amount, userId, asset.toUpperCase()]
+            [amount, dbUserId, asset.toUpperCase()]
         );
     },
 
@@ -272,11 +334,14 @@ export const walletService = {
      * Unlock funds (order cancelled)
      */
     async unlockFunds(userId: string, asset: string, amount: number): Promise<void> {
+        const dbUserId = await resolveUserId(userId);
+        if (!dbUserId) return;
+
         await db.query(
             `UPDATE wallets 
              SET available = available + $1, locked = locked - $1, updated_at = NOW()
              WHERE user_id = $2 AND asset = $3 AND locked >= $1`,
-            [amount, userId, asset.toUpperCase()]
+            [amount, dbUserId, asset.toUpperCase()]
         );
     },
 
@@ -284,6 +349,9 @@ export const walletService = {
      * Get transaction history
      */
     async getTransactions(userId: string, limit = 50): Promise<Transaction[]> {
+        const dbUserId = await resolveUserId(userId);
+        if (!dbUserId) return [];
+
         const result = await db.query(
             `SELECT t.*, w.asset 
              FROM transactions t
@@ -291,7 +359,7 @@ export const walletService = {
              WHERE t.user_id = $1
              ORDER BY t.created_at DESC
              LIMIT $2`,
-            [userId, limit]
+            [dbUserId, limit]
         );
         return result.rows;
     },
@@ -326,10 +394,18 @@ export const walletService = {
         const transferId = `TXF-${Date.now()}-${Math.random().toString(36).substring(7)}`;
 
         return db.transaction(async (client) => {
+            // Resolve user IDs (might be emails)
+            const dbFromUserId = await resolveUserId(fromUserId);
+            const dbToUserId = await resolveUserId(toUserId);
+
+            if (!dbFromUserId || !dbToUserId) {
+                throw new NotFoundError(`User not found`);
+            }
+
             // Get sender's wallet
             const senderResult = await client.query(
                 `SELECT * FROM wallets WHERE user_id = $1 AND asset = $2 FOR UPDATE`,
-                [fromUserId, asset.toUpperCase()]
+                [dbFromUserId, asset.toUpperCase()]
             );
 
             if (senderResult.rows.length === 0) {
@@ -345,7 +421,7 @@ export const walletService = {
             // Get receiver's wallet
             const receiverResult = await client.query(
                 `SELECT * FROM wallets WHERE user_id = $1 AND asset = $2 FOR UPDATE`,
-                [toUserId, asset.toUpperCase()]
+                [dbToUserId, asset.toUpperCase()]
             );
 
             if (receiverResult.rows.length === 0) {
@@ -374,13 +450,13 @@ export const walletService = {
             await client.query(
                 `INSERT INTO transactions (user_id, wallet_id, type, amount, description, reference_id)
                  VALUES ($1, $2, 'withdrawal', $3, $4, $5)`,
-                [fromUserId, senderWallet.id, -amount, `Transfer to user`, transferId]
+                [dbFromUserId, senderWallet.id, -amount, `Transfer to user`, transferId]
             );
 
             await client.query(
                 `INSERT INTO transactions (user_id, wallet_id, type, amount, description, reference_id)
                  VALUES ($1, $2, 'deposit', $3, $4, $5)`,
-                [toUserId, receiverWallet.id, amount, `Transfer from user`, transferId]
+                [dbToUserId, receiverWallet.id, amount, `Transfer from user`, transferId]
             );
 
             // Get updated balances

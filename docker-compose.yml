@@ -11,6 +11,8 @@ services:
       - kong_data:/var/lib/postgresql/data
     networks:
       - kong-net
+    restart: unless-stopped
+    # No dependencies - databases should start immediately
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U kong -d kong"]
       interval: 5s
@@ -24,6 +26,7 @@ services:
     depends_on:
       kong-database:
         condition: service_healthy
+      # Removed payment-processor dependency - kong-migrations doesn't need it
     environment:
       KONG_DATABASE: postgres
       KONG_PG_HOST: kong-database
@@ -41,6 +44,7 @@ services:
         condition: service_healthy
       kong-migrations:
         condition: service_completed_successfully
+      # Removed payment-processor dependency - kong-gateway doesn't need it
     environment:
       KONG_DATABASE: postgres
       KONG_PG_HOST: kong-database
@@ -90,6 +94,7 @@ services:
     networks:
       - kong-net
     restart: unless-stopped
+    # No dependencies - rabbitmq should start immediately
     healthcheck:
       test: ["CMD", "rabbitmq-diagnostics", "-q", "ping"]
       interval: 10s
@@ -149,8 +154,8 @@ services:
       - ollama_data:/root/.ollama
     networks:
       - kong-net
-    # Note: GPU support removed for stability. Add back 'deploy' section if NVIDIA GPU available.
     restart: unless-stopped
+    # Note: GPU support removed for stability. Add back 'deploy' section if NVIDIA GPU available.
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:11434/"]
       interval: 30s
@@ -191,6 +196,7 @@ services:
     networks:
       - kong-net
     restart: unless-stopped
+    # No dependencies - app-database should start immediately
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U exchange -d crypto_exchange"]
       interval: 10s
@@ -255,6 +261,10 @@ services:
     networks:
       - kong-net
     restart: unless-stopped
+
+  # NOTE: Node.js services (kx-exchange, payment-processor, frontend) run natively on the host.
+  # Start them with: npm run dev (or individual scripts)
+  # This avoids Docker overhead and enables faster development iteration.
 
 volumes:
   kong_data:

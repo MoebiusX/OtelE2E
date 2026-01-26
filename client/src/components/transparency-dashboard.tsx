@@ -17,6 +17,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Badge } from '@/components/ui/badge';
 import { Activity, TrendingUp, Shield, Zap, Users, Eye } from 'lucide-react';
 import { TradeTraceTimeline } from './trade-trace-timeline';
+import { getJaegerTraceUrl } from '@/lib/trace-utils';
 import { useLocation } from 'wouter';
 import Layout from '@/components/Layout';
 
@@ -47,6 +48,7 @@ interface SystemStatus {
 
 interface PublicTrade {
   tradeId: string;
+  traceId?: string; // OpenTelemetry trace ID for Jaeger links
   timestamp: string;
   type: 'BUY' | 'SELL';
   asset: string;
@@ -351,7 +353,7 @@ export function TransparencyDashboard() {
                       <span className="text-cyan-100/40">Latest Trace Flow</span>
                       <div className="flex items-center gap-2">
                         <span className={`text-xs font-medium ${status.metrics.tradesLast24h > 1000 ? 'text-emerald-400' :
-                            status.metrics.tradesLast24h > 100 ? 'text-amber-400' : 'text-cyan-400'
+                          status.metrics.tradesLast24h > 100 ? 'text-amber-400' : 'text-cyan-400'
                           }`}>
                           {status.metrics.tradesLast24h > 1000 ? 'HIGH' :
                             status.metrics.tradesLast24h > 100 ? 'MEDIUM' : 'LOW'} VOLUME
@@ -554,7 +556,7 @@ export function TransparencyDashboard() {
                     key={trade.tradeId}
                     className="flex items-center justify-between p-4 rounded-lg bg-slate-800/50 border border-slate-700/50 hover:border-blue-500/30 transition-all duration-300 hover:shadow-lg hover:shadow-blue-500/5 animate-in fade-in slide-in-from-left duration-500 cursor-pointer group"
                     style={{ animationDelay: `${index * 50}ms` }}
-                    onClick={() => window.open(`http://localhost:16686/trace/${trade.tradeId}`, '_blank')}
+                    onClick={() => trade.traceId && window.open(getJaegerTraceUrl(trade.traceId), '_blank')}
                   >
                     <div className="flex items-center gap-4">
                       <Badge
@@ -568,7 +570,7 @@ export function TransparencyDashboard() {
                           {trade.amount.toFixed(4)} {trade.asset.split('/')[0]}
                         </div>
                         <div className="text-sm text-cyan-100/60">
-                          @ ${trade.price.toLocaleString()} • Trace: {trade.tradeId.slice(0, 8)}...
+                          @ ${trade.price.toLocaleString()} • Trace: {trade.traceId ? trade.traceId.slice(0, 8) : trade.tradeId.slice(0, 8)}...
                         </div>
                       </div>
                     </div>
@@ -576,7 +578,9 @@ export function TransparencyDashboard() {
                       <div className="text-sm font-semibold text-amber-400">{trade.executionTimeMs}ms</div>
                       <div className="text-sm text-cyan-100/60 flex items-center gap-1 justify-end">
                         {trade.aiVerified && <Shield className="h-3 w-3 text-emerald-400" />}
-                        <span className="group-hover:text-cyan-400 transition-colors">View Trace →</span>
+                        <span className={`transition-colors ${trade.traceId ? 'group-hover:text-cyan-400' : 'text-cyan-100/40'}`}>
+                          {trade.traceId ? 'View Trace →' : 'No trace'}
+                        </span>
                       </div>
                     </div>
                   </div>

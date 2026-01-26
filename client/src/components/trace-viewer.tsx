@@ -4,6 +4,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Trash2, Clock, Activity, ChevronDown, ChevronRight, ExternalLink } from "lucide-react";
 import { formatTimeAgo, truncateId } from "@/lib/utils";
+import { getJaegerTraceUrl } from "@/lib/trace-utils";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useState } from "react";
 
@@ -83,7 +84,7 @@ function TraceItem({ trace, onTraceViewed }: { trace: TraceData; onTraceViewed?:
             {trace.spans.length} spans
           </Badge>
           <a
-            href={`http://localhost:16686/trace/${trace.traceId}`}
+            href={getJaegerTraceUrl(trace.traceId)}
             target="_blank"
             rel="noopener noreferrer"
             className="text-slate-400 hover:text-white"
@@ -150,16 +151,16 @@ export function TraceViewer() {
     const hasTradeSpan = trace.spans.some(span => {
       const opName = (span.operationName || '').toLowerCase();
       const serviceName = (span.serviceName || '').toLowerCase();
-      
+
       // Exclude if it matches excluded operations
       if (EXCLUDED_OPERATIONS.some(excluded => opName.includes(excluded))) {
         return false;
       }
-      
+
       // Include if it matches trade operations
       return TRADE_OPERATIONS.some(trade => opName.includes(trade) || serviceName.includes(trade));
     });
-    
+
     return hasTradeSpan;
   };
 
@@ -239,7 +240,7 @@ export function TraceViewer() {
             {traceList.map((trace) => (
               <TraceItem key={trace.traceId} trace={trace} onTraceViewed={handleTraceViewed} />
             ))}
-            
+
             {/* Jaeger CTA */}
             <div className="mt-4 p-4 bg-gradient-to-r from-indigo-900/30 to-purple-900/30 rounded-lg border border-indigo-500/20">
               <p className="text-sm text-indigo-200/80 mb-2">Want the full picture?</p>

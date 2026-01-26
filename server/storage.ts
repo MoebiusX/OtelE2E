@@ -30,25 +30,25 @@ export function generateWalletId(): string {
 }
 
 // ============================================
-// DEMO USERS & WALLETS
+// SEED DATA - Initial System Configuration
 // ============================================
 
 export const USERS: User[] = [
-  { id: 'alice', name: 'Alice', avatar: '👩' },
-  { id: 'bob', name: 'Bob', avatar: '👨' },
+  { id: 'user_seed_001', name: 'Primary User', avatar: '👤' },
+  { id: 'user_seed_002', name: 'Secondary User', avatar: '👤' },
 ];
 
-// Demo wallet addresses (deterministic from email for consistency)
-export const DEMO_WALLETS = {
-  alice: {
-    walletId: 'wal_alice_main_demo_2026',
-    address: generateWalletAddress('alice@demo.com'),  // kx1...
-    ownerId: 'alice@demo.com',
+// Seed wallet addresses (deterministic from user identifiers)
+export const SEED_WALLETS = {
+  primary: {
+    walletId: 'wal_seed_primary_001',
+    address: generateWalletAddress('seed_user_primary_001'),
+    ownerId: 'seed.user.primary@krystaline.io',
   },
-  bob: {
-    walletId: 'wal_bob_main_demo_2026',
-    address: generateWalletAddress('bob@demo.com'),    // kx1...
-    ownerId: 'bob@demo.com',
+  secondary: {
+    walletId: 'wal_seed_primary_002',
+    address: generateWalletAddress('seed_user_primary_002'),
+    ownerId: 'seed.user.secondary@krystaline.io',
   },
 };
 
@@ -130,16 +130,16 @@ export class MemoryStorage implements IStorage {
   private nextId = 1;
 
   constructor() {
-    this.initializeDemoData();
+    this.initializeSeedData();
   }
 
-  private initializeDemoData(): void {
-    // Create demo wallets with kx1 addresses
-    for (const [name, demo] of Object.entries(DEMO_WALLETS)) {
+  private initializeSeedData(): void {
+    // Create seed wallets with kx1 addresses
+    for (const [name, seed] of Object.entries(SEED_WALLETS)) {
       const wallet: KXWallet = {
-        walletId: demo.walletId,
-        address: demo.address,
-        ownerId: demo.ownerId,
+        walletId: seed.walletId,
+        address: seed.address,
+        ownerId: seed.ownerId,
         label: `${name.charAt(0).toUpperCase() + name.slice(1)}'s Main Wallet`,
         type: 'custodial',
         createdAt: new Date(),
@@ -152,7 +152,7 @@ export class MemoryStorage implements IStorage {
       // Initialize balances (stored as smallest units)
       const walletBalances = new Map<string, WalletBalance>();
 
-      if (name === 'alice') {
+      if (name === 'primary') {
         walletBalances.set('BTC', { walletId: wallet.walletId, asset: 'BTC', balance: 150000000, decimals: 8, lastUpdated: new Date() }); // 1.5 BTC
         walletBalances.set('USD', { walletId: wallet.walletId, asset: 'USD', balance: 5000000, decimals: 2, lastUpdated: new Date() });   // $50,000
       } else {
@@ -168,20 +168,20 @@ export class MemoryStorage implements IStorage {
         defaultWalletId: wallet.walletId,
       });
 
-      // Legacy wallet storage for backwards compatibility
-      const legacyWallet: UserWallet = {
+      // Seed wallet storage for backwards compatibility
+      const seedWallet: UserWallet = {
         userId: wallet.ownerId,
-        btc: name === 'alice' ? 1.5 : 0.5,
-        usd: name === 'alice' ? 50000 : 10000,
+        btc: name === 'primary' ? 1.5 : 0.5,
+        usd: name === 'primary' ? 50000 : 10000,
         lastUpdated: new Date(),
       };
-      this.wallets.set(wallet.ownerId, legacyWallet);
-      this.wallets.set(name, { ...legacyWallet, userId: name });
+      this.wallets.set(wallet.ownerId, seedWallet);
+      this.wallets.set(name, { ...seedWallet, userId: name });
     }
 
-    console.log('[storage] Initialized Krystaline Exchange demo wallets:');
-    console.log(`  Alice: ${DEMO_WALLETS.alice.address}`);
-    console.log(`  Bob: ${DEMO_WALLETS.bob.address}`);
+    console.log('[storage] Initialized seed wallets:');
+    console.log(`  Primary: ${SEED_WALLETS.primary.address}`);
+    console.log(`  Secondary: ${SEED_WALLETS.secondary.address}`);
   }
 
   // ============================================
@@ -507,8 +507,8 @@ export class MemoryStorage implements IStorage {
     this.userWalletMappings.clear();
     this.wallets.clear();
 
-    // Re-initialize demo data
-    this.initializeDemoData();
+    // Re-initialize seed data
+    this.initializeSeedData();
   }
 }
 
@@ -523,16 +523,16 @@ export class MemoryStorage implements IStorage {
 export type StorageType = 'memory' | 'postgres';
 
 /**
- * Get the configured storage type - defaults to memory
- * Set STORAGE_TYPE=postgres or STORAGE_TYPE=postgresql for PostgreSQL
+ * Get the configured storage type - defaults to postgres for production
+ * Set STORAGE_TYPE=memory for testing environments only
  */
 export function getStorageType(): StorageType {
   const envType = process.env.STORAGE_TYPE?.toLowerCase();
-  if (envType === 'postgres' || envType === 'postgresql') {
-    return 'postgres';
+  if (envType === 'memory') {
+    return 'memory';
   }
-  // Default to memory for testing/development
-  return 'memory';
+  // Default to postgres for production - trades must be persisted!
+  return 'postgres';
 }
 
 /**

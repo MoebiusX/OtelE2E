@@ -9,6 +9,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
+import { getJaegerTraceUrl } from "@/lib/trace-utils";
 import { ArrowUpRight, ArrowDownRight, Wallet, TrendingUp, Loader2, Bitcoin, CheckCircle2, Clock, ExternalLink } from "lucide-react";
 
 // Type-safe error message extraction
@@ -66,7 +67,7 @@ export function TradeForm({ currentUser: propUser, walletAddress: propAddress }:
     const queryClient = useQueryClient();
 
     // Get user and wallet address from props or localStorage
-    const [currentUser, setCurrentUser] = useState<string>(propUser || 'alice');
+    const [currentUser, setCurrentUser] = useState<string>(propUser || 'seed.user.primary@krystaline.io');
     const [walletAddress, setWalletAddress] = useState<string | undefined>(propAddress);
 
     useEffect(() => {
@@ -76,7 +77,7 @@ export function TradeForm({ currentUser: propUser, walletAddress: propAddress }:
                 try {
                     const parsed = JSON.parse(userData);
                     // Use email as userId since wallets are keyed by email
-                    setCurrentUser(parsed.email || parsed.id || 'alice');
+                    setCurrentUser(parsed.email || parsed.id || 'seed.user.primary@krystaline.io');
                     // Get wallet address if stored
                     setWalletAddress(parsed.walletAddress);
                 } catch { }
@@ -143,6 +144,14 @@ export function TradeForm({ currentUser: propUser, walletAddress: propAddress }:
                     const result = await response.json();
 
                     if (!response.ok) {
+                        // Check for 401 and redirect instead of showing toast
+                        if (response.status === 401) {
+                            localStorage.removeItem('accessToken');
+                            localStorage.removeItem('refreshToken');
+                            localStorage.removeItem('user');
+                            window.location.href = '/';
+                            return;
+                        }
                         throw new Error(result.error || 'Order failed');
                     }
 
@@ -207,7 +216,7 @@ export function TradeForm({ currentUser: propUser, walletAddress: propAddress }:
                             )}
                         </div>
                         <a
-                            href={`http://localhost:16686/trace/${traceId}`}
+                            href={getJaegerTraceUrl(traceId)}
                             target="_blank"
                             rel="noopener noreferrer"
                             className="flex items-center justify-center gap-2 w-full py-2.5 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white rounded-lg text-sm font-medium transition-all shadow-lg shadow-purple-500/25"
@@ -295,7 +304,7 @@ export function TradeForm({ currentUser: propUser, walletAddress: propAddress }:
                                     {lastTrade.side} {lastTrade.quantity.toFixed(6)} BTC @ ${lastTrade.fillPrice.toLocaleString()}
                                 </p>
                                 <a
-                                    href={`http://localhost:16686/trace/${lastTrade.traceId}`}
+                                    href={getJaegerTraceUrl(lastTrade.traceId)}
                                     target="_blank"
                                     rel="noopener noreferrer"
                                     className="inline-flex items-center gap-1 mt-2 text-xs text-purple-400 hover:text-purple-300"

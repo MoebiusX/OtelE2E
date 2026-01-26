@@ -9,17 +9,18 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { 
-  Activity, 
-  CheckCircle2, 
-  Clock, 
-  ExternalLink, 
+import {
+  Activity,
+  CheckCircle2,
+  Clock,
+  ExternalLink,
   Shield,
   Zap,
   Database,
   Server,
   AlertCircle
 } from "lucide-react";
+import { getJaegerTraceUrl } from "@/lib/trace-utils";
 import { useState, useEffect } from "react";
 
 interface TraceSpan {
@@ -83,14 +84,14 @@ export function TradeTraceTimeline({ traceId, className }: TradeTraceTimelinePro
     const fetchTrace = async () => {
       setLoading(true);
       setError(null);
-      
+
       try {
         const response = await fetch(`/api/public/trace/${traceId}`);
-        
+
         if (!response.ok) {
           throw new Error(`Failed to fetch trace: ${response.statusText}`);
         }
-        
+
         const data = await response.json();
         setTrace(data);
       } catch (err: any) {
@@ -218,7 +219,7 @@ export function TradeTraceTimeline({ traceId, className }: TradeTraceTimelinePro
               variant="ghost"
               size="sm"
               className="ml-auto text-cyan-400 hover:text-cyan-300 hover:bg-cyan-500/10"
-              onClick={() => window.open(`http://localhost:16686/trace/${trace.traceId}`, '_blank')}
+              onClick={() => window.open(getJaegerTraceUrl(trace.traceId), '_blank')}
             >
               <ExternalLink className="w-4 h-4 mr-1" />
               View in Jaeger
@@ -298,7 +299,7 @@ export function TradeTraceTimeline({ traceId, className }: TradeTraceTimelinePro
                     {selectedSpan.status}
                   </Badge>
                 </div>
-                
+
                 <div className="grid grid-cols-2 gap-3 text-sm">
                   <div>
                     <span className="text-cyan-100/60">Operation</span>

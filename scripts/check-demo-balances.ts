@@ -1,7 +1,7 @@
 /**
  * Check Demo User Wallet Balances
  *
- * Prints wallet balances for Alice and Bob.
+ * Prints wallet balances for Primary and Secondary seed users.
  * Run with: npx tsx scripts/check-demo-balances.ts
  */
 
@@ -18,8 +18,8 @@ const pool = new Pool({
 });
 
 const DEMO_USERS = [
-    'alice@demo.com',
-    'bob@demo.com',
+    'seed.user.primary@krystaline.io',
+    'seed.user.secondary@krystaline.io',
 ];
 
 async function checkBalances() {

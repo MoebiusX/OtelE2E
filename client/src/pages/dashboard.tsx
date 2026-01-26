@@ -11,6 +11,7 @@ import { Bitcoin, TrendingUp, Wallet, ArrowUpRight, ArrowDownRight, Send, ArrowR
 import type { Order, Transfer } from "@shared/schema";
 import Layout from "@/components/Layout";
 import { useLocation, useSearch } from "wouter";
+import { getJaegerTraceUrl } from "@/lib/trace-utils";
 
 // Types for portfolio
 interface WalletData {
@@ -90,7 +91,7 @@ export default function Dashboard() {
       try {
         const parsed = JSON.parse(userData);
         // Use email as userId since wallets are keyed by email
-        setCurrentUser(parsed.email || parsed.id || 'alice');
+        setCurrentUser(parsed.email || parsed.id || 'seed.user.primary@krystaline.io');
       } catch {
         navigate('/login');
       }
@@ -137,14 +138,14 @@ export default function Dashboard() {
   });
 
   // Portfolio data - use SAME endpoint as trade form for consistency
-  interface SimpleWallet {
+  interface PortfolioSummary {
     btc: number;
     usd: number;
     btcValue: number;
     totalValue: number;
   }
 
-  const { data: simpleWallet, isLoading: simpleWalletLoading } = useQuery<SimpleWallet>({
+  const { data: portfolio, isLoading: portfolioLoading } = useQuery<PortfolioSummary>({
     queryKey: ["/api/wallet", { userId: currentUser }],
     queryFn: async () => {
       const res = await fetch(`http://localhost:8000/api/wallet?userId=${currentUser}`);
@@ -192,10 +193,13 @@ export default function Dashboard() {
     return 0;
   };
 
-  // Calculate total portfolio value - use simpleWallet for accuracy (matches trade form)
+  // Calculate total portfolio value - always use real Binance prices for accuracy
   const calculateTotalUSD = () => {
-    if (simpleWallet) {
-      return simpleWallet.totalValue || (simpleWallet.btc * (priceData?.BTC || 0) + simpleWallet.usd);
+    if (portfolio) {
+      // Always calculate using real Binance price, not backend's simulated totalValue
+      const btcValue = (portfolio.btc ?? 0) * (priceData?.BTC || 0);
+      const usdValue = portfolio.usd ?? 0;
+      return btcValue + usdValue;
     }
     if (!walletsData?.wallets) return 0;
     return walletsData.wallets.reduce((total, w) => {
@@ -386,7 +390,7 @@ export default function Dashboard() {
                             </div>
                             {order.traceId && (
                               <a
-                                href={`http://localhost:16686/trace/${order.traceId}`}
+                                href={getJaegerTraceUrl(order.traceId)}
                                 target="_blank"
                                 rel="noopener noreferrer"
                                 className="p-2 bg-purple-500/20 hover:bg-purple-500/30 rounded-lg text-purple-400 hover:text-purple-300 transition-colors opacity-0 group-hover:opacity-100"
@@ -475,14 +479,14 @@ export default function Dashboard() {
                     </p>
                   </div>
 
-                  {/* Asset Grid - Use simpleWallet to match trade form */}
-                  {simpleWalletLoading ? (
+                  {/* Asset Grid - Uses portfolio summary from API */}
+                  {portfolioLoading ? (
                     <div className="grid grid-cols-2 gap-2">
                       {[...Array(2)].map((_, i) => (
                         <Skeleton key={i} className="h-16 bg-slate-800" />
                       ))}
                     </div>
-                  ) : simpleWallet ? (
+                  ) : portfolio ? (
                     <div className="grid grid-cols-2 gap-2">
                       {/* BTC Balance */}
                       <div className="bg-slate-800/50 rounded-lg p-3 border border-slate-700/50 hover:border-orange-500/30 transition-colors">
@@ -491,13 +495,13 @@ export default function Dashboard() {
                           <span className="font-medium text-white text-sm">BTC</span>
                         </div>
                         <p className="text-white font-semibold">
-                          {(simpleWallet.btc ?? 0).toLocaleString(undefined, {
+                          {(portfolio.btc ?? 0).toLocaleString(undefined, {
                             minimumFractionDigits: 6,
                             maximumFractionDigits: 6,
                           })}
                         </p>
                         <p className="text-slate-400 text-xs">
-                          ≈ ${((simpleWallet.btc ?? 0) * (priceData?.BTC || 0)).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                          ≈ ${((portfolio.btc ?? 0) * (priceData?.BTC || 0)).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                         </p>
                       </div>
 
@@ -508,7 +512,7 @@ export default function Dashboard() {
                           <span className="font-medium text-white text-sm">USD</span>
                         </div>
                         <p className="text-white font-semibold">
-                          {(simpleWallet.usd ?? 0).toLocaleString(undefined, {
+                          {(portfolio.usd ?? 0).toLocaleString(undefined, {
                             minimumFractionDigits: 2,
                             maximumFractionDigits: 2,
                           })}

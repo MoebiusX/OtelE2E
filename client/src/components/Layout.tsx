@@ -60,8 +60,8 @@ export default function Layout({ children, showAuth = true }: LayoutProps) {
                                     <a
                                         href="/trade"
                                         className={`px-4 py-2 rounded-lg text-sm font-semibold transition-all ${location === '/trade' || location === '/portfolio' || location === '/trading'
-                                                ? 'bg-gradient-to-r from-cyan-500 to-blue-500 text-white shadow-lg shadow-cyan-500/25'
-                                                : 'bg-cyan-500/10 text-cyan-400 hover:bg-cyan-500/20 border border-cyan-500/30'
+                                            ? 'bg-gradient-to-r from-cyan-500 to-blue-500 text-white shadow-lg shadow-cyan-500/25'
+                                            : 'bg-cyan-500/10 text-cyan-400 hover:bg-cyan-500/20 border border-cyan-500/30'
                                             }`}
                                     >
                                         Trade
@@ -101,7 +101,12 @@ export default function Layout({ children, showAuth = true }: LayoutProps) {
                         <div className="flex items-center gap-3">
                             {user ? (
                                 <>
-                                    <span className="text-cyan-100/70 text-sm hidden sm:inline">{user.email}</span>
+                                    <a
+                                        href="/profile"
+                                        className="text-cyan-100/70 text-sm hidden sm:inline hover:text-cyan-400 transition-colors"
+                                    >
+                                        {user.email}
+                                    </a>
                                     <Badge variant="outline" className="border-emerald-500/30 text-emerald-400 hidden sm:flex bg-emerald-500/5">
                                         Verified
                                     </Badge>
