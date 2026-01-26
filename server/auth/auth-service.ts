@@ -56,6 +56,12 @@ export interface AuthTokens {
     accessToken: string;
     refreshToken: string;
     expiresIn: number;
+    sessionId: string;
+}
+
+export interface SessionInfo {
+    userAgent?: string;
+    ipAddress?: string;
 }
 
 function generateCode(): string {
@@ -110,7 +116,7 @@ export const authService = {
     /**
      * Verify email with code
      */
-    async verifyEmail(data: z.infer<typeof verifySchema>): Promise<{ user: User; tokens: AuthTokens }> {
+    async verifyEmail(data: z.infer<typeof verifySchema>, sessionInfo?: SessionInfo): Promise<{ user: User; tokens: AuthTokens }> {
         // Find user
         const userResult = await db.query(
             'SELECT * FROM users WHERE email = $1',
@@ -156,8 +162,8 @@ export const authService = {
         // Send welcome email
         await emailService.sendWelcome(user.email);
 
-        // Generate tokens
-        const tokens = await this.generateTokens(user.id);
+        // Generate tokens with session info
+        const tokens = await this.generateTokens(user.id, sessionInfo);
 
         logger.info({
             userId: user.id,
@@ -172,7 +178,7 @@ export const authService = {
     /**
      * Login with email and password
      */
-    async login(data: z.infer<typeof loginSchema>): Promise<{ user: User; tokens: AuthTokens }> {
+    async login(data: z.infer<typeof loginSchema>, sessionInfo?: SessionInfo): Promise<{ user: User; tokens: AuthTokens }> {
         // Find user
         const result = await db.query(
             'SELECT * FROM users WHERE email = $1',
@@ -206,8 +212,8 @@ export const authService = {
             [user.id]
         );
 
-        // Generate tokens
-        const tokens = await this.generateTokens(user.id);
+        // Generate tokens with session info
+        const tokens = await this.generateTokens(user.id, sessionInfo);
 
         logger.info({
             userId: user.id,
@@ -219,7 +225,7 @@ export const authService = {
     /**
      * Generate JWT tokens
      */
-    async generateTokens(userId: string): Promise<AuthTokens> {
+    async generateTokens(userId: string, sessionInfo?: SessionInfo): Promise<AuthTokens> {
         const accessToken = jwt.sign(
             { userId },
             JWT_SECRET,
@@ -232,18 +238,20 @@ export const authService = {
             { expiresIn: REFRESH_EXPIRES_IN }
         );
 
-        // Store refresh token hash in sessions
+        // Store refresh token hash in sessions with user agent and IP
         const tokenHash = await bcrypt.hash(refreshToken, 10);
-        await db.query(
-            `INSERT INTO sessions (user_id, refresh_token_hash, expires_at)
-             VALUES ($1, $2, NOW() + INTERVAL '7 days')`,
-            [userId, tokenHash]
+        const sessionResult = await db.query(
+            `INSERT INTO sessions (user_id, refresh_token_hash, user_agent, ip_address, expires_at)
+             VALUES ($1, $2, $3, $4, NOW() + INTERVAL '7 days')
+             RETURNING id`,
+            [userId, tokenHash, sessionInfo?.userAgent || null, sessionInfo?.ipAddress || null]
         );
 
         return {
             accessToken,
             refreshToken,
             expiresIn: 3600, // 1 hour in seconds
+            sessionId: sessionResult.rows[0].id,
         };
     },
 

@@ -27,7 +27,7 @@ declare global {
  */
 export const authenticate = async (req: Request, res: Response, next: NextFunction) => {
     const authHeader = req.headers.authorization;
-    
+
     logger.debug({
         path: req.path,
         hasAuth: !!authHeader
@@ -91,7 +91,11 @@ router.post('/register', async (req, res) => {
 router.post('/verify', async (req, res) => {
     try {
         const data = verifySchema.parse(req.body);
-        const result = await authService.verifyEmail(data);
+        const sessionInfo = {
+            userAgent: req.headers['user-agent'] || undefined,
+            ipAddress: req.ip || req.socket.remoteAddress || undefined,
+        };
+        const result = await authService.verifyEmail(data, sessionInfo);
 
         res.json({
             success: true,
@@ -139,7 +143,11 @@ router.post('/resend-code', async (req, res) => {
 router.post('/login', async (req, res) => {
     try {
         const data = loginSchema.parse(req.body);
-        const result = await authService.login(data);
+        const sessionInfo = {
+            userAgent: req.headers['user-agent'] || undefined,
+            ipAddress: req.ip || req.socket.remoteAddress || undefined,
+        };
+        const result = await authService.login(data, sessionInfo);
 
         res.json({
             success: true,
