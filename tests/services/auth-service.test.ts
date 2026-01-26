@@ -172,10 +172,10 @@ describe('Auth Service', () => {
     it('should register new user successfully', async () => {
       vi.mocked(db.query)
         .mockResolvedValueOnce({ rows: [] }) // Check existing
-        .mockResolvedValueOnce({ 
-          rows: [{ 
-            id: 'user-123', 
-            email: 'test@example.com', 
+        .mockResolvedValueOnce({
+          rows: [{
+            id: 'user-123',
+            email: 'test@example.com',
             phone: null,
             status: 'pending',
             kyc_level: 0,
@@ -197,8 +197,8 @@ describe('Auth Service', () => {
     });
 
     it('should throw error if email already exists', async () => {
-      vi.mocked(db.query).mockResolvedValueOnce({ 
-        rows: [{ id: 'existing-user' }] 
+      vi.mocked(db.query).mockResolvedValueOnce({
+        rows: [{ id: 'existing-user' }]
       });
 
       await expect(
@@ -212,9 +212,9 @@ describe('Auth Service', () => {
     it('should hash password before storing', async () => {
       vi.mocked(db.query)
         .mockResolvedValueOnce({ rows: [] })
-        .mockResolvedValueOnce({ 
-          rows: [{ 
-            id: 'user-123', 
+        .mockResolvedValueOnce({
+          rows: [{
+            id: 'user-123',
             email: 'test@example.com',
             status: 'pending',
           }]
@@ -235,14 +235,14 @@ describe('Auth Service', () => {
   describe('verifyEmail', () => {
     it('should verify email with valid code', async () => {
       vi.mocked(db.query)
-        .mockResolvedValueOnce({ 
-          rows: [{ 
-            id: 'user-123', 
+        .mockResolvedValueOnce({
+          rows: [{
+            id: 'user-123',
             email: 'test@example.com',
             status: 'pending',
           }]
         }) // Find user
-        .mockResolvedValueOnce({ 
+        .mockResolvedValueOnce({
           rows: [{ id: 'code-123', code: '123456' }]
         }); // Find code
 
@@ -260,8 +260,8 @@ describe('Auth Service', () => {
         },
       }));
 
-      // Need to mock generateTokens behavior
-      vi.mocked(db.query).mockResolvedValueOnce({ rows: [] }); // Session insert
+      // Need to mock generateTokens behavior - session insert returns id
+      vi.mocked(db.query).mockResolvedValueOnce({ rows: [{ id: 'session-123' }] }); // Session insert
 
       const result = await authService.verifyEmail({
         email: 'test@example.com',
@@ -285,7 +285,7 @@ describe('Auth Service', () => {
 
     it('should throw error if code is invalid', async () => {
       vi.mocked(db.query)
-        .mockResolvedValueOnce({ 
+        .mockResolvedValueOnce({
           rows: [{ id: 'user-123', email: 'test@example.com' }]
         })
         .mockResolvedValueOnce({ rows: [] }); // No matching code
@@ -302,16 +302,16 @@ describe('Auth Service', () => {
   describe('login', () => {
     it('should login verified user with correct password', async () => {
       vi.mocked(db.query)
-        .mockResolvedValueOnce({ 
-          rows: [{ 
-            id: 'user-123', 
+        .mockResolvedValueOnce({
+          rows: [{
+            id: 'user-123',
             email: 'test@example.com',
             password_hash: 'hashed_password',
             status: 'verified',
           }]
         })
         .mockResolvedValueOnce({ rows: [] }) // Update last login
-        .mockResolvedValueOnce({ rows: [] }); // Insert session
+        .mockResolvedValueOnce({ rows: [{ id: 'session-123' }] }); // Insert session returns id
 
       vi.mocked(bcrypt.compare).mockResolvedValue(true as never);
 
@@ -336,9 +336,9 @@ describe('Auth Service', () => {
     });
 
     it('should throw error for unverified user', async () => {
-      vi.mocked(db.query).mockResolvedValueOnce({ 
-        rows: [{ 
-          id: 'user-123', 
+      vi.mocked(db.query).mockResolvedValueOnce({
+        rows: [{
+          id: 'user-123',
           email: 'test@example.com',
           status: 'pending',
         }]
@@ -353,9 +353,9 @@ describe('Auth Service', () => {
     });
 
     it('should throw error for suspended user', async () => {
-      vi.mocked(db.query).mockResolvedValueOnce({ 
-        rows: [{ 
-          id: 'user-123', 
+      vi.mocked(db.query).mockResolvedValueOnce({
+        rows: [{
+          id: 'user-123',
           email: 'test@example.com',
           status: 'suspended',
         }]
@@ -370,9 +370,9 @@ describe('Auth Service', () => {
     });
 
     it('should throw error for incorrect password', async () => {
-      vi.mocked(db.query).mockResolvedValueOnce({ 
-        rows: [{ 
-          id: 'user-123', 
+      vi.mocked(db.query).mockResolvedValueOnce({
+        rows: [{
+          id: 'user-123',
           email: 'test@example.com',
           password_hash: 'hashed_password',
           status: 'verified',
@@ -422,16 +422,16 @@ describe('Auth Service', () => {
 
   describe('refreshToken', () => {
     it('should call generateTokens for valid refresh token', async () => {
-      vi.mocked(jwt.verify).mockReturnValue({ 
-        userId: 'user-123', 
-        type: 'refresh' 
+      vi.mocked(jwt.verify).mockReturnValue({
+        userId: 'user-123',
+        type: 'refresh'
       } as any);
 
       vi.mocked(db.query)
-        .mockResolvedValueOnce({ 
+        .mockResolvedValueOnce({
           rows: [{ refresh_token_hash: 'hashed_refresh' }]
         })
-        .mockResolvedValueOnce({ rows: [] }); // Insert new session
+        .mockResolvedValueOnce({ rows: [{ id: 'session-123' }] }); // Insert new session returns id
 
       vi.mocked(bcrypt.compare).mockResolvedValue(true as never);
       vi.mocked(bcrypt.hash).mockResolvedValue('new_hashed_token' as never);
@@ -445,9 +445,9 @@ describe('Auth Service', () => {
     });
 
     it('should throw error for non-refresh token', async () => {
-      vi.mocked(jwt.verify).mockReturnValue({ 
-        userId: 'user-123', 
-        type: 'access' 
+      vi.mocked(jwt.verify).mockReturnValue({
+        userId: 'user-123',
+        type: 'access'
       } as any);
 
       await expect(
@@ -456,9 +456,9 @@ describe('Auth Service', () => {
     });
 
     it('should throw error for expired session', async () => {
-      vi.mocked(jwt.verify).mockReturnValue({ 
-        userId: 'user-123', 
-        type: 'refresh' 
+      vi.mocked(jwt.verify).mockReturnValue({
+        userId: 'user-123',
+        type: 'refresh'
       } as any);
 
       vi.mocked(db.query).mockResolvedValueOnce({ rows: [] }); // No sessions
@@ -513,7 +513,7 @@ describe('Auth Service', () => {
   describe('resendVerificationCode', () => {
     it('should resend code for pending user', async () => {
       vi.mocked(db.query)
-        .mockResolvedValueOnce({ 
+        .mockResolvedValueOnce({
           rows: [{ id: 'user-123', email: 'test@example.com', status: 'pending' }]
         })
         .mockResolvedValueOnce({ rows: [] }); // Insert new code
