@@ -15,6 +15,7 @@ import crypto from 'crypto';
 import db from '../db';
 import { createLogger } from '../lib/logger';
 import { changePasswordSchema, forgotPasswordSchema, resetPasswordSchema } from '../db/schema';
+import { authenticate } from '../auth/routes';
 
 const router = Router();
 const logger = createLogger('auth-routes');
@@ -27,14 +28,9 @@ const logger = createLogger('auth-routes');
  * GET /api/auth/profile
  * Get current user's profile
  */
-router.get('/profile', async (req: Request, res: Response) => {
+router.get('/profile', authenticate, async (req: Request, res: Response) => {
     try {
-        // Get user ID from session/token (simplified - in production use JWT middleware)
-        const userId = req.headers['x-user-id'] as string;
-
-        if (!userId) {
-            return res.status(401).json({ error: 'Not authenticated' });
-        }
+        const userId = req.user!.id;
 
         const result = await db.query(
             `SELECT id, email, phone, status, kyc_level, created_at, last_login_at
@@ -70,13 +66,9 @@ router.get('/profile', async (req: Request, res: Response) => {
  * POST /api/auth/change-password
  * Change password for authenticated user
  */
-router.post('/change-password', async (req: Request, res: Response) => {
+router.post('/change-password', authenticate, async (req: Request, res: Response) => {
     try {
-        const userId = req.headers['x-user-id'] as string;
-
-        if (!userId) {
-            return res.status(401).json({ error: 'Not authenticated' });
-        }
+        const userId = req.user!.id;
 
         const validation = changePasswordSchema.safeParse(req.body);
         if (!validation.success) {
@@ -220,13 +212,9 @@ router.post('/reset-password', async (req: Request, res: Response) => {
  * POST /api/auth/resend-verification
  * Resend email verification
  */
-router.post('/resend-verification', async (req: Request, res: Response) => {
+router.post('/resend-verification', authenticate, async (req: Request, res: Response) => {
     try {
-        const userId = req.headers['x-user-id'] as string;
-
-        if (!userId) {
-            return res.status(401).json({ error: 'Not authenticated' });
-        }
+        const userId = req.user!.id;
 
         // Check user status
         const userResult = await db.query(
@@ -271,14 +259,10 @@ router.post('/resend-verification', async (req: Request, res: Response) => {
  * GET /api/auth/sessions
  * Get all active sessions for current user
  */
-router.get('/sessions', async (req: Request, res: Response) => {
+router.get('/sessions', authenticate, async (req: Request, res: Response) => {
     try {
-        const userId = req.headers['x-user-id'] as string;
+        const userId = req.user!.id;
         const currentSessionId = req.headers['x-session-id'] as string;
-
-        if (!userId) {
-            return res.status(401).json({ error: 'Not authenticated' });
-        }
 
         const result = await db.query(
             `SELECT id, user_agent, ip_address, created_at, expires_at
@@ -308,14 +292,10 @@ router.get('/sessions', async (req: Request, res: Response) => {
  * DELETE /api/auth/sessions/:id
  * Revoke a specific session
  */
-router.delete('/sessions/:id', async (req: Request, res: Response) => {
+router.delete('/sessions/:id', authenticate, async (req: Request, res: Response) => {
     try {
-        const userId = req.headers['x-user-id'] as string;
+        const userId = req.user!.id;
         const sessionId = req.params.id;
-
-        if (!userId) {
-            return res.status(401).json({ error: 'Not authenticated' });
-        }
 
         // Ensure session belongs to user
         const result = await db.query(
@@ -339,14 +319,10 @@ router.delete('/sessions/:id', async (req: Request, res: Response) => {
  * POST /api/auth/sessions/revoke-all
  * Revoke all sessions except current
  */
-router.post('/sessions/revoke-all', async (req: Request, res: Response) => {
+router.post('/sessions/revoke-all', authenticate, async (req: Request, res: Response) => {
     try {
-        const userId = req.headers['x-user-id'] as string;
+        const userId = req.user!.id;
         const currentSessionId = req.headers['x-session-id'] as string;
-
-        if (!userId) {
-            return res.status(401).json({ error: 'Not authenticated' });
-        }
 
         const result = await db.query(
             'DELETE FROM sessions WHERE user_id = $1 AND id != $2',

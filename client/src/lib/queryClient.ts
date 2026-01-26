@@ -1,6 +1,17 @@
 import { QueryClient, QueryFunction } from "@tanstack/react-query";
 
 /**
+ * Get authorization headers from stored access token
+ */
+function getAuthHeaders(): Record<string, string> {
+  const accessToken = localStorage.getItem('accessToken');
+  if (accessToken) {
+    return { 'Authorization': `Bearer ${accessToken}` };
+  }
+  return {};
+}
+
+/**
  * Handle 401 Unauthorized responses by clearing auth state and redirecting to landing page
  */
 function handleUnauthorized(): void {
@@ -35,6 +46,7 @@ export async function apiRequest(
 ): Promise<Response> {
   const headers = {
     ...(data ? { "Content-Type": "application/json" } : {}),
+    ...getAuthHeaders(),
     ...(customHeaders || {}),
   };
 
@@ -75,6 +87,7 @@ export const getQueryFn: <T>(options: {
       const res = await fetch(targetUrl, {
         credentials: "same-origin",
         cache: "no-cache",
+        headers: getAuthHeaders(),
       });
 
       // Handle 401 based on specified behavior
