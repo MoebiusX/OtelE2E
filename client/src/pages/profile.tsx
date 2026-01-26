@@ -22,7 +22,9 @@ import {
     LogOut,
     Eye,
     EyeOff,
-    Trash2
+    Trash2,
+    Smartphone,
+    Copy
 } from "lucide-react";
 import { apiRequest } from "@/lib/queryClient";
 
@@ -82,10 +84,7 @@ export default function Profile() {
     // Change password mutation
     const changePasswordMutation = useMutation({
         mutationFn: async (data: { currentPassword: string; newPassword: string }) => {
-            return apiRequest("/api/auth/change-password", {
-                method: "POST",
-                body: JSON.stringify(data),
-            });
+            return apiRequest("POST", "/api/auth/change-password", data);
         },
         onSuccess: () => {
             setPasswordSuccess("Password changed successfully!");
@@ -104,7 +103,7 @@ export default function Profile() {
     // Resend verification mutation
     const resendVerificationMutation = useMutation({
         mutationFn: async () => {
-            return apiRequest("/api/auth/resend-verification", { method: "POST" });
+            return apiRequest("POST", "/api/auth/resend-verification");
         },
         onSuccess: () => {
             alert("Verification email sent! Check your inbox.");
@@ -117,7 +116,7 @@ export default function Profile() {
     // Revoke session mutation
     const revokeSessionMutation = useMutation({
         mutationFn: async (sessionId: string) => {
-            return apiRequest(`/api/auth/sessions/${sessionId}`, { method: "DELETE" });
+            return apiRequest("DELETE", `/api/auth/sessions/${sessionId}`);
         },
         onSuccess: () => {
             refetchSessions();
@@ -127,12 +126,83 @@ export default function Profile() {
     // Revoke all other sessions
     const revokeAllSessionsMutation = useMutation({
         mutationFn: async () => {
-            return apiRequest("/api/auth/sessions/revoke-all", { method: "POST" });
+            return apiRequest("POST", "/api/auth/sessions/revoke-all");
         },
         onSuccess: () => {
             refetchSessions();
         },
     });
+
+    // 2FA State
+    const [show2FASetup, setShow2FASetup] = useState(false);
+    const [totpCode, setTotpCode] = useState("");
+    const [backupCodes, setBackupCodes] = useState<string[]>([]);
+    const [twoFactorError, setTwoFactorError] = useState("");
+
+    // 2FA Status Query
+    const { data: twoFactorStatus, refetch: refetch2FAStatus } = useQuery<{ enabled: boolean }>({
+        queryKey: ["/api/auth/2fa/status"],
+        enabled: !!user,
+    });
+
+    // 2FA Setup Mutation
+    const setup2FAMutation = useMutation({
+        mutationFn: async () => {
+            return apiRequest("POST", "/api/auth/2fa/setup");
+        },
+        onSuccess: () => {
+            setShow2FASetup(true);
+            setTwoFactorError("");
+        },
+        onError: (error: Error) => {
+            setTwoFactorError(error.message || "Failed to setup 2FA");
+        },
+    });
+
+    // 2FA Verify Mutation  
+    const verify2FAMutation = useMutation({
+        mutationFn: async (code: string) => {
+            return apiRequest("POST", "/api/auth/2fa/verify", { code });
+        },
+        onSuccess: (data: any) => {
+            if (data.backupCodes) {
+                setBackupCodes(data.backupCodes);
+            }
+            refetch2FAStatus();
+            setShow2FASetup(false);
+            setTotpCode("");
+            setTwoFactorError("");
+        },
+        onError: (error: Error) => {
+            setTwoFactorError(error.message || "Invalid verification code");
+        },
+    });
+
+    // 2FA Disable Mutation
+    const disable2FAMutation = useMutation({
+        mutationFn: async (password: string) => {
+            return apiRequest("POST", "/api/auth/2fa/disable", { password });
+        },
+        onSuccess: () => {
+            refetch2FAStatus();
+            setBackupCodes([]);
+            setTwoFactorError("");
+        },
+        onError: (error: Error) => {
+            setTwoFactorError(error.message || "Failed to disable 2FA");
+        },
+    });
+
+    const handleDisable2FA = () => {
+        const password = prompt("Enter your password to disable 2FA:");
+        if (password) {
+            disable2FAMutation.mutate(password);
+        }
+    };
+
+    const copyToClipboard = (text: string) => {
+        navigator.clipboard.writeText(text);
+    };
 
     const handleChangePassword = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -380,6 +450,156 @@ export default function Profile() {
                         </CardContent>
                     </Card>
 
+                    {/* Two-Factor Authentication */}
+                    <Card className="bg-gradient-to-br from-slate-800/50 to-slate-900/50 border-cyan-500/20">
+                        <CardHeader>
+                            <CardTitle className="text-cyan-100 flex items-center gap-2">
+                                <Smartphone className="w-5 h-5 text-cyan-400" />
+                                Two-Factor Authentication
+                            </CardTitle>
+                            <CardDescription className="text-cyan-100/50">
+                                Add an extra layer of security to your account
+                            </CardDescription>
+                        </CardHeader>
+                        <CardContent className="space-y-4">
+                            {twoFactorError && (
+                                <div className="bg-red-500/10 border border-red-500/30 text-red-400 px-4 py-2 rounded-lg text-sm">
+                                    {twoFactorError}
+                                </div>
+                            )}
+
+                            {twoFactorStatus?.enabled ? (
+                                <div className="space-y-4">
+                                    <div className="flex items-center gap-3">
+                                        <div className="p-2 bg-emerald-500/20 rounded-lg">
+                                            <CheckCircle2 className="w-5 h-5 text-emerald-400" />
+                                        </div>
+                                        <div>
+                                            <p className="text-cyan-100 font-medium">2FA is enabled</p>
+                                            <p className="text-cyan-100/50 text-sm">Your account is protected with TOTP authentication</p>
+                                        </div>
+                                    </div>
+                                    <Button
+                                        variant="outline"
+                                        onClick={handleDisable2FA}
+                                        disabled={disable2FAMutation.isPending}
+                                        className="border-red-500/30 text-red-400 hover:bg-red-500/10"
+                                    >
+                                        {disable2FAMutation.isPending ? 'Disabling...' : 'Disable 2FA'}
+                                    </Button>
+                                </div>
+                            ) : show2FASetup && setup2FAMutation.data ? (
+                                <div className="space-y-4">
+                                    <div className="flex flex-col md:flex-row gap-6">
+                                        <div className="flex-shrink-0">
+                                            <img
+                                                src={(setup2FAMutation.data as any).qrCode}
+                                                alt="QR Code"
+                                                className="w-48 h-48 rounded-lg border border-cyan-500/20"
+                                            />
+                                        </div>
+                                        <div className="space-y-4">
+                                            <div>
+                                                <p className="text-cyan-100 font-medium">Scan QR Code</p>
+                                                <p className="text-cyan-100/50 text-sm">
+                                                    Scan this QR code with your authenticator app (Google Authenticator, Authy, etc.)
+                                                </p>
+                                            </div>
+                                            <div>
+                                                <p className="text-cyan-100/50 text-sm mb-1">Or enter manually:</p>
+                                                <div className="flex items-center gap-2">
+                                                    <code className="bg-slate-800 px-3 py-1. rounded text-cyan-400 text-sm font-mono">
+                                                        {(setup2FAMutation.data as any).secret}
+                                                    </code>
+                                                    <Button
+                                                        variant="ghost"
+                                                        size="sm"
+                                                        onClick={() => copyToClipboard((setup2FAMutation.data as any).secret)}
+                                                        className="text-cyan-400 hover:bg-cyan-500/10"
+                                                    >
+                                                        <Copy className="w-4 h-4" />
+                                                    </Button>
+                                                </div>
+                                            </div>
+                                            <div className="space-y-2">
+                                                <Label className="text-cyan-100/70">Enter verification code</Label>
+                                                <div className="flex gap-2">
+                                                    <Input
+                                                        type="text"
+                                                        placeholder="000000"
+                                                        value={totpCode}
+                                                        onChange={(e) => setTotpCode(e.target.value.replace(/\D/g, '').slice(0, 6))}
+                                                        className="bg-slate-900/50 border-cyan-500/20 text-cyan-100 w-32 text-center font-mono tracking-widest"
+                                                        maxLength={6}
+                                                    />
+                                                    <Button
+                                                        onClick={() => verify2FAMutation.mutate(totpCode)}
+                                                        disabled={totpCode.length !== 6 || verify2FAMutation.isPending}
+                                                        className="bg-cyan-600 hover:bg-cyan-700"
+                                                    >
+                                                        {verify2FAMutation.isPending ? 'Verifying...' : 'Enable 2FA'}
+                                                    </Button>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <Button
+                                        variant="ghost"
+                                        onClick={() => setShow2FASetup(false)}
+                                        className="text-cyan-100/50 hover:text-cyan-100"
+                                    >
+                                        Cancel
+                                    </Button>
+                                </div>
+                            ) : (
+                                <div className="space-y-4">
+                                    <p className="text-cyan-100/70 text-sm">
+                                        Protect your account with time-based one-time passwords (TOTP).
+                                        You'll need an authenticator app like Google Authenticator or Authy.
+                                    </p>
+                                    <Button
+                                        onClick={() => setup2FAMutation.mutate()}
+                                        disabled={setup2FAMutation.isPending}
+                                        className="bg-cyan-600 hover:bg-cyan-700"
+                                    >
+                                        <Shield className="w-4 h-4 mr-2" />
+                                        {setup2FAMutation.isPending ? 'Setting up...' : 'Set Up 2FA'}
+                                    </Button>
+                                </div>
+                            )}
+
+                            {/* Backup Codes Display */}
+                            {backupCodes.length > 0 && (
+                                <div className="mt-6 p-4 bg-yellow-500/10 border border-yellow-500/30 rounded-lg">
+                                    <h4 className="text-yellow-400 font-medium mb-2 flex items-center gap-2">
+                                        <AlertCircle className="w-4 h-4" />
+                                        Save Your Backup Codes
+                                    </h4>
+                                    <p className="text-yellow-400/70 text-sm mb-3">
+                                        These codes can be used to access your account if you lose your authenticator.
+                                        Each code can only be used once.
+                                    </p>
+                                    <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
+                                        {backupCodes.map((code, index) => (
+                                            <code key={index} className="bg-slate-800 px-2 py-1 rounded text-cyan-400 text-sm font-mono text-center">
+                                                {code}
+                                            </code>
+                                        ))}
+                                    </div>
+                                    <Button
+                                        variant="outline"
+                                        size="sm"
+                                        onClick={() => copyToClipboard(backupCodes.join('\n'))}
+                                        className="mt-3 border-yellow-500/30 text-yellow-400 hover:bg-yellow-500/10"
+                                    >
+                                        <Copy className="w-4 h-4 mr-2" />
+                                        Copy All Codes
+                                    </Button>
+                                </div>
+                            )}
+                        </CardContent>
+                    </Card>
+
                     {/* Active Sessions */}
                     <Card className="bg-gradient-to-br from-slate-800/50 to-slate-900/50 border-cyan-500/20">
                         <CardHeader className="flex flex-row items-center justify-between">
@@ -418,8 +638,8 @@ export default function Profile() {
                                             <div
                                                 key={session.id}
                                                 className={`flex items-center justify-between p-4 rounded-lg border ${session.isCurrent
-                                                        ? 'bg-cyan-500/10 border-cyan-500/30'
-                                                        : 'bg-slate-900/50 border-cyan-500/10'
+                                                    ? 'bg-cyan-500/10 border-cyan-500/30'
+                                                    : 'bg-slate-900/50 border-cyan-500/10'
                                                     }`}
                                             >
                                                 <div className="flex items-center gap-4">

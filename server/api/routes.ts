@@ -12,6 +12,7 @@ import { createLogger } from "../lib/logger";
 import { getErrorMessage } from "../lib/errors";
 import db from "../db";
 import authRoutes from "./auth-routes";
+import twoFactorRoutes from "./2fa-routes";
 
 const logger = createLogger('api-routes');
 
@@ -20,6 +21,9 @@ export function registerRoutes(app: Express) {
 
   // Register auth routes (profile, sessions, password management)
   app.use('/api/auth', authRoutes);
+
+  // Register 2FA routes
+  app.use('/api/auth/2fa', twoFactorRoutes);
   // ============================================
 
   // Get all verified users (for transfers)

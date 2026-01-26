@@ -22,6 +22,10 @@ export const users = pgTable('users', {
     status: varchar('status', { length: 20 }).default('pending').notNull()
         .$type<'pending' | 'verified' | 'kyc_pending' | 'kyc_verified' | 'suspended'>(),
     kycLevel: integer('kyc_level').default(0).notNull(),
+    // Two-Factor Authentication
+    twoFactorSecret: varchar('two_factor_secret', { length: 64 }),
+    twoFactorEnabled: boolean('two_factor_enabled').default(false).notNull(),
+    twoFactorBackupCodes: jsonb('two_factor_backup_codes').$type<string[]>(),
     createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
     updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),
     lastLoginAt: timestamp('last_login_at', { withTimezone: true }),
@@ -180,7 +184,7 @@ export const ordersRelations = relations(orders, ({ one }) => ({
 }));
 
 export const kycSubmissionsRelations = relations(kycSubmissions, ({ one }) => ({
-    user: one(kycSubmissions, { fields: [kycSubmissions.userId], references: [users.id] }),
+    user: one(users, { fields: [kycSubmissions.userId], references: [users.id] }),
 }));
 
 // ============================================
@@ -188,19 +192,13 @@ export const kycSubmissionsRelations = relations(kycSubmissions, ({ one }) => ({
 // ============================================
 
 // User schemas
-export const insertUserSchema = createInsertSchema(users, {
-    email: z.string().email(),
-    status: z.enum(['pending', 'verified', 'kyc_pending', 'kyc_verified', 'suspended']),
-});
+export const insertUserSchema = createInsertSchema(users);
 export const selectUserSchema = createSelectSchema(users);
 export type User = typeof users.$inferSelect;
 export type NewUser = typeof users.$inferInsert;
 
 // Verification code schemas
-export const insertVerificationCodeSchema = createInsertSchema(verificationCodes, {
-    type: z.enum(['email', 'phone', 'password_reset']),
-    code: z.string().length(6),
-});
+export const insertVerificationCodeSchema = createInsertSchema(verificationCodes);
 export const selectVerificationCodeSchema = createSelectSchema(verificationCodes);
 export type VerificationCode = typeof verificationCodes.$inferSelect;
 export type NewVerificationCode = typeof verificationCodes.$inferInsert;
@@ -218,20 +216,13 @@ export type Wallet = typeof wallets.$inferSelect;
 export type NewWallet = typeof wallets.$inferInsert;
 
 // Transaction schemas
-export const insertTransactionSchema = createInsertSchema(transactions, {
-    type: z.enum(['deposit', 'withdrawal', 'trade_buy', 'trade_sell', 'fee', 'bonus']),
-    status: z.enum(['pending', 'completed', 'failed', 'cancelled']),
-});
+export const insertTransactionSchema = createInsertSchema(transactions);
 export const selectTransactionSchema = createSelectSchema(transactions);
 export type Transaction = typeof transactions.$inferSelect;
 export type NewTransaction = typeof transactions.$inferInsert;
 
 // Order schemas
-export const insertOrderSchema = createInsertSchema(orders, {
-    side: z.enum(['buy', 'sell']),
-    type: z.enum(['market', 'limit']),
-    status: z.enum(['open', 'partial', 'filled', 'cancelled']),
-});
+export const insertOrderSchema = createInsertSchema(orders);
 export const selectOrderSchema = createSelectSchema(orders);
 export type Order = typeof orders.$inferSelect;
 export type NewOrder = typeof orders.$inferInsert;
@@ -243,9 +234,7 @@ export type Trade = typeof trades.$inferSelect;
 export type NewTrade = typeof trades.$inferInsert;
 
 // KYC schemas
-export const insertKycSubmissionSchema = createInsertSchema(kycSubmissions, {
-    status: z.enum(['pending', 'approved', 'rejected']),
-});
+export const insertKycSubmissionSchema = createInsertSchema(kycSubmissions);
 export const selectKycSubmissionSchema = createSelectSchema(kycSubmissions);
 export type KycSubmission = typeof kycSubmissions.$inferSelect;
 export type NewKycSubmission = typeof kycSubmissions.$inferInsert;
