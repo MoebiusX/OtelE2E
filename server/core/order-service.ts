@@ -2,11 +2,13 @@
 // Handles trade orders and BTC transfers between users
 
 import { storage } from '../storage';
+import db from '../db';
 import { rabbitMQClient } from '../services/rabbitmq-client';
 import { walletService } from '../wallet/wallet-service';
 import { trace, context, SpanStatusCode } from '@opentelemetry/api';
 import { createLogger } from '../lib/logger';
 import { OrderError, ValidationError, InsufficientFundsError, getErrorMessage } from '../lib/errors';
+import type { Order } from '@shared/schema';
 
 const logger = createLogger('order');
 
@@ -138,7 +140,7 @@ export class OrderService {
         }
 
         // Store order
-        const order = await storage.createOrder({
+        const order = await this.createOrderRecord({
             orderId,
             pair: request.pair,
             side: request.side,
@@ -205,7 +207,7 @@ export class OrderService {
                             quantity: request.quantity
                         }, 'Wallet update failed - marking order as rejected');
 
-                        await storage.updateOrder(orderId, {
+                        await this.updateOrderRecord(orderId, {
                             status: 'REJECTED',
                             fillPrice: executionResponse.fillPrice,
                             totalValue: executionResponse.totalValue
@@ -225,7 +227,7 @@ export class OrderService {
                     }
                 }
 
-                await storage.updateOrder(orderId, {
+                await this.updateOrderRecord(orderId, {
                     status: executionResponse.status as "PENDING" | "FILLED" | "REJECTED",
                     fillPrice: executionResponse.fillPrice,
                     totalValue: executionResponse.totalValue
@@ -391,8 +393,28 @@ export class OrderService {
         }, 'Wallet updated after trade');
     }
 
-    async getOrders(limit: number = 10) {
-        return storage.getOrders(limit);
+    async getOrders(limit: number = 10): Promise<Order[]> {
+        const { rows } = await db.query(
+            `SELECT id, order_id, pair, side, type, quantity, filled, status, price, trace_id, created_at
+             FROM orders
+             ORDER BY created_at DESC
+             LIMIT $1`,
+            [limit]
+        );
+
+        return rows.map(row => ({
+            orderId: row.order_id || row.id,
+            pair: 'BTC/USD' as const,
+            side: row.side.toUpperCase() as 'BUY' | 'SELL',
+            quantity: parseFloat(row.quantity),
+            orderType: 'MARKET' as const,
+            status: this.mapOrderStatus(row.status),
+            fillPrice: row.price ? parseFloat(row.price) : undefined,
+            totalValue: row.price && row.filled ? parseFloat(row.price) * parseFloat(row.filled) : undefined,
+            traceId: row.trace_id || '',
+            spanId: '',
+            createdAt: row.created_at,
+        }));
     }
 
     async getTransfers(limit: number = 10) {
@@ -401,6 +423,122 @@ export class OrderService {
 
     async clearAllData() {
         return storage.clearAllData();
+    }
+
+    // ============================================
+    // PRIVATE ORDER DB METHODS
+    // ============================================
+
+    private mapOrderStatus(status: string): 'PENDING' | 'FILLED' | 'REJECTED' {
+        switch (status.toLowerCase()) {
+            case 'filled': return 'FILLED';
+            case 'cancelled':
+            case 'rejected': return 'REJECTED';
+            default: return 'PENDING';
+        }
+    }
+
+    private async createOrderRecord(orderData: {
+        orderId: string;
+        pair: string;
+        side: string;
+        quantity: number;
+        orderType: string;
+        traceId: string;
+        spanId: string;
+        userId?: string;
+    }): Promise<Order> {
+        // Resolve user ID if provided
+        let dbUserId: string | null = null;
+        if (orderData.userId) {
+            const { rows } = await db.query(
+                `SELECT id FROM users WHERE email = $1 OR id::text = $1`,
+                [orderData.userId]
+            );
+            if (rows.length > 0) {
+                dbUserId = rows[0].id;
+            }
+        }
+
+        const { rows } = await db.query(
+            `INSERT INTO orders (order_id, user_id, pair, side, type, quantity, status, trace_id)
+             VALUES ($1, $2, $3, $4, $5, $6, 'open', $7)
+             RETURNING id, order_id, pair, side, type, quantity, status, trace_id, created_at`,
+            [
+                orderData.orderId,
+                dbUserId || '00000000-0000-0000-0000-000000000000',
+                orderData.pair || 'BTC/USD',
+                orderData.side.toLowerCase(),
+                orderData.orderType.toLowerCase(),
+                orderData.quantity,
+                orderData.traceId,
+            ]
+        );
+
+        const row = rows[0];
+        return {
+            orderId: orderData.orderId,
+            pair: 'BTC/USD' as const,
+            side: row.side.toUpperCase() as 'BUY' | 'SELL',
+            quantity: parseFloat(row.quantity),
+            orderType: 'MARKET' as const,
+            status: 'PENDING',
+            traceId: orderData.traceId,
+            spanId: orderData.spanId,
+            createdAt: row.created_at,
+        };
+    }
+
+    private async updateOrderRecord(orderId: string, updates: {
+        status?: 'PENDING' | 'FILLED' | 'REJECTED';
+        fillPrice?: number;
+        totalValue?: number;
+    }): Promise<Order | undefined> {
+        const setClauses: string[] = ['updated_at = NOW()'];
+        const values: unknown[] = [];
+        let paramIndex = 1;
+
+        if (updates.status) {
+            const pgStatus = updates.status === 'FILLED' ? 'filled' :
+                updates.status === 'REJECTED' ? 'cancelled' : 'open';
+            setClauses.push(`status = $${paramIndex++}`);
+            values.push(pgStatus);
+
+            if (updates.status === 'FILLED') {
+                setClauses.push(`filled = quantity`);
+            }
+        }
+
+        if (updates.fillPrice) {
+            setClauses.push(`price = $${paramIndex++}`);
+            values.push(updates.fillPrice);
+        }
+
+        values.push(orderId);
+
+        const { rows } = await db.query(
+            `UPDATE orders SET ${setClauses.join(', ')}
+             WHERE order_id = $${paramIndex}
+             RETURNING id, order_id, pair, side, type, quantity, filled, status, price, created_at`,
+            values
+        );
+
+        if (rows.length === 0) return undefined;
+
+        const row = rows[0];
+        return {
+            orderId: row.order_id,
+            pair: 'BTC/USD' as const,
+            side: row.side.toUpperCase() as 'BUY' | 'SELL',
+            quantity: parseFloat(row.quantity),
+            orderType: 'MARKET' as const,
+            status: this.mapOrderStatus(row.status),
+            fillPrice: row.price ? parseFloat(row.price) : undefined,
+            totalValue: row.price && row.filled ? parseFloat(row.price) * parseFloat(row.filled) : undefined,
+            traceId: '',
+            spanId: '',
+            createdAt: row.created_at,
+        };
     }
 
     private generateCorrelationId(): string {
