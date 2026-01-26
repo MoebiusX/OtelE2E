@@ -192,7 +192,37 @@ export class OrderService {
                 }, 'Order execution response received');
 
                 if (executionResponse.status === 'FILLED') {
-                    await this.updateUserWallet(userId, request.side, request.quantity, executionResponse.fillPrice);
+                    try {
+                        await this.updateUserWallet(userId, request.side, request.quantity, executionResponse.fillPrice);
+                    } catch (walletError: unknown) {
+                        // Wallet update failed (e.g., balance constraint violation)
+                        // Mark order as rejected to prevent stuck pending orders
+                        logger.error({
+                            err: walletError,
+                            orderId,
+                            userId,
+                            side: request.side,
+                            quantity: request.quantity
+                        }, 'Wallet update failed - marking order as rejected');
+
+                        await storage.updateOrder(orderId, {
+                            status: 'REJECTED',
+                            fillPrice: executionResponse.fillPrice,
+                            totalValue: executionResponse.totalValue
+                        });
+
+                        return {
+                            orderId, traceId, spanId,
+                            order,
+                            execution: {
+                                status: 'REJECTED',
+                                fillPrice: executionResponse.fillPrice,
+                                totalValue: executionResponse.totalValue,
+                                processedAt: executionResponse.processedAt,
+                                processorId: 'settlement-failed'
+                            }
+                        };
+                    }
                 }
 
                 await storage.updateOrder(orderId, {

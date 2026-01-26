@@ -29,9 +29,13 @@ export function registerRoutes(app: Express) {
   // Get all verified users (for transfers)
   app.get("/api/users", async (req: Request, res: Response) => {
     try {
-      // Get real users from database (only verified ones)
+      // Get real users from database with their wallet addresses
       const result = await db.query(
-        `SELECT id, email, status FROM users WHERE status = 'verified' ORDER BY created_at DESC LIMIT 50`
+        `SELECT u.id, u.email, u.status, w.address as wallet_address
+         FROM users u
+         LEFT JOIN wallets w ON u.id = w.user_id AND w.asset = 'BTC'
+         WHERE u.status = 'verified'
+         ORDER BY u.created_at DESC LIMIT 50`
       );
 
       // Map to expected format for transfer form
@@ -39,7 +43,8 @@ export function registerRoutes(app: Express) {
         id: user.id,
         name: user.email.split('@')[0], // Use username part of email
         email: user.email,
-        avatar: '👤'
+        avatar: '👤',
+        walletAddress: user.wallet_address
       }));
 
       res.json(users);
