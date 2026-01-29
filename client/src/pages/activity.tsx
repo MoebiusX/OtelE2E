@@ -43,19 +43,19 @@ export default function Activity() {
     }, [navigate]);
 
     const { data: orders, isLoading: ordersLoading, refetch: refetchOrders } = useQuery<Order[]>({
-        queryKey: ["/api/orders"],
+        queryKey: ["/api/v1/orders"],
         refetchInterval: 5000,
         enabled: !!user,
     });
 
     const { data: transfers, isLoading: transfersLoading, refetch: refetchTransfers } = useQuery<Transfer[]>({
-        queryKey: ["/api/transfers"],
+        queryKey: ["/api/v1/transfers"],
         refetchInterval: 5000,
         enabled: !!user,
     });
 
     const { data: priceData } = useQuery<{ BTC: number; ETH: number }>({
-        queryKey: ["/api/price"],
+        queryKey: ["/api/v1/price"],
         refetchInterval: 3000,
     });
 
@@ -222,10 +222,10 @@ export default function Activity() {
                                             {/* Icon & Type */}
                                             <div className="flex items-center gap-4 flex-1">
                                                 <div className={`p-3 rounded-xl ${isOrder
-                                                        ? order?.side === 'BUY'
-                                                            ? 'bg-emerald-500/20'
-                                                            : 'bg-red-500/20'
-                                                        : 'bg-purple-500/20'
+                                                    ? order?.side === 'BUY'
+                                                        ? 'bg-emerald-500/20'
+                                                        : 'bg-red-500/20'
+                                                    : 'bg-purple-500/20'
                                                     }`}>
                                                     {isOrder ? (
                                                         order?.side === 'BUY'
@@ -239,10 +239,10 @@ export default function Activity() {
                                                 <div className="flex-1">
                                                     <div className="flex items-center gap-2 flex-wrap">
                                                         <span className={`font-semibold ${isOrder
-                                                                ? order?.side === 'BUY'
-                                                                    ? 'text-emerald-400'
-                                                                    : 'text-red-400'
-                                                                : 'text-purple-400'
+                                                            ? order?.side === 'BUY'
+                                                                ? 'text-emerald-400'
+                                                                : 'text-red-400'
+                                                            : 'text-purple-400'
                                                             }`}>
                                                             {isOrder
                                                                 ? `${order?.side} ${order?.pair}`

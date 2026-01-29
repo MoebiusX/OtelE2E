@@ -9,7 +9,8 @@ import type {
     TimeBaseline,
     AdaptiveThresholds,
     JaegerTrace,
-    JaegerSpan
+    JaegerSpan,
+    SpanBaseline
 } from './types';
 import { historyStore } from './history-store';
 import { config } from '../config';
@@ -306,8 +307,47 @@ export class BaselineCalculator {
             this.timeBaselines = newBaselines;
             this.lastCalculation = new Date();
 
-            // Persist to history store
-            historyStore.setTimeBaselines(Array.from(newBaselines.values()));
+            // Persist time baselines to history store
+            await historyStore.setTimeBaselines(Array.from(newBaselines.values()));
+
+            // Also aggregate and save span baselines (for the /baselines endpoint)
+            const spanBaselineMap = new Map<string, { durations: number[] }>();
+            for (const span of allSpans) {
+                const spanKey = `${span.service}:${span.operation}`;
+                if (!spanBaselineMap.has(spanKey)) {
+                    spanBaselineMap.set(spanKey, { durations: [] });
+                }
+                spanBaselineMap.get(spanKey)!.durations.push(span.durationMs);
+            }
+
+            const spanBaselines: SpanBaseline[] = [];
+            for (const [spanKey, data] of Array.from(spanBaselineMap.entries())) {
+                const [service, operation] = spanKey.split(':');
+                const durations = data.durations.sort((a, b) => a - b);
+                const n = durations.length;
+                const mean = durations.reduce((a, b) => a + b, 0) / n;
+                const variance = durations.reduce((sum, d) => sum + Math.pow(d - mean, 2), 0) / n;
+                const stdDev = Math.sqrt(variance);
+
+                spanBaselines.push({
+                    spanKey,
+                    service,
+                    operation,
+                    mean: Math.round(mean * 100) / 100,
+                    stdDev: Math.round(stdDev * 100) / 100,
+                    variance: Math.round(variance * 100) / 100,
+                    p50: durations[Math.floor(n * 0.5)] || 0,
+                    p95: durations[Math.floor(n * 0.95)] || 0,
+                    p99: durations[Math.floor(n * 0.99)] || 0,
+                    min: durations[0] || 0,
+                    max: durations[n - 1] || 0,
+                    sampleCount: n,
+                    lastUpdated: new Date()
+                });
+            }
+
+            await historyStore.updateBaselines(spanBaselines);
+            logger.info({ spanBaselinesCount: spanBaselines.length }, 'Saved aggregated span baselines');
 
             const duration = Date.now() - startTime;
             logger.info({ baselinesCount: newBaselines.size, durationMs: duration }, 'Calculated time-aware baselines');
@@ -405,8 +445,8 @@ export class BaselineCalculator {
     /**
      * Load baselines from storage
      */
-    loadFromStorage(): void {
-        const baselines = historyStore.getTimeBaselines();
+    async loadFromStorage(): Promise<void> {
+        const baselines = await historyStore.getTimeBaselines();
         if (baselines && baselines.length > 0) {
             this.timeBaselines.clear();
             for (const b of baselines) {

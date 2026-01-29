@@ -15,17 +15,17 @@ vi.mock('../../server/db', () => ({
   },
 }));
 
+// TODO: Tech Debt - Tests still mock storage methods but actual code uses walletService/db.query
+// These storage mocks should be removed and tests refactored to mock walletService instead
 vi.mock('../../server/storage', () => ({
   storage: {
     getWallet: vi.fn(),
     getUsers: vi.fn(),
-    getOrders: vi.fn(),
     getTransfers: vi.fn(),
-    createOrder: vi.fn(),
-    updateOrder: vi.fn(),
-    updateWallet: vi.fn(),
     createTransfer: vi.fn(),
     updateTransfer: vi.fn(),
+    updateWallet: vi.fn(),
+    createOrder: vi.fn(),
   },
 }));
 
@@ -40,13 +40,27 @@ vi.mock('../../server/wallet/wallet-service', () => ({
   walletService: {
     getWallet: vi.fn().mockResolvedValue({
       id: 'test-wallet-id',
-      user_id: 'alice',
-      asset: 'USD',
-      balance: '500000',
-      available: '500000',
+      user_id: 'seed.user.primary@krystaline.io',
+      asset: 'BTC',
+      balance: '5.0',
+      available: '5.0',
       locked: '0',
     }),
     getWallets: vi.fn().mockResolvedValue([]),
+    getWalletSummary: vi.fn().mockResolvedValue({
+      userId: 'seed.user.primary@krystaline.io',
+      btc: 5.0,
+      usd: 100000,
+      lastUpdated: new Date(),
+    }),
+    transfer: vi.fn().mockResolvedValue({
+      success: true,
+      transferId: 'TXF-test-123',
+      fromBalance: '4.5',
+      toBalance: '0.5',
+    }),
+    getKXAddress: vi.fn().mockResolvedValue('kx1test123'),
+    resolveAddress: vi.fn().mockResolvedValue('kx1test123'),
   },
 }));
 
@@ -94,6 +108,8 @@ vi.mock('@opentelemetry/api', () => ({
 
 import { registerRoutes } from '../../server/api/routes';
 import { storage } from '../../server/storage';
+import db from '../../server/db';
+import { walletService } from '../../server/wallet/wallet-service';
 
 function createApp() {
   const app = express();
@@ -109,24 +125,20 @@ describe('Transfer API Integration', () => {
     app = createApp();
     vi.clearAllMocks();
 
-    // Default mocks for transfer operations
-    vi.mocked(storage.getWallet).mockResolvedValue({
+    // Default mocks for transfer operations - use walletService (the actual code path)
+    vi.mocked(walletService.getWalletSummary).mockResolvedValue({
+      userId: 'seed.user.primary@krystaline.io',
       btc: 5.0,
       usd: 100000,
       lastUpdated: new Date(),
     });
 
-    vi.mocked(storage.createTransfer).mockResolvedValue({
-      id: 'TXF-test-123',
-      fromUserId: 'alice',
-      toUserId: 'bob',
-      amount: 0.5,
-      status: 'PENDING',
-      createdAt: new Date(),
-    } as any);
-
-    vi.mocked(storage.updateTransfer).mockResolvedValue(undefined);
-    vi.mocked(storage.updateWallet).mockResolvedValue(undefined);
+    vi.mocked(walletService.transfer).mockResolvedValue({
+      success: true,
+      transferId: 'TXF-test-123',
+      fromBalance: '4.5',
+      toBalance: '0.5',
+    });
   });
 
   afterEach(() => {
@@ -139,12 +151,12 @@ describe('Transfer API Integration', () => {
         fromAddress: 'kx1qxy2kgdygjrsqtzq2n0yrf2490',
         toAddress: 'kx1abc2defghijklmnopqrs1234',
         amount: 0.5,
-        fromUserId: 'alice',
-        toUserId: 'bob',
+        fromUserId: 'seed.user.primary@krystaline.io',
+        toUserId: 'seed.user.secondary@krystaline.io',
       };
 
       const response = await request(app)
-        .post('/api/transfer')
+        .post('/api/v1/transfer')
         .send(transferRequest)
         .set('Content-Type', 'application/json');
 
@@ -158,35 +170,29 @@ describe('Transfer API Integration', () => {
       // Reset and set up proper mock sequence for this specific test
       vi.clearAllMocks();
 
-      // First call: sender wallet (for validation)
-      // Second call: sender wallet after transfer 
-      // Third call: recipient wallet after transfer
-      vi.mocked(storage.getWallet)
-        .mockResolvedValueOnce({ btc: 5.0, usd: 100000, lastUpdated: new Date() })  // initial check
-        .mockResolvedValueOnce({ btc: 4.5, usd: 100000, lastUpdated: new Date() })  // alice after
-        .mockResolvedValueOnce({ btc: 0.5, usd: 0, lastUpdated: new Date() });      // bob after
+      // Mock walletService for transfer validation and execution
+      vi.mocked(walletService.getWalletSummary)
+        .mockResolvedValueOnce({ userId: 'seed.user.primary@krystaline.io', btc: 5.0, usd: 100000, lastUpdated: new Date() })  // initial check
+        .mockResolvedValueOnce({ userId: 'seed.user.primary@krystaline.io', btc: 4.5, usd: 100000, lastUpdated: new Date() })  // primary after
+        .mockResolvedValueOnce({ userId: 'seed.user.secondary@krystaline.io', btc: 0.5, usd: 0, lastUpdated: new Date() });   // secondary after
 
-      vi.mocked(storage.createTransfer).mockResolvedValue({
-        id: 'TXF-test-123',
-        fromUserId: 'alice',
-        toUserId: 'bob',
-        amount: 0.5,
-        status: 'PENDING',
-        createdAt: new Date(),
-      } as any);
-      vi.mocked(storage.updateTransfer).mockResolvedValue(undefined);
-      vi.mocked(storage.updateWallet).mockResolvedValue(undefined);
+      vi.mocked(walletService.transfer).mockResolvedValue({
+        success: true,
+        transferId: 'TXF-test-123',
+        fromBalance: '4.5',
+        toBalance: '0.5',
+      });
 
       const transferRequest = {
         fromAddress: 'kx1qxy2kgdygjrsqtzq2n0yrf2490',
         toAddress: 'kx1abc2defghijklmnopqrs1234',
         amount: 0.5,
-        fromUserId: 'alice',
-        toUserId: 'bob',
+        fromUserId: 'seed.user.primary@krystaline.io',
+        toUserId: 'seed.user.secondary@krystaline.io',
       };
 
       const response = await request(app)
-        .post('/api/transfer')
+        .post('/api/v1/transfer')
         .send(transferRequest);
 
       // The first test passed, so if this fails it's due to mock sequence issues
@@ -207,7 +213,7 @@ describe('Transfer API Integration', () => {
       };
 
       const response = await request(app)
-        .post('/api/transfer')
+        .post('/api/v1/transfer')
         .send(invalidTransfer);
 
       expect(response.status).toBe(400);
@@ -222,7 +228,7 @@ describe('Transfer API Integration', () => {
       };
 
       const response = await request(app)
-        .post('/api/transfer')
+        .post('/api/v1/transfer')
         .send(invalidTransfer);
 
       expect(response.status).toBe(400);
@@ -236,7 +242,7 @@ describe('Transfer API Integration', () => {
       };
 
       const response = await request(app)
-        .post('/api/transfer')
+        .post('/api/v1/transfer')
         .send(invalidTransfer);
 
       expect(response.status).toBe(400);
@@ -262,7 +268,7 @@ describe('Transfer API Integration', () => {
       };
 
       const response = await request(app)
-        .post('/api/transfer')
+        .post('/api/v1/transfer')
         .send(transferRequest)
         .set('traceparent', '00-0af7651916cd43dd8448eb211c80319c-b7ad6b7169203331-01');
 
@@ -293,7 +299,7 @@ describe('Transfer API Integration', () => {
       };
 
       const response = await request(app)
-        .post('/api/transfer')
+        .post('/api/v1/transfer')
         .send(transferRequest);
 
       // If successful, should have transfer details
@@ -314,7 +320,7 @@ describe('Transfer API Integration', () => {
       };
 
       const response = await request(app)
-        .post('/api/transfer')
+        .post('/api/v1/transfer')
         .send(invalidTransfer);
 
       expect(response.status).toBe(400);
@@ -327,23 +333,23 @@ describe('Transfer API Integration', () => {
       vi.mocked(storage.getTransfers).mockResolvedValue([
         {
           id: 'TXF-1',
-          fromUserId: 'alice',
-          toUserId: 'bob',
+          fromUserId: 'seed.user.primary@krystaline.io',
+          toUserId: 'seed.user.secondary@krystaline.io',
           amount: 0.5,
           status: 'COMPLETED',
           createdAt: new Date(),
         },
         {
           id: 'TXF-2',
-          fromUserId: 'bob',
-          toUserId: 'charlie',
+          fromUserId: 'seed.user.secondary@krystaline.io',
+          toUserId: 'seed.user.tertiary@krystaline.io',
           amount: 0.2,
           status: 'PENDING',
           createdAt: new Date(),
         },
       ] as any);
 
-      const response = await request(app).get('/api/transfers');
+      const response = await request(app).get('/api/v1/transfers');
 
       expect(response.status).toBe(200);
       expect(Array.isArray(response.body)).toBe(true);
@@ -353,7 +359,7 @@ describe('Transfer API Integration', () => {
     it('should return empty array when no transfers exist', async () => {
       vi.mocked(storage.getTransfers).mockResolvedValue([]);
 
-      const response = await request(app).get('/api/transfers');
+      const response = await request(app).get('/api/v1/transfers');
 
       expect(response.status).toBe(200);
       expect(response.body).toEqual([]);
@@ -362,7 +368,7 @@ describe('Transfer API Integration', () => {
     it('should handle database errors', async () => {
       vi.mocked(storage.getTransfers).mockRejectedValue(new Error('DB Error'));
 
-      const response = await request(app).get('/api/transfers');
+      const response = await request(app).get('/api/v1/transfers');
 
       expect(response.status).toBe(500);
       expect(response.body.error).toBe('Failed to fetch transfers');
@@ -385,7 +391,7 @@ describe('Transfer API Integration', () => {
       };
 
       const response = await request(app)
-        .post('/api/payments')
+        .post('/api/v1/payments')
         .send(paymentRequest);
 
       expect(response.status).toBe(200);
@@ -405,7 +411,7 @@ describe('Transfer API Integration', () => {
       } as any);
 
       const response = await request(app)
-        .post('/api/payments')
+        .post('/api/v1/payments')
         .send({});
 
       expect(response.status).toBe(200);
@@ -423,7 +429,7 @@ describe('Transfer API Integration', () => {
       } as any);
 
       const response = await request(app)
-        .post('/api/payments')
+        .post('/api/v1/payments')
         .send({ amount: 50 });
 
       expect(response.body.traceId).toBeDefined();
@@ -432,27 +438,32 @@ describe('Transfer API Integration', () => {
 
   describe('GET /api/payments (legacy)', () => {
     it('should return orders as payments', async () => {
-      vi.mocked(storage.getOrders).mockResolvedValue([
-        {
-          orderId: 'ORD-1',
-          pair: 'BTC/USD',
-          side: 'BUY',
-          quantity: 0.1,
-          status: 'FILLED',
-          createdAt: new Date(),
-        },
-      ] as any);
+      // Use db.query mock instead of storage.getOrders
+      vi.mocked(db.query).mockResolvedValueOnce({
+        rows: [
+          {
+            id: 'uuid-1',
+            order_id: 'ORD-1',
+            pair: 'BTC/USD',
+            side: 'buy',
+            type: 'market',
+            quantity: '0.1',
+            status: 'filled',
+            created_at: new Date(),
+          },
+        ],
+      } as any);
 
-      const response = await request(app).get('/api/payments');
+      const response = await request(app).get('/api/v1/payments');
 
       expect(response.status).toBe(200);
       expect(Array.isArray(response.body)).toBe(true);
     });
 
     it('should handle errors', async () => {
-      vi.mocked(storage.getOrders).mockRejectedValue(new Error('DB Error'));
+      vi.mocked(db.query).mockRejectedValueOnce(new Error('DB Error'));
 
-      const response = await request(app).get('/api/payments');
+      const response = await request(app).get('/api/v1/payments');
 
       expect(response.status).toBe(500);
       expect(response.body.error).toBe('Failed to fetch payments');

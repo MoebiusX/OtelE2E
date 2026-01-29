@@ -139,6 +139,7 @@ router.post('/resend-code', async (req, res) => {
 /**
  * POST /api/auth/login
  * Login with email and password
+ * If 2FA is enabled, returns requires2FA instead of tokens
  */
 router.post('/login', async (req, res) => {
     try {
@@ -149,6 +150,20 @@ router.post('/login', async (req, res) => {
         };
         const result = await authService.login(data, sessionInfo);
 
+        // Check if 2FA is required
+        if (result.requires2FA) {
+            return res.json({
+                success: true,
+                requires2FA: true,
+                tempToken: result.tempToken,
+                user: {
+                    id: result.user.id,
+                    email: result.user.email,
+                },
+            });
+        }
+
+        // Normal login response with tokens
         res.json({
             success: true,
             user: {

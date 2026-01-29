@@ -1,8 +1,10 @@
 
 // global fetch is available in Node 18+
+import config from './config.js';
 
 async function enableOtel() {
-    const KONG_ADMIN_URL = 'http://localhost:8001';
+    // Use internal URL for local Docker access
+    const KONG_ADMIN_URL = config.kong.internalAdminUrl;
 
     console.log('📡 Enabling OpenTelemetry on Kong Gateway via Admin API...');
 
@@ -29,9 +31,7 @@ async function enableOtel() {
                 resource_attributes: {
                     'service.name': 'api-gateway'
                 },
-                headers: {
-                    'traceparent': 'preserve'
-                }
+                header_type: 'w3c'
             }
         };
 

@@ -93,15 +93,13 @@ export const walletService = {
                 const balance = INITIAL_BALANCES[asset] || 0;
 
                 const result = await client.query(
-                    `INSERT INTO wallets (user_id, asset, balance, available, locked)
-                     VALUES ($1, $2, $3, $3, 0)
+                    `INSERT INTO wallets (user_id, asset, balance, available, locked, address)
+                     VALUES ($1, $2, $3, $3, 0, $4)
                      RETURNING *`,
-                    [userId, asset, balance]
+                    [userId, asset, balance, kxAddress]
                 );
 
-                // Add the kx1 address to the wallet object
-                const wallet = { ...result.rows[0], address: kxAddress };
-                wallets.push(wallet);
+                wallets.push(result.rows[0]);
 
                 // Log bonus transaction if balance > 0
                 if (balance > 0) {
@@ -169,9 +167,8 @@ export const walletService = {
             [dbUserId]
         );
 
-        // Add kx1 address to each wallet
-        const kxAddress = await this.getKXAddress(userId);
-        return result.rows.map(w => ({ ...w, address: kxAddress }));
+        // Address is now stored in DB, no fallback needed
+        return result.rows;
     },
 
     /**

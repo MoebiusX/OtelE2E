@@ -128,12 +128,12 @@ export default function Dashboard() {
   }, [searchString]);
 
   const { data: orders, isLoading: ordersLoading } = useQuery<Order[]>({
-    queryKey: ["/api/orders"],
+    queryKey: ["/api/v1/orders"],
     refetchInterval: 3000,
   });
 
   const { data: transfers, isLoading: transfersLoading } = useQuery<Transfer[]>({
-    queryKey: ["/api/transfers"],
+    queryKey: ["/api/v1/transfers"],
     refetchInterval: 3000,
   });
 
@@ -146,9 +146,10 @@ export default function Dashboard() {
   }
 
   const { data: portfolio, isLoading: portfolioLoading } = useQuery<PortfolioSummary>({
-    queryKey: ["/api/wallet", { userId: currentUser }],
+    queryKey: ["/api/v1/wallet", { userId: currentUser }],
     queryFn: async () => {
-      const res = await fetch(`http://localhost:8000/api/wallet?userId=${currentUser}`);
+      const kongUrl = import.meta.env.VITE_KONG_URL || 'http://localhost:8000';
+      const res = await fetch(`${kongUrl}/api/v1/wallet?userId=${currentUser}`);
       return res.json();
     },
     enabled: !!currentUser,
@@ -157,10 +158,10 @@ export default function Dashboard() {
 
   // Also fetch detailed wallets as backup (for asset grid)
   const { data: walletsData, isLoading: walletsLoading } = useQuery<{ wallets: WalletData[] }>({
-    queryKey: ["/api/wallet/balances"],
+    queryKey: ["/api/v1/wallet/balances"],
     queryFn: async () => {
       const token = localStorage.getItem("accessToken");
-      const res = await fetch("/api/wallet/balances", {
+      const res = await fetch("/api/v1/wallet/balances", {
         headers: { Authorization: `Bearer ${token}` },
       });
       if (!res.ok) {
@@ -178,7 +179,7 @@ export default function Dashboard() {
 
   // Real-time price data from Binance
   const { data: priceData } = useQuery<PriceData>({
-    queryKey: ["/api/price"],
+    queryKey: ["/api/v1/price"],
     refetchInterval: 3000,
   });
 

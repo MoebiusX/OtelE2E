@@ -82,7 +82,7 @@ class TransparencyService {
       );
 
       // Get anomaly stats
-      const anomalyHistory = historyStore.getAnomalyHistory({ hours: 24 });
+      const anomalyHistory = await historyStore.getAnomalyHistory({ hours: 24 });
       const criticalAnomalies = anomalyHistory.filter(a => a.severity <= 3);
 
       // Calculate average execution time from database (orders have trace data)
@@ -279,8 +279,8 @@ class TransparencyService {
       );
 
       // Anomaly stats
-      const allAnomalies = historyStore.getAnomalyHistory();
-      const last24hAnomalies = historyStore.getAnomalyHistory({ hours: 24 });
+      const allAnomalies = await historyStore.getAnomalyHistory();
+      const last24hAnomalies = await historyStore.getAnomalyHistory({ hours: 24 });
       const latestAnomaly = allAnomalies.length > 0 ? allAnomalies[0] : null;
 
       // Monitor stats

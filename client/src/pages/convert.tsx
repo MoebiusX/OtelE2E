@@ -51,10 +51,10 @@ export default function Convert() {
 
     // Fetch wallets
     const { data: walletsData } = useQuery<{ wallets: Wallet[] }>({
-        queryKey: ["/api/wallet/balances"],
+        queryKey: ["/api/v1/wallet/balances"],
         queryFn: async () => {
             const token = localStorage.getItem("accessToken");
-            const res = await fetch("/api/wallet/balances", {
+            const res = await fetch("/api/v1/wallet/balances", {
                 headers: { Authorization: `Bearer ${token}` },
             });
             return res.json();
@@ -65,7 +65,7 @@ export default function Convert() {
     const quoteMutation = useMutation({
         mutationFn: async () => {
             const token = localStorage.getItem("accessToken");
-            const res = await fetch("/api/trade/convert/quote", {
+            const res = await fetch("/api/v1/trade/convert/quote", {
                 method: "POST",
                 headers: {
                     "Content-Type": "application/json",
@@ -97,7 +97,7 @@ export default function Convert() {
     const convertMutation = useMutation({
         mutationFn: async () => {
             const token = localStorage.getItem("accessToken");
-            const res = await fetch("/api/trade/convert", {
+            const res = await fetch("/api/v1/trade/convert", {
                 method: "POST",
                 headers: {
                     "Content-Type": "application/json",

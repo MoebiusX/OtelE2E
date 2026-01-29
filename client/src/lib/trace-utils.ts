@@ -20,8 +20,9 @@ export function formatTraceIdForJaeger(traceId: string): string {
  * Get Jaeger trace URL for a given trace ID
  */
 export function getJaegerTraceUrl(traceId: string): string {
+    const jaegerUrl = import.meta.env.VITE_JAEGER_URL || 'http://localhost:16686';
     const formattedId = formatTraceIdForJaeger(traceId);
-    return `http://localhost:16686/trace/${formattedId}`;
+    return `${jaegerUrl}/trace/${formattedId}`;
 }
 
 /**

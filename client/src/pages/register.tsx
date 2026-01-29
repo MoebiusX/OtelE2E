@@ -18,7 +18,7 @@ export default function Register() {
 
     const registerMutation = useMutation({
         mutationFn: async () => {
-            const res = await fetch("/api/auth/register", {
+            const res = await fetch("/api/v1/auth/register", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({ email, password }),
@@ -40,7 +40,7 @@ export default function Register() {
 
     const verifyMutation = useMutation({
         mutationFn: async () => {
-            const res = await fetch("/api/auth/verify", {
+            const res = await fetch("/api/v1/auth/verify", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({ email, code: verificationCode }),
@@ -88,10 +88,10 @@ export default function Register() {
         <div className="min-h-screen bg-gradient-to-br from-slate-950 via-blue-950 to-slate-900 flex items-center justify-center p-4">
             {/* Back to Home */}
             <a href="/" className="absolute top-6 left-6 flex items-center gap-2 text-cyan-100/70 hover:text-cyan-100 transition-colors group">
-                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="group-hover:-translate-x-1 transition-transform"><path d="m15 18-6-6 6-6"/></svg>
+                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="group-hover:-translate-x-1 transition-transform"><path d="m15 18-6-6 6-6" /></svg>
                 <span className="text-sm font-medium">Back to Home</span>
             </a>
-            
+
             <Card className="w-full max-w-md bg-slate-900/80 border-cyan-500/20 backdrop-blur-xl shadow-2xl">
                 <CardHeader className="text-center">
                     <CardTitle className="text-3xl font-bold bg-gradient-to-r from-cyan-400 via-blue-400 to-indigo-400 bg-clip-text text-transparent">
@@ -175,7 +175,7 @@ export default function Register() {
                                     className="bg-slate-800/50 border-cyan-500/30 text-cyan-100 text-center text-2xl tracking-widest placeholder:text-cyan-100/30"
                                 />
                                 <p className="text-sm text-cyan-100/60 text-center">
-                                    Check your email or view at <a href="http://localhost:1080" target="_blank" className="text-cyan-400 hover:text-cyan-300 underline">localhost:1080</a>
+                                    Check your email or view at <a href={import.meta.env.VITE_MAILDEV_URL || "http://localhost:1080"} target="_blank" className="text-cyan-400 hover:text-cyan-300 underline">Mail Inbox</a>
                                 </p>
                             </div>
 

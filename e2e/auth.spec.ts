@@ -35,9 +35,10 @@ test.describe('Authentication', () => {
             await page.click('button[type="submit"]');
 
             // Should show error message about password mismatch
-            const errorMsg = page.getByRole('alert')
-                .or(page.locator('[class*="destructive"]'))
-                .or(page.getByText(/password|match/i));
+            // Use more specific selector to find error element in form
+            const errorMsg = page.locator('[role="alert"]')
+                .or(page.locator('[class*="error"], [class*="destructive"]'))
+                .first();
             await expect(errorMsg).toBeVisible({ timeout: 5000 });
         });
     });
@@ -68,10 +69,11 @@ test.describe('Authentication', () => {
 
             await page.click('button[type="submit"]');
 
-            // Should show error message (alert, destructive class, or error text)
-            const errorMsg = page.getByRole('alert')
-                .or(page.locator('[class*="destructive"]'))
-                .or(page.getByText(/invalid|error|failed/i));
+            // Should show error message (alert or destructive class)
+            // Use more specific selector to find error element in form
+            const errorMsg = page.locator('[role="alert"]')
+                .or(page.locator('[class*="error"], [class*="destructive"]'))
+                .first();
             await expect(errorMsg).toBeVisible({ timeout: 5000 });
         });
 

@@ -118,8 +118,8 @@ describe('NotFoundError', () => {
   });
 
   it('should include identifier in message if provided', () => {
-    const error = new NotFoundError('User', 'alice@test.com');
-    expect(error.message).toContain('alice@test.com');
+    const error = new NotFoundError('User', 'seed.user.primary@krystaline.io');
+    expect(error.message).toContain('seed.user.primary@krystaline.io');
   });
 });
 

@@ -71,20 +71,20 @@ export default function Profile() {
 
     // Fetch user profile
     const { data: profile, isLoading: profileLoading, refetch: refetchProfile } = useQuery<UserProfile>({
-        queryKey: ["/api/auth/profile"],
+        queryKey: ["/api/v1/auth/profile"],
         enabled: !!user,
     });
 
     // Fetch sessions
     const { data: sessions, isLoading: sessionsLoading, refetch: refetchSessions } = useQuery<Session[]>({
-        queryKey: ["/api/auth/sessions"],
+        queryKey: ["/api/v1/auth/sessions"],
         enabled: !!user,
     });
 
     // Change password mutation
     const changePasswordMutation = useMutation({
         mutationFn: async (data: { currentPassword: string; newPassword: string }) => {
-            return apiRequest("POST", "/api/auth/change-password", data);
+            return apiRequest("POST", "/api/v1/auth/change-password", data);
         },
         onSuccess: () => {
             setPasswordSuccess("Password changed successfully!");
@@ -103,7 +103,7 @@ export default function Profile() {
     // Resend verification mutation
     const resendVerificationMutation = useMutation({
         mutationFn: async () => {
-            return apiRequest("POST", "/api/auth/resend-verification");
+            return apiRequest("POST", "/api/v1/auth/resend-verification");
         },
         onSuccess: () => {
             alert("Verification email sent! Check your inbox.");
@@ -126,7 +126,7 @@ export default function Profile() {
     // Revoke all other sessions
     const revokeAllSessionsMutation = useMutation({
         mutationFn: async () => {
-            return apiRequest("POST", "/api/auth/sessions/revoke-all");
+            return apiRequest("POST", "/api/v1/auth/sessions/revoke-all");
         },
         onSuccess: () => {
             refetchSessions();
@@ -141,14 +141,15 @@ export default function Profile() {
 
     // 2FA Status Query
     const { data: twoFactorStatus, refetch: refetch2FAStatus } = useQuery<{ enabled: boolean }>({
-        queryKey: ["/api/auth/2fa/status"],
+        queryKey: ["/api/v1/auth/2fa/status"],
         enabled: !!user,
     });
 
     // 2FA Setup Mutation
     const setup2FAMutation = useMutation({
         mutationFn: async () => {
-            return apiRequest("POST", "/api/auth/2fa/setup");
+            const response = await apiRequest("POST", "/api/v1/auth/2fa/setup");
+            return response.json();  // Parse JSON from Response object
         },
         onSuccess: () => {
             setShow2FASetup(true);
@@ -162,7 +163,8 @@ export default function Profile() {
     // 2FA Verify Mutation  
     const verify2FAMutation = useMutation({
         mutationFn: async (code: string) => {
-            return apiRequest("POST", "/api/auth/2fa/verify", { code });
+            const response = await apiRequest("POST", "/api/v1/auth/2fa/verify", { code });
+            return response.json();  // Parse JSON from Response object
         },
         onSuccess: (data: any) => {
             if (data.backupCodes) {
@@ -181,7 +183,7 @@ export default function Profile() {
     // 2FA Disable Mutation
     const disable2FAMutation = useMutation({
         mutationFn: async (password: string) => {
-            return apiRequest("POST", "/api/auth/2fa/disable", { password });
+            return apiRequest("POST", "/api/v1/auth/2fa/disable", { password });
         },
         onSuccess: () => {
             refetch2FAStatus();

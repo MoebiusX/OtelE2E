@@ -87,7 +87,7 @@ Browser (order.response.received)
 - **Real-time wallet** balance updates
 
 ### Multi-User
-- **User switcher** - Toggle between Alice 👩 and Bob 👨
+- **User switcher** - Toggle between Primary User 👩 and Secondary User 👨
 - **BTC transfers** - Send BTC between users
 - **Per-user wallets** - Each user has separate BTC/USD balance
 
@@ -101,8 +101,8 @@ Browser (order.response.received)
 
 | Endpoint | Method | Description |
 |----------|--------|-------------|
-| `/api/users` | GET | List users (Alice, Bob) |
-| `/api/wallet?userId=alice` | GET | Get user's wallet |
+| `/api/users` | GET | List users |
+| `/api/wallet?userId=seed.user.primary@krystaline.io` | GET | Get user's wallet |
 | `/api/orders` | POST | Submit trade order |
 | `/api/transfer` | POST | Transfer BTC between users |
 | `/api/transfers` | GET | List recent transfers |
@@ -112,17 +112,17 @@ Browser (order.response.received)
 
 ### Manual Test - Order
 1. Go to http://localhost:5173
-2. Select Alice or Bob
+2. Select Primary User or Secondary User
 3. Enter BTC amount (e.g., 0.01)
 4. Click BUY or SELL
 5. Check Jaeger at http://localhost:16686 → service `kx-wallet` or `kx-exchange`
 
 ### Manual Test - Transfer
-1. Select Alice
+1. Select Primary User
 2. Click "Transfer BTC" tab
 3. Enter amount (e.g., 0.1)
-4. Click Send → BTC moves to Bob
-5. Switch to Bob to verify balance
+4. Click Send → BTC moves to Secondary User
+5. Switch to Secondary User to verify balance
 
 ## Technical Stack
 

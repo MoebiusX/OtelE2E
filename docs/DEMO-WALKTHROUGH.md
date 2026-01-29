@@ -2,7 +2,7 @@
 
 > **Purpose:** Step-by-step guide to demonstrate "Proof of Observability™"  
 > **Duration:** 12-15 minutes  
-> **Updated:** 2025-01-19
+> **Updated:** 2026-01-28
 
 ---
 

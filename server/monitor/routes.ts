@@ -47,10 +47,11 @@ router.get('/health', (req, res) => {
 
 /**
  * GET /api/monitor/baselines
- * All span baselines with statistics
+ * All span baselines with statistics (from database)
  */
-router.get('/baselines', (req, res) => {
-    const baselines = traceProfiler.getBaselines();
+router.get('/baselines', async (req, res) => {
+    // Read from database to get consistent results with recalculate
+    const baselines = await historyStore.getBaselines();
 
     const response: BaselinesResponse = {
         baselines: baselines.sort((a, b) => b.sampleCount - a.sampleCount),
@@ -79,12 +80,12 @@ router.get('/anomalies', (req, res) => {
  * GET /api/monitor/history
  * Anomaly history for trends
  */
-router.get('/history', (req, res) => {
+router.get('/history', async (req, res) => {
     const hours = parseInt(req.query.hours as string) || 24;
     const service = req.query.service as string;
 
-    const anomalies = historyStore.getAnomalyHistory({ hours, service });
-    const hourlyTrend = historyStore.getHourlyTrend(hours);
+    const anomalies = await historyStore.getAnomalyHistory({ hours, service });
+    const hourlyTrend = await historyStore.getHourlyTrend(hours);
 
     res.json({
         anomalies,

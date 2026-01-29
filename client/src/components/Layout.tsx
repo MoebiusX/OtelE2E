@@ -27,7 +27,7 @@ export default function Layout({ children, showAuth = true }: LayoutProps) {
 
     const handleLogout = () => {
         const token = localStorage.getItem("accessToken");
-        fetch("/api/auth/logout", {
+        fetch("/api/v1/auth/logout", {
             method: "POST",
             headers: { Authorization: `Bearer ${token}` },
         }).finally(() => {

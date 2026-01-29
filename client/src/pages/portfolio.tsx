@@ -4,6 +4,7 @@ import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import Layout from "@/components/Layout";
+import { WelcomeModal, useWelcomeModal } from "@/components/welcome-modal";
 import { Sparkles, ArrowRight, TrendingUp, Eye, Zap } from "lucide-react";
 
 interface Wallet {
@@ -39,6 +40,7 @@ export default function Portfolio() {
     const [, navigate] = useLocation();
     const [user, setUser] = useState<User | null>(null);
     const [isNewUser, setIsNewUser] = useState(false);
+    const { isOpen: showWelcome, close: closeWelcome } = useWelcomeModal();
 
     useEffect(() => {
         const storedUser = localStorage.getItem("user");
@@ -47,7 +49,7 @@ export default function Portfolio() {
             return;
         }
         setUser(JSON.parse(storedUser));
-        
+
         // Check if this is a new user who hasn't traded yet
         const newUserFlag = localStorage.getItem("isNewUser");
         const hasTraded = localStorage.getItem("hasCompletedFirstTrade");
@@ -56,15 +58,15 @@ export default function Portfolio() {
 
     // Fetch real prices from Binance API
     const { data: priceData } = useQuery<PriceData>({
-        queryKey: ["/api/price"],
+        queryKey: ["/api/v1/price"],
         refetchInterval: 3000, // Update every 3 seconds
     });
 
     const { data: walletsData, isLoading } = useQuery<{ wallets: Wallet[] }>({
-        queryKey: ["/api/wallet/balances"],
+        queryKey: ["/api/v1/wallet/balances"],
         queryFn: async () => {
             const token = localStorage.getItem("accessToken");
-            const res = await fetch("/api/wallet/balances", {
+            const res = await fetch("/api/v1/wallet/balances", {
                 headers: { Authorization: `Bearer ${token}` },
             });
             if (!res.ok) {
@@ -104,6 +106,9 @@ export default function Portfolio() {
 
     return (
         <Layout>
+            {/* Welcome Modal for new users */}
+            <WelcomeModal isOpen={showWelcome} onClose={closeWelcome} />
+
             <div className="container mx-auto px-4 py-8">
                 {/* Total Balance Card */}
                 <Card className="bg-gradient-to-r from-cyan-900/30 to-blue-900/30 border-cyan-500/30 mb-8 backdrop-blur">
@@ -134,7 +139,7 @@ export default function Portfolio() {
                                         Ready for Your First Trade? 🚀
                                     </h3>
                                     <p className="text-purple-100/70 mb-4 max-w-lg">
-                                        Experience <span className="text-cyan-400 font-semibold">Proof of Observability</span> - 
+                                        Experience <span className="text-cyan-400 font-semibold">Proof of Observability</span> -
                                         every trade is traced end-to-end. See exactly what happens behind the scenes.
                                     </p>
                                     <div className="flex flex-wrap items-center justify-center md:justify-start gap-3 text-sm text-purple-200/60">
@@ -149,7 +154,7 @@ export default function Portfolio() {
                                         </span>
                                     </div>
                                 </div>
-                                <Button 
+                                <Button
                                     size="lg"
                                     onClick={() => navigate("/trade?welcome=true")}
                                     className="bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-500 hover:to-pink-500 text-lg px-8 py-6 shadow-xl shadow-purple-500/25 group"
@@ -164,25 +169,25 @@ export default function Portfolio() {
 
                 {/* Quick Actions */}
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
-                    <Button 
+                    <Button
                         className="h-16 bg-emerald-600 hover:bg-emerald-700 text-lg font-semibold"
                         onClick={() => navigate("/trade")}
                     >
                         Deposit
                     </Button>
-                    <Button 
+                    <Button
                         className="h-16 bg-blue-600 hover:bg-blue-700 text-lg font-semibold"
                         onClick={() => navigate("/trade")}
                     >
                         Withdraw
                     </Button>
-                    <Button 
+                    <Button
                         className="h-16 bg-cyan-600 hover:bg-cyan-700 text-lg font-semibold"
                         onClick={() => navigate("/convert")}
                     >
                         Convert
                     </Button>
-                    <Button 
+                    <Button
                         className="h-16 bg-indigo-600 hover:bg-indigo-700 text-lg font-semibold"
                         onClick={() => navigate("/trade")}
                     >

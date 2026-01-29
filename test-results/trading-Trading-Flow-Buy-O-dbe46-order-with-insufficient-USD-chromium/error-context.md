@@ -1,0 +1,30 @@
+# Page snapshot
+
+```yaml
+- generic [ref=e2]:
+  - region "Notifications (F8)":
+    - list
+  - generic [ref=e3]:
+    - link "Back to Home" [ref=e4] [cursor=pointer]:
+      - /url: /
+      - img [ref=e5]
+      - generic [ref=e7]: Back to Home
+    - generic [ref=e8]:
+      - generic [ref=e9]:
+        - generic [ref=e10]: Verify Email
+        - generic [ref=e11]: We sent a code to e2e-poor-1769639510536@test.com
+      - generic [ref=e13]:
+        - generic [ref=e14]:
+          - text: Verification Code
+          - textbox "Verification Code" [ref=e15]:
+            - /placeholder: Enter 6-digit code
+          - paragraph [ref=e16]:
+            - text: Check your email or view at
+            - link "Mail Inbox" [ref=e17] [cursor=pointer]:
+              - /url: http://localhost:1080
+        - button "Verify & Continue" [ref=e18] [cursor=pointer]
+      - generic [ref=e20]:
+        - text: Already have an account?
+        - link "Sign in" [ref=e21] [cursor=pointer]:
+          - /url: /login
+```

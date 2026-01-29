@@ -10,6 +10,7 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
 import { getJaegerTraceUrl } from "@/lib/trace-utils";
+import { TradeVerifiedModal } from "@/components/trade-verified-modal";
 import { ArrowUpRight, ArrowDownRight, Wallet, TrendingUp, Loader2, Bitcoin, CheckCircle2, Clock, ExternalLink } from "lucide-react";
 
 // Type-safe error message extraction
@@ -63,6 +64,16 @@ export function TradeForm({ currentUser: propUser, walletAddress: propAddress }:
         executionTimeMs: number;
         timestamp: Date;
     } | null>(null);
+    const [showVerifiedModal, setShowVerifiedModal] = useState(false);
+    const [verifiedTradeData, setVerifiedTradeData] = useState<{
+        tradeId: string;
+        traceId?: string;
+        side: 'BUY' | 'SELL';
+        amount: number;
+        asset: string;
+        price: number;
+        executionTimeMs?: number;
+    } | null>(null);
     const { toast } = useToast();
     const queryClient = useQueryClient();
 
@@ -86,10 +97,11 @@ export function TradeForm({ currentUser: propUser, walletAddress: propAddress }:
     }, [propUser]);
 
     // Fetch wallet balance for current user
+    const kongUrl = import.meta.env.VITE_KONG_URL || 'http://localhost:8000';
     const { data: wallet } = useQuery<WalletData>({
-        queryKey: ["/api/wallet", { userId: currentUser }],
+        queryKey: ["/api/v1/wallet", { userId: currentUser }],
         queryFn: async () => {
-            const res = await fetch(`http://localhost:8000/api/wallet?userId=${currentUser}`);
+            const res = await fetch(`${kongUrl}/api/v1/wallet?userId=${currentUser}`);
             return res.json();
         },
         refetchInterval: 5000,
@@ -97,7 +109,7 @@ export function TradeForm({ currentUser: propUser, walletAddress: propAddress }:
 
     // Fetch current price
     const { data: priceData } = useQuery<PriceData>({
-        queryKey: ["/api/price"],
+        queryKey: ["/api/v1/price"],
         refetchInterval: 3000,
     });
 
@@ -132,7 +144,7 @@ export function TradeForm({ currentUser: propUser, walletAddress: propAddress }:
                     parentSpan.setAttribute('order.pair', data.pair);
 
                     // Route through Kong Gateway for proper API gateway tracing
-                    const response = await fetch('http://localhost:8000/api/orders', {
+                    const response = await fetch(`${kongUrl}/api/v1/orders`, {
                         method: 'POST',
                         headers: {
                             'Content-Type': 'application/json',
@@ -192,6 +204,18 @@ export function TradeForm({ currentUser: propUser, walletAddress: propAddress }:
             // Clear success state after 10 seconds
             setTimeout(() => setLastTrade(null), 10000);
 
+            // Show verified modal for prominent trace link
+            setVerifiedTradeData({
+                tradeId: data.orderId || data.order.id,
+                traceId,
+                side: data.order.side,
+                amount: data.order.quantity,
+                asset: 'BTC',
+                price: execution?.fillPrice || 0,
+                executionTimeMs: execution?.executionTimeMs,
+            });
+            setShowVerifiedModal(true);
+
             toast({
                 title: execution?.status === 'FILLED' ? "✓ Trade Verified & Traced" : "Order Submitted",
                 description: (
@@ -232,12 +256,12 @@ export function TradeForm({ currentUser: propUser, walletAddress: propAddress }:
             });
 
             // Refresh data
-            queryClient.invalidateQueries({ queryKey: ["/api/wallet"] });
-            queryClient.invalidateQueries({ queryKey: ["/api/orders"] });
-            queryClient.invalidateQueries({ queryKey: ["/api/traces"] });
+            queryClient.invalidateQueries({ queryKey: ["/api/v1/wallet"] });
+            queryClient.invalidateQueries({ queryKey: ["/api/v1/orders"] });
+            queryClient.invalidateQueries({ queryKey: ["/api/v1/traces"] });
 
             setTimeout(() => {
-                queryClient.invalidateQueries({ queryKey: ["/api/traces"] });
+                queryClient.invalidateQueries({ queryKey: ["/api/v1/traces"] });
             }, 1500);
         },
         onError: (error) => {
@@ -426,6 +450,21 @@ export function TradeForm({ currentUser: propUser, walletAddress: propAddress }:
                     </form>
                 </Form>
             </CardContent>
+
+            {/* Trade Verified Modal */}
+            {verifiedTradeData && (
+                <TradeVerifiedModal
+                    isOpen={showVerifiedModal}
+                    onClose={() => setShowVerifiedModal(false)}
+                    tradeId={verifiedTradeData.tradeId}
+                    traceId={verifiedTradeData.traceId}
+                    side={verifiedTradeData.side}
+                    amount={verifiedTradeData.amount}
+                    asset={verifiedTradeData.asset}
+                    price={verifiedTradeData.price}
+                    executionTimeMs={verifiedTradeData.executionTimeMs}
+                />
+            )}
         </Card>
     );
 }

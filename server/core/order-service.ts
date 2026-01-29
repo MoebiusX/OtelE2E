@@ -89,11 +89,26 @@ export class OrderService {
         const activeSpan = trace.getActiveSpan();
         const spanContext = activeSpan?.spanContext();
 
+        // DIAGNOSTIC: Log whether context was properly received
+        logger.info({
+            hasActiveSpan: !!activeSpan,
+            activeTraceId: spanContext?.traceId,
+            activeSpanId: spanContext?.spanId,
+        }, 'Order submission - checking trace context from HTTP layer');
+
         const traceId = spanContext?.traceId || this.generateTraceId();
         const spanId = spanContext?.spanId || this.generateSpanId();
         const correlationId = this.generateCorrelationId();
         const orderId = `ORD-${Date.now()}-${++this.orderCounter}`;
         const userId = request.userId || 'seed.user.primary@krystaline.io';
+
+        // WARN if we had to generate our own trace ID (indicates context propagation failure)
+        if (!spanContext?.traceId) {
+            logger.warn({
+                userId,
+                side: request.side,
+            }, 'NO TRACE CONTEXT - generating fallback trace ID (this is a bug!)');
+        }
 
         logger.info({
             userId,

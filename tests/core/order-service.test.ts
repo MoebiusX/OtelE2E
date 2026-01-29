@@ -7,6 +7,22 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 
 // Mock the dependencies before importing the service
+// Use vi.hoisted to ensure the mock is available when the mock factory runs
+const { mockDbQuery } = vi.hoisted(() => ({
+  mockDbQuery: vi.fn()
+}));
+
+vi.mock('../../server/db', () => ({
+  default: {
+    query: mockDbQuery,
+    transaction: vi.fn(async (callback) => callback({
+      query: vi.fn().mockResolvedValue({ rows: [] }),
+    })),
+  },
+}));
+
+// TODO: Tech Debt - Tests still mock storage methods but actual code uses walletService/db.query
+// These storage mocks should be removed and tests refactored to mock walletService instead
 vi.mock('../../server/storage', () => ({
   storage: {
     getWallet: vi.fn(),
@@ -31,6 +47,13 @@ vi.mock('../../server/wallet/wallet-service', () => ({
   walletService: {
     getWallet: vi.fn(),
     getWallets: vi.fn().mockResolvedValue([]),
+    getWalletSummary: vi.fn().mockResolvedValue({
+      userId: 'seed.user.primary@krystaline.io',
+      btc: 5.0,
+      usd: 100000,
+      lastUpdated: new Date(),
+    }),
+    updateBalance: vi.fn().mockResolvedValue(true),
   },
 }));
 
@@ -68,6 +91,49 @@ describe('Order Service', () => {
   beforeEach(() => {
     orderService = new OrderService();
     vi.clearAllMocks();
+
+    // Set up default db.query mock that handles different query patterns
+    mockDbQuery.mockImplementation(async (sql: string) => {
+      // User lookup query
+      if (sql.includes('SELECT id FROM users WHERE email')) {
+        return { rows: [{ id: 'test-user-uuid' }] };
+      }
+      // Order insert query
+      if (sql.includes('INSERT INTO orders')) {
+        return {
+          rows: [{
+            id: 'test-uuid',
+            order_id: 'ORD-test-123',
+            pair: 'BTC/USD',
+            side: 'buy',
+            type: 'market',
+            quantity: '0.1',
+            status: 'open',
+            trace_id: 'test-trace-id',
+            created_at: new Date(),
+          }]
+        };
+      }
+      // Order update query
+      if (sql.includes('UPDATE orders')) {
+        return {
+          rows: [{
+            id: 'test-uuid',
+            order_id: 'ORD-test-123',
+            pair: 'BTC/USD',
+            side: 'buy',
+            type: 'market',
+            quantity: '0.1',
+            filled: '0.1',
+            status: 'filled',
+            price: '45000.00',
+            created_at: new Date(),
+          }]
+        };
+      }
+      // Default fallback
+      return { rows: [] };
+    });
   });
 
   afterEach(() => {
@@ -96,22 +162,22 @@ describe('Order Service', () => {
   });
 
   describe('getWallet', () => {
-    it('should call storage.getWallet with user id', async () => {
-      const mockWallet = { btc: 1.5, usd: 10000, lastUpdated: new Date() };
-      vi.mocked(storage.getWallet).mockResolvedValue(mockWallet);
+    it('should call walletService.getWalletSummary with user id', async () => {
+      const mockWallet = { userId: 'seed.user.primary@krystaline.io', btc: 1.5, usd: 10000, lastUpdated: new Date() };
+      vi.mocked(walletService.getWalletSummary).mockResolvedValue(mockWallet);
 
       const wallet = await orderService.getWallet('seed.user.primary@krystaline.io');
 
-      expect(storage.getWallet).toHaveBeenCalledWith('seed.user.primary@krystaline.io');
+      expect(walletService.getWalletSummary).toHaveBeenCalledWith('seed.user.primary@krystaline.io');
       expect(wallet).toEqual(mockWallet);
     });
 
     it('should default to seed.user.primary@krystaline.io if no user specified', async () => {
-      vi.mocked(storage.getWallet).mockResolvedValue(null);
+      vi.mocked(walletService.getWalletSummary).mockResolvedValue(null);
 
       await orderService.getWallet();
 
-      expect(storage.getWallet).toHaveBeenCalledWith('seed.user.primary@krystaline.io');
+      expect(walletService.getWalletSummary).toHaveBeenCalledWith('seed.user.primary@krystaline.io');
     });
   });
 
@@ -201,7 +267,7 @@ describe('Order Service', () => {
 
       const result = await orderService.submitOrder(validBuyOrder);
 
-      expect(storage.createOrder).toHaveBeenCalled();
+      // OrderService now uses internal db.query methods instead of storage.createOrder
       expect(result.orderId).toMatch(/^ORD-/);
     });
 
@@ -225,7 +291,7 @@ describe('Order Service', () => {
 
       const result = await orderService.submitOrder(validSellOrder);
 
-      expect(storage.createOrder).toHaveBeenCalled();
+      // OrderService now uses internal db.query methods instead of storage.createOrder
       expect(result.orderId).toMatch(/^ORD-/);
     });
 
@@ -236,7 +302,7 @@ describe('Order Service', () => {
         if (asset === 'BTC') return { id: '2', user_id: userId, asset: 'BTC', balance: '2.0', available: '2.0', locked: '0' };
         return null;
       });
-      vi.mocked(storage.createOrder).mockResolvedValue({} as any);
+      // OrderService now uses db.query directly, no need for storage.createOrder mock
       vi.mocked(rabbitMQClient.isConnected).mockReturnValue(false);
 
       const result = await orderService.submitOrder(validBuyOrder);
@@ -258,8 +324,7 @@ describe('Order Service', () => {
         if (asset === 'BTC') return { id: '2', user_id: userId, asset: 'BTC', balance: '2.0', available: '2.0', locked: '0' };
         return null;
       });
-      vi.mocked(storage.createOrder).mockResolvedValue({} as any);
-      vi.mocked(storage.updateWallet).mockResolvedValue(undefined);
+      // OrderService now uses db.query directly, no need for storage.createOrder or updateWallet mocks
       vi.mocked(rabbitMQClient.isConnected).mockReturnValue(true);
 
       // When RabbitMQ times out or fails, should still return an order

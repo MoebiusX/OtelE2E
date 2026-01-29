@@ -56,10 +56,10 @@ test.describe('Trading Flow', () => {
 
             // Try to buy way more than balance allows (user has ~$10k USD)
             // Attempt to buy 100 BTC (~$4M worth)
-            await page.click('button:has-text("Trade BTC")');
-            await page.click('button:has-text("BUY")');
+            await page.getByText('BTC/USD Trade').waitFor({ timeout: 10000 });
+            await page.getByRole('button', { name: /^BUY$/i }).click();
             await page.fill('input[type="number"]', '100');
-            await page.click('button:has-text("Buy")');
+            await page.getByRole('button', { name: /Buy.*BTC/i }).click();
 
             // Should show rejection/error
             const hasError = await isOrderRejected(page);
@@ -79,10 +79,10 @@ test.describe('Trading Flow', () => {
             await page.waitForLoadState('networkidle');
 
             // Try to sell BTC when we have none
-            await page.click('button:has-text("Trade BTC")');
-            await page.click('button:has-text("SELL")');
+            await page.getByText('BTC/USD Trade').waitFor({ timeout: 10000 });
+            await page.getByRole('button', { name: /^SELL$/i }).click();
             await page.fill('input[type="number"]', '1');
-            await page.click('button:has-text("Sell")');
+            await page.getByRole('button', { name: /Sell.*BTC/i }).click();
 
             // Should show rejection/error
             const hasError = await isOrderRejected(page);
@@ -126,10 +126,10 @@ test.describe('Trading Flow', () => {
             await page.waitForLoadState('networkidle');
 
             // Execute a trade
-            await page.click('button:has-text("Trade BTC")');
-            await page.click('button:has-text("BUY")');
+            await page.getByText('BTC/USD Trade').waitFor({ timeout: 10000 });
+            await page.getByRole('button', { name: /^BUY$/i }).click();
             await page.fill('input[type="number"]', '0.0001');
-            await page.click('button:has-text("Buy")');
+            await page.getByRole('button', { name: /Buy.*BTC/i }).click();
 
             // Should show execution confirmation
             await expect(page.getByText(/Executed|Submitted|Verified/i)).toBeVisible({ timeout: 15000 });

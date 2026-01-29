@@ -99,6 +99,38 @@ export const anomaliesDetectedTotal = new Counter({
 });
 
 // ============================================
+// Circuit Breaker Metrics
+// ============================================
+
+// Circuit breaker state (0=closed, 1=open, 2=half-open)
+export const circuitBreakerState = new Gauge({
+    name: 'circuit_breaker_state',
+    help: 'Circuit breaker state (0=closed, 1=open, 2=half-open)',
+    labelNames: ['service'],
+    registers: [register],
+});
+
+// Circuit breaker state changes
+export const circuitBreakerTripsTotal = new Counter({
+    name: 'circuit_breaker_trips_total',
+    help: 'Total number of circuit breaker state changes',
+    labelNames: ['service', 'from_state', 'to_state'],
+    registers: [register],
+});
+
+// Helper to record circuit breaker state
+export function recordCircuitBreakerState(service: string, state: 'CLOSED' | 'OPEN' | 'HALF_OPEN'): void {
+    const stateValue = state === 'CLOSED' ? 0 : state === 'OPEN' ? 1 : 2;
+    circuitBreakerState.set({ service }, stateValue);
+}
+
+// Helper to record circuit breaker trip
+export function recordCircuitBreakerTrip(service: string, fromState: string, toState: string): void {
+    circuitBreakerTripsTotal.inc({ service, from_state: fromState, to_state: toState });
+    recordCircuitBreakerState(service, toState as any);
+}
+
+// ============================================
 // Middleware
 // ============================================
 

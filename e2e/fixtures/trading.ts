@@ -60,20 +60,20 @@ export async function submitBuyOrder(page: Page, amount: number): Promise<void> 
         await page.goto('/trade');
     }
 
-    // Click Trade BTC tab if not active
-    await page.getByRole('button', { name: /Trade BTC/i }).click();
+    // Wait for trade form to load
+    await page.getByText('BTC/USD Trade').waitFor({ timeout: 10000 });
 
-    // Click BUY button
+    // Click BUY toggle button
     await page.getByRole('button', { name: /^BUY$/i }).click();
 
     // Fill amount
     await page.locator('input[type="number"]').first().fill(amount.toString());
 
-    // Submit order
-    await page.getByRole('button', { name: /^Buy$/i }).click();
+    // Submit order - button text is "Buy X.XXXX BTC"
+    await page.getByRole('button', { name: /Buy.*BTC/i }).click();
 
     // Wait for execution toast or confirmation
-    await page.getByText(/Trade Executed|Order Submitted|Executed|Verified/i).waitFor({ timeout: 15000 });
+    await page.getByText(/Trade.*Verified|Order Submitted|Executed/i).waitFor({ timeout: 15000 });
 }
 
 /**
@@ -85,20 +85,20 @@ export async function submitSellOrder(page: Page, amount: number): Promise<void>
         await page.goto('/trade');
     }
 
-    // Click Trade BTC tab if not active
-    await page.getByRole('button', { name: /Trade BTC/i }).click();
+    // Wait for trade form to load
+    await page.getByText('BTC/USD Trade').waitFor({ timeout: 10000 });
 
-    // Click SELL button
+    // Click SELL toggle button
     await page.getByRole('button', { name: /^SELL$/i }).click();
 
     // Fill amount
     await page.locator('input[type="number"]').first().fill(amount.toString());
 
-    // Submit order
-    await page.getByRole('button', { name: /^Sell$/i }).click();
+    // Submit order - button text is "Sell X.XXXX BTC"
+    await page.getByRole('button', { name: /Sell.*BTC/i }).click();
 
     // Wait for execution toast or confirmation
-    await page.getByText(/Trade Executed|Order Submitted|Executed|Verified/i).waitFor({ timeout: 15000 });
+    await page.getByText(/Trade.*Verified|Order Submitted|Executed/i).waitFor({ timeout: 15000 });
 }
 
 /**

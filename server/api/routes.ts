@@ -20,14 +20,14 @@ export function registerRoutes(app: Express) {
   logger.info('Registering API routes');
 
   // Register auth routes (profile, sessions, password management)
-  app.use('/api/auth', authRoutes);
+  app.use('/api/v1/auth', authRoutes);
 
   // Register 2FA routes
-  app.use('/api/auth/2fa', twoFactorRoutes);
+  app.use('/api/v1/auth/2fa', twoFactorRoutes);
   // ============================================
 
   // Get all verified users (for transfers)
-  app.get("/api/users", async (req: Request, res: Response) => {
+  app.get("/api/v1/users", async (req: Request, res: Response) => {
     try {
       // Get real users from database with their wallet addresses
       const result = await db.query(
@@ -59,7 +59,7 @@ export function registerRoutes(app: Express) {
   // ============================================
 
   // Get current BTC price (real from Binance)
-  app.get("/api/price", async (req: Request, res: Response) => {
+  app.get("/api/v1/price", async (req: Request, res: Response) => {
     try {
       // Import priceService for real Binance prices
       const { priceService } = await import('../services/price-service');
@@ -102,7 +102,7 @@ export function registerRoutes(app: Express) {
   });
 
   // Get wallet balance for a user (default: seed.user.primary@krystaline.io)
-  app.get("/api/wallet", async (req: Request, res: Response) => {
+  app.get("/api/v1/wallet", async (req: Request, res: Response) => {
     try {
       const userId = (req.query.userId as string) || 'seed.user.primary@krystaline.io';
       const wallet = await orderService.getWallet(userId);
@@ -120,86 +120,82 @@ export function registerRoutes(app: Express) {
     }
   });
 
-  // Get wallet for specific user
-  app.get("/api/wallet/:userId", async (req: Request, res: Response) => {
-    try {
-      const { userId } = req.params;
-      const wallet = await orderService.getWallet(userId);
-      if (!wallet) {
-        return res.status(404).json({ error: "User not found" });
-      }
-      const price = getPrice();
-      res.json({
-        ...wallet,
-        btcValue: wallet.btc * price,
-        totalValue: wallet.usd + (wallet.btc * price)
-      });
-    } catch (error: unknown) {
-      res.status(500).json({ error: "Failed to fetch wallet" });
-    }
-  });
+  // NOTE: /api/v1/wallet/* routes are handled by walletRoutes (server/wallet/routes.ts)
+  // Do NOT add /api/v1/wallet/:userId here as it conflicts with /api/v1/wallet/balances
 
   // ============================================
   // ORDER ENDPOINTS
   // ============================================
 
   // Submit trade order
-  app.post("/api/orders", async (req: Request, res: Response) => {
-    try {
-      const incomingTraceparent = req.headers['traceparent'];
-      if (incomingTraceparent) {
-        logger.debug({ traceparent: incomingTraceparent }, 'Incoming trace context from client');
-      }
+  app.post("/api/v1/orders", async (req: Request, res: Response) => {
+    // CRITICAL: Explicitly extract trace context from HTTP headers
+    // The HTTP auto-instrumentation may not always properly link the span
+    const { propagation, context, trace } = await import('@opentelemetry/api');
 
-      // Extend schema to include userId
-      const orderWithUserSchema = insertOrderSchema.extend({
-        userId: z.string().optional()
-      });
+    // Extract trace context from incoming request headers
+    const extractedContext = propagation.extract(context.active(), req.headers);
+    const extractedSpan = trace.getSpan(extractedContext);
 
-      const validation = orderWithUserSchema.safeParse(req.body);
-      if (!validation.success) {
-        return res.status(400).json({
-          error: "Invalid order request",
-          details: fromZodError(validation.error).message
+    logger.debug({
+      hasExtractedSpan: !!extractedSpan,
+      extractedTraceId: extractedSpan?.spanContext().traceId,
+      incomingTraceparent: req.headers['traceparent'],
+    }, 'Trace context extraction for order request');
+
+    // Execute the entire order processing within the extracted context
+    return context.with(extractedContext, async () => {
+      try {
+        // Extend schema to include userId
+        const orderWithUserSchema = insertOrderSchema.extend({
+          userId: z.string().optional()
         });
-      }
 
-      const orderData = validation.data;
+        const validation = orderWithUserSchema.safeParse(req.body);
+        if (!validation.success) {
+          return res.status(400).json({
+            error: "Invalid order request",
+            details: fromZodError(validation.error).message
+          });
+        }
 
-      const result = await orderService.submitOrder({
-        userId: orderData.userId || 'seed.user.primary@krystaline.io',
-        pair: orderData.pair,
-        side: orderData.side,
-        quantity: orderData.quantity,
-        orderType: orderData.orderType
-      });
+        const orderData = validation.data;
 
-      const wallet = await orderService.getWallet(orderData.userId || 'seed.user.primary@krystaline.io');
-
-      res.json({
-        success: true,
-        orderId: result.orderId,
-        order: {
-          orderId: result.orderId,
+        const result = await orderService.submitOrder({
+          userId: orderData.userId || 'seed.user.primary@krystaline.io',
           pair: orderData.pair,
           side: orderData.side,
-          quantity: orderData.quantity
-        },
-        execution: result.execution,
-        wallet,
-        traceId: result.traceId,
-        spanId: result.spanId
-      });
+          quantity: orderData.quantity,
+          orderType: orderData.orderType
+        });
 
-    } catch (error: unknown) {
-      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-      logger.error({ err: error }, 'Order processing failed');
-      res.status(500).json({ error: "Failed to process order", details: errorMessage });
-    }
+        const wallet = await orderService.getWallet(orderData.userId || 'seed.user.primary@krystaline.io');
+
+        res.json({
+          success: true,
+          orderId: result.orderId,
+          order: {
+            orderId: result.orderId,
+            pair: orderData.pair,
+            side: orderData.side,
+            quantity: orderData.quantity
+          },
+          execution: result.execution,
+          wallet,
+          traceId: result.traceId,
+          spanId: result.spanId
+        });
+
+      } catch (error: unknown) {
+        const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+        logger.error({ err: error }, 'Order processing failed');
+        res.status(500).json({ error: "Failed to process order", details: errorMessage });
+      }
+    });
   });
 
   // Get orders
-  app.get("/api/orders", async (req: Request, res: Response) => {
+  app.get("/api/v1/orders", async (req: Request, res: Response) => {
     try {
       const orders = await orderService.getOrders(10);
       res.json(orders);
@@ -213,7 +209,7 @@ export function registerRoutes(app: Express) {
   // ============================================
 
   // Transfer BTC between users
-  app.post("/api/transfer", async (req: Request, res: Response) => {
+  app.post("/api/v1/transfer", async (req: Request, res: Response) => {
     try {
       const incomingTraceparent = req.headers['traceparent'];
       if (incomingTraceparent) {
@@ -265,7 +261,7 @@ export function registerRoutes(app: Express) {
   });
 
   // Get transfers
-  app.get("/api/transfers", async (req: Request, res: Response) => {
+  app.get("/api/v1/transfers", async (req: Request, res: Response) => {
     try {
       const transfers = await orderService.getTransfers(10);
       res.json(transfers);
@@ -278,7 +274,7 @@ export function registerRoutes(app: Express) {
   // LEGACY PAYMENT ROUTES (backwards compat)
   // ============================================
 
-  app.post("/api/payments", async (req: Request, res: Response) => {
+  app.post("/api/v1/payments", async (req: Request, res: Response) => {
     const orderRequest = {
       userId: 'seed.user.primary@krystaline.io',
       pair: "BTC/USD" as const,
@@ -311,7 +307,7 @@ export function registerRoutes(app: Express) {
     }
   });
 
-  app.get("/api/payments", async (req: Request, res: Response) => {
+  app.get("/api/v1/payments", async (req: Request, res: Response) => {
     try {
       const orders = await orderService.getOrders(10);
       res.json(orders);
@@ -324,7 +320,7 @@ export function registerRoutes(app: Express) {
   // TRACES ENDPOINT (for UI)
   // ============================================
 
-  app.get("/api/traces", async (req: Request, res: Response) => {
+  app.get("/api/v1/traces", async (req: Request, res: Response) => {
     try {
       const traceGroups = new Map<string, any[]>();
 
@@ -367,7 +363,7 @@ export function registerRoutes(app: Express) {
   });
 
   // Clear all data
-  app.delete("/api/clear", async (req: Request, res: Response) => {
+  app.delete("/api/v1/clear", async (req: Request, res: Response) => {
     try {
       const { clearTraces } = await import('../otel');
       await orderService.clearAllData();

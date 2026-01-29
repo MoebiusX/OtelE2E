@@ -31,7 +31,7 @@ describe('Auth Request Validation', () => {
   describe('Login Request', () => {
     it('should accept valid login credentials', () => {
       const request = {
-        email: 'alice@demo.com',
+        email: 'seed.user.primary@krystaline.io',
         password: 'password123',
       };
       expect(() => loginRequestSchema.parse(request)).not.toThrow();
@@ -47,7 +47,7 @@ describe('Auth Request Validation', () => {
 
     it('should reject short password', () => {
       const request = {
-        email: 'alice@demo.com',
+        email: 'seed.user.primary@krystaline.io',
         password: '12345',
       };
       expect(() => loginRequestSchema.parse(request)).toThrow();
@@ -63,7 +63,7 @@ describe('Auth Request Validation', () => {
 
     it('should reject empty password', () => {
       const request = {
-        email: 'alice@demo.com',
+        email: 'seed.user.primary@krystaline.io',
         password: '',
       };
       expect(() => loginRequestSchema.parse(request)).toThrow();
@@ -112,7 +112,7 @@ describe('Auth Request Validation', () => {
     it('should validate token payload structure', () => {
       const payload = {
         userId: 'user_123',
-        email: 'alice@demo.com',
+        email: 'seed.user.primary@krystaline.io',
         iat: Math.floor(Date.now() / 1000),
         exp: Math.floor(Date.now() / 1000) + 3600,
       };
@@ -123,7 +123,7 @@ describe('Auth Request Validation', () => {
       const now = Math.floor(Date.now() / 1000);
       const payload = {
         userId: 'user_123',
-        email: 'alice@demo.com',
+        email: 'seed.user.primary@krystaline.io',
         iat: now,
         exp: now + 86400, // 24 hours
       };

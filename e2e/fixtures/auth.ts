@@ -95,13 +95,13 @@ export async function register(page: Page, email: string, password: string, _nam
             // Wait for redirect to trade page
             await page.waitForURL(/\/(portfolio|trade)/, { timeout: 15000 });
         } else {
-            // If no code available, try placeholder code for demo
-            console.warn('Could not fetch verification code, using demo flow');
-            await page.fill('input#code', '123456');
+            // Use E2E test bypass code for @test.com emails in development
+            console.warn('Could not fetch verification code, using E2E bypass code 000000');
+            await page.fill('input#code', '000000');
             await page.click('button[type="submit"]');
 
-            // May fail, but continue
-            await page.waitForTimeout(2000);
+            // Wait for redirect to trade page
+            await page.waitForURL(/\/(portfolio|trade)/, { timeout: 15000 });
         }
     } else {
         // Direct registration (maybe demo mode)
@@ -130,10 +130,17 @@ export async function login(page: Page, email: string, password: string) {
  */
 export async function logout(page: Page) {
     // Look for logout link or button
-    const logoutLink = page.locator('a:has-text("Logout"), button:has-text("Logout")');
-    if (await logoutLink.isVisible()) {
-        await logoutLink.click();
-        await page.waitForURL('/');
+    const logoutButton = page.getByRole('button', { name: 'Logout' });
+    if (await logoutButton.isVisible()) {
+        await logoutButton.click();
+
+        // Wait for redirect to home page with timeout
+        // The app clears localStorage and navigates to /
+        await page.waitForURL('/', { timeout: 10000 });
+    } else {
+        // If no logout button, just navigate to home
+        await page.goto('/');
+        await page.waitForLoadState('networkidle');
     }
 }
 

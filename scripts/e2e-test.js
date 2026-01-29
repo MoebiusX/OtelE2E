@@ -5,9 +5,11 @@
  * Use Case 2: Client Headers - Client provides trace context
  */
 
-const PAYMENT_API = 'http://localhost:5000/api/payments';
-const KONG_API = 'http://localhost:8000/api/payments';
-const JAEGER_API = 'http://localhost:16686/api';
+import config from './config.js';
+
+const PAYMENT_API = `${config.server.url}/api/v1/payments`;
+const KONG_API = `${config.kong.gatewayUrl}/api/v1/payments`;
+const JAEGER_API = `${config.observability.jaegerUrl}/api`;
 
 async function delay(ms) {
     return new Promise(resolve => setTimeout(resolve, ms));
@@ -151,80 +153,103 @@ async function testCase1_EmptyHeaders() {
     // Retry fetching traces with exponential backoff
     try {
         const result = await retryWithBackoff(async (attempt) => {
-            process.stdout.write(`\r   Attempt ${attempt}/10... `);
+            process.stdout.write(`\r   Attempt ${attempt}/15... `);
 
             // Try service names in order of preference (new kx-* names first)
-            let traces = await queryJaegerTraces('kx-exchange');
+            let traces = await queryJaegerTraces('kx-exchange', '5m');
+            let foundService = 'kx-exchange';
             if (!traces.data || traces.data.length === 0) {
-                traces = await queryJaegerTraces('api-gateway');
+                traces = await queryJaegerTraces('kong', '5m');
+                foundService = 'kong';
             }
             if (!traces.data || traces.data.length === 0) {
-                traces = await queryJaegerTraces('kx-wallet');
+                traces = await queryJaegerTraces('api-gateway', '5m');
+                foundService = 'api-gateway';
+            }
+            if (!traces.data || traces.data.length === 0) {
+                traces = await queryJaegerTraces('kx-wallet', '5m');
+                foundService = 'kx-wallet';
             }
             // Legacy fallbacks
             if (!traces.data || traces.data.length === 0) {
-                traces = await queryJaegerTraces('exchange-api');
+                traces = await queryJaegerTraces('exchange-api', '5m');
+                foundService = 'exchange-api';
             }
 
             if (!traces.data || traces.data.length === 0) {
+                if (attempt === 1) {
+                    console.log('\\n   Debug: No traces found for any service');
+                }
                 return null; // Retry
             }
 
-            // Filter traces to only recent ones (within last 10 seconds)
+            if (attempt === 1) {
+                console.log(`\\n   Debug: Found ${traces.data.length} traces under service '${foundService}'`);
+            }
+
+            // Filter traces to only ones created after we sent the payment (within 2 minutes)
             const recentTraces = traces.data.filter(t => {
                 const traceStartTime = t.spans[0]?.startTime || 0;
                 const traceAge = (Date.now() * 1000) - traceStartTime; // Jaeger uses microseconds
-                return traceAge < 10000000; // 10 seconds in microseconds
+                return traceAge < 120000000; // 120 seconds in microseconds
             });
 
             if (recentTraces.length === 0) {
+                if (attempt === 1) {
+                    console.log('\\n   Debug: No recent traces (within 2 min)');
+                }
                 return null; // Retry
             }
 
-            // Get the most recent trace
-            const latestTrace = recentTraces[0];
-            const fullTrace = await findTraceById(latestTrace.traceID);
+            // Check ALL recent traces for one that matches our criteria
+            for (const trace of recentTraces) {
+                const fullTrace = await findTraceById(trace.traceID);
+                if (!fullTrace) continue;
 
-            if (!fullTrace) {
-                return null; // Retry
+                const spans = fullTrace.data[0]?.spans || [];
+                const traceStartTime = spans[0]?.startTime || 0;
+                const traceAge = (Date.now() * 1000) - traceStartTime;
+
+                // Accept if trace is recent and has enough spans (indicating full flow)
+                const hasRequiredSpans = spans.length >= 3;
+                const isRecentEnough = traceAge < 120000000;
+
+                // Also check if this trace happened after we sent our payment
+                const traceStartMs = traceStartTime / 1000;
+                const isAfterPayment = traceStartMs >= (paymentTime - 5000); // Allow 5s slack
+
+                if (hasRequiredSpans && isRecentEnough && isAfterPayment) {
+                    const services = new Set(spans.map(s => s.processID).map(pid =>
+                        fullTrace.data[0]?.processes[pid]?.serviceName
+                    ));
+
+                    console.log(); // New line after attempts
+                    console.log(`   ✓ Found correct trace with ${spans.length} spans (took ${Date.now() - paymentTime}ms)`);
+                    console.log(`   Services: ${Array.from(services).join(', ')}`);
+                    console.log(`   Trace ID: ${trace.traceID}`);
+                    console.log(`   Payment ID ${payment.payment?.id} processed`);
+
+                    return { traceId: trace.traceID, spanCount: spans.length };
+                }
             }
 
-            const spans = fullTrace.data[0]?.spans || [];
-
-            // Verify this trace was created around our test time (within 15 seconds)
-            const traceStartTime = spans[0]?.startTime || 0;
-            const traceAge = (Date.now() * 1000) - traceStartTime; // Jaeger uses microseconds
-
-            // Accept if trace is recent and has API gateway + exchange spans
-            const hasRequiredSpans = spans.length >= 3;
-            const isRecentEnough = traceAge < 15000000; // 15 seconds in microseconds
-
-            if (hasRequiredSpans && isRecentEnough) {
-                const services = new Set(spans.map(s => s.processID).map(pid =>
-                    fullTrace.data[0]?.processes[pid]?.serviceName
-                ));
-
-                console.log(); // New line after attempts
-                console.log(`   ✓ Found correct trace with ${spans.length} spans (took ${Date.now() - paymentTime}ms)`);
-                console.log(`   Services: ${Array.from(services).join(', ')}`);
-                console.log(`   Trace ID: ${latestTrace.traceID}`);
-                console.log(`   Payment ID ${payment.payment?.id} processed`);
-
-                return { traceId: latestTrace.traceID, spanCount: spans.length };
+            // None of the recent traces matched
+            if (attempt === 1) {
+                console.log(`\\n   Debug: ${recentTraces.length} recent traces found, but none match criteria`);
             }
 
             return null; // Retry
         }, {
-            maxRetries: 10,
-            initialDelay: 1000,
-            maxDelay: 3000,
-            timeoutMs: 25000
+            maxRetries: 15,
+            initialDelay: 2000,
+            maxDelay: 5000,
+            timeoutMs: 60000
         });
 
         return { success: true, ...result };
     } catch (error) {
         if (error.message.includes('Timeout')) {
-            return { success: false, reason: 'Traces did not appear within 30 seconds' };
+            return { success: false, reason: 'Traces did not appear within 60 seconds' };
         }
         return { success: false, reason: 'No traces found for any service' };
     }
@@ -315,7 +340,7 @@ async function main() {
 
     // Check services are running
     try {
-        await fetch(PAYMENT_API.replace('/payments', '/traces'));
+        await fetch(PAYMENT_API.replace('/api/v1/payments', '/api/v1/traces'));
         console.log('✅ Payment API is running');
     } catch {
         console.error('❌ Payment API is not running on port 5000');

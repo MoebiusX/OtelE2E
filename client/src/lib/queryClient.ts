@@ -1,5 +1,8 @@
 import { QueryClient, QueryFunction } from "@tanstack/react-query";
 
+// Kong Gateway URL - configured via environment variable
+const KONG_URL = import.meta.env.VITE_KONG_URL || 'http://localhost:8000';
+
 /**
  * Get authorization headers from stored access token
  */
@@ -53,11 +56,12 @@ export async function apiRequest(
   // All API requests go through Kong Gateway:
   // - If client provides traceparent → Kong preserves and propagates it
   // - If no traceparent → Kong creates new trace context
-  const KONG_URL = 'http://localhost:8000';
 
   let targetUrl = url;
-  if (url.startsWith('/api')) {
-    targetUrl = `${KONG_URL}${url}`;
+  if (url.startsWith('/api/')) {
+    // Only add v1 if not already versioned - prevents /api/v1/ → /api/v1/v1/
+    const versionedUrl = url.startsWith('/api/v1/') ? url : url.replace(/^\/api\//, '/api/v1/');
+    targetUrl = `${KONG_URL}${versionedUrl}`;
   }
 
   const res = await fetch(targetUrl, {
@@ -80,9 +84,13 @@ export const getQueryFn: <T>(options: {
     async ({ queryKey }) => {
       const url = queryKey[0] as string;
 
-      // Route all /api requests through Kong Gateway
-      const KONG_URL = 'http://localhost:8000';
-      const targetUrl = url.startsWith('/api') ? `${KONG_URL}${url}` : url;
+      // Route all /api requests through Kong Gateway with v1 versioning
+      let targetUrl = url;
+      if (url.startsWith('/api/')) {
+        // Only add v1 if not already versioned - prevents /api/v1/ → /api/v1/v1/
+        const versionedUrl = url.startsWith('/api/v1/') ? url : url.replace(/^\/api\//, '/api/v1/');
+        targetUrl = `${KONG_URL}${versionedUrl}`;
+      }
 
       const res = await fetch(targetUrl, {
         credentials: "same-origin",

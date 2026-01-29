@@ -190,26 +190,26 @@ export default function Monitor() {
 
     // Fetch health data
     const { data: healthData } = useQuery<{ status: string; services: ServiceHealth[] }>({
-        queryKey: ["/api/monitor/health"],
+        queryKey: ["/api/v1/monitor/health"],
         refetchInterval: 5000,
     });
 
     // Fetch baselines
     const { data: baselinesData } = useQuery<{ baselines: SpanBaseline[] }>({
-        queryKey: ["/api/monitor/baselines"],
+        queryKey: ["/api/v1/monitor/baselines"],
         refetchInterval: 10000,
     });
 
     // Fetch anomalies
     const { data: anomaliesData } = useQuery<{ active: Anomaly[] }>({
-        queryKey: ["/api/monitor/anomalies"],
+        queryKey: ["/api/v1/monitor/anomalies"],
         refetchInterval: 5000,
     });
 
     // Analyze mutation
     const analyzeMutation = useMutation({
         mutationFn: async (traceId: string) => {
-            const res = await fetch("/api/monitor/analyze", {
+            const res = await fetch("/api/v1/monitor/analyze", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({ traceId }),
@@ -221,7 +221,7 @@ export default function Monitor() {
     // Metrics correlation mutation
     const correlationMutation = useMutation({
         mutationFn: async (anomaly: Anomaly) => {
-            const res = await fetch("/api/monitor/correlate", {
+            const res = await fetch("/api/v1/monitor/correlate", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({
@@ -237,7 +237,7 @@ export default function Monitor() {
     // Recalculate baselines mutation
     const recalculateMutation = useMutation({
         mutationFn: async () => {
-            const res = await fetch("/api/monitor/recalculate", {
+            const res = await fetch("/api/v1/monitor/recalculate", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
             });
@@ -245,7 +245,7 @@ export default function Monitor() {
         },
         onSuccess: () => {
             // Refresh all data after recalculation
-            queryClient.invalidateQueries({ queryKey: ["/api/monitor"] });
+            queryClient.invalidateQueries({ queryKey: ["/api/v1/monitor"] });
         },
     });
 
@@ -259,7 +259,7 @@ export default function Monitor() {
             if (!selectedAnomaly || !analyzeMutation.data) return;
 
             // Use the EXACT prompt and response from the LLM call
-            const res = await fetch("/api/monitor/training/rate", {
+            const res = await fetch("/api/v1/monitor/training/rate", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({
@@ -294,7 +294,7 @@ export default function Monitor() {
 
     // Training stats query
     const { data: trainingStats } = useQuery<{ totalExamples: number; goodExamples: number; badExamples: number }>({
-        queryKey: ["/api/monitor/training/stats"],
+        queryKey: ["/api/v1/monitor/training/stats"],
         refetchInterval: 30000,
     });
 
@@ -370,7 +370,7 @@ export default function Monitor() {
                     <div className="flex flex-wrap gap-2 sm:gap-3">
                         <button
                             onClick={() => {
-                                queryClient.invalidateQueries({ queryKey: ["/api/monitor"] });
+                                queryClient.invalidateQueries({ queryKey: ["/api/v1/monitor"] });
                             }}
                             className="px-4 py-2 rounded-lg border border-cyan-500/30 bg-slate-800/50 text-cyan-100 hover:bg-slate-800 hover:border-cyan-400/50 text-sm sm:text-base font-medium transition-all duration-300 backdrop-blur"
                         >
@@ -384,7 +384,7 @@ export default function Monitor() {
                             {recalculateMutation.isPending ? 'Calculating...' : 'Recalculate Baselines'}
                         </button>
                         <button
-                            onClick={() => window.open("http://localhost:16686", "_blank")}
+                            onClick={() => window.open(import.meta.env.VITE_JAEGER_URL || "http://localhost:16686", "_blank")}
                             className="px-4 py-2 rounded-lg border border-cyan-500/30 bg-slate-800/50 text-cyan-100 hover:bg-slate-800 hover:border-cyan-400/50 text-sm sm:text-base font-medium transition-all duration-300 backdrop-blur"
                         >
                             View in Jaeger
@@ -439,8 +439,8 @@ export default function Monitor() {
                                     >
                                         <span className="font-medium">
                                             <Badge className={`mr-2 ${alert.severity === 'critical' ? 'bg-red-600 text-white' :
-                                                    alert.severity === 'high' ? 'bg-orange-600 text-white' :
-                                                        'bg-amber-600 text-white'
+                                                alert.severity === 'high' ? 'bg-orange-600 text-white' :
+                                                    'bg-amber-600 text-white'
                                                 }`}>
                                                 {alert.severity === 'critical' ? 'CRITICAL' : alert.severity === 'high' ? 'HIGH' : 'MEDIUM'}
                                             </Badge>
@@ -946,6 +946,6 @@ export default function Monitor() {
                     </CardContent>
                 </Card>
             </div>
-        </Layout>
+        </Layout >
     );
 }
