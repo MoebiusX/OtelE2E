@@ -9,10 +9,11 @@ import { orderService, getPrice } from "../core/order-service";
 import { insertOrderSchema, insertTransferSchema } from "@shared/schema";
 import { traces } from "../otel";
 import { createLogger } from "../lib/logger";
-import { getErrorMessage } from "../lib/errors";
+import { getErrorMessage, InsufficientFundsError, OrderError } from "../lib/errors";
 import db from "../db";
 import authRoutes from "./auth-routes";
 import twoFactorRoutes from "./2fa-routes";
+import { validateUUID } from "../middleware/uuid-validation";
 
 const logger = createLogger('api-routes');
 
@@ -130,8 +131,8 @@ export function registerRoutes(app: Express) {
   // ORDER ENDPOINTS
   // ============================================
 
-  // Submit trade order
-  app.post("/api/v1/orders", async (req: Request, res: Response) => {
+  // Submit trade order - NOW WITH UUID VALIDATION
+  app.post("/api/v1/orders", validateUUID('userId'), async (req: Request, res: Response) => {
     // CRITICAL: Explicitly extract trace context from HTTP headers
     // The HTTP auto-instrumentation may not always properly link the span
     const { propagation, context, trace } = await import('@opentelemetry/api');
@@ -151,7 +152,7 @@ export function registerRoutes(app: Express) {
       try {
         // Extend schema to include userId
         const orderWithUserSchema = insertOrderSchema.extend({
-          userId: z.string().optional()
+          userId: z.string() // Make it required now
         });
 
         const validation = orderWithUserSchema.safeParse(req.body);
@@ -178,7 +179,8 @@ export function registerRoutes(app: Express) {
 
         const wallet = await orderService.getWallet(orderData.userId);
 
-        res.json({
+        // Return 201 Created for successful order submission
+        return res.status(201).json({
           success: true,
           orderId: result.orderId,
           order: {
@@ -194,9 +196,32 @@ export function registerRoutes(app: Express) {
         });
 
       } catch (error: unknown) {
+        // Handle semantic errors with proper HTTP status codes
+        if (error instanceof InsufficientFundsError) {
+          return res.status(422).json({
+            error: error.message,
+            code: 'INSUFFICIENT_FUNDS',
+            details: error.details
+          });
+        }
+
+        if (error instanceof OrderError) {
+          // Check if it's a service unavailable error
+          if (error.message.includes('unavailable')) {
+            return res.status(503).json({
+              error: error.message,
+              code: 'SERVICE_UNAVAILABLE'
+            });
+          }
+          return res.status(422).json({
+            error: error.message,
+            code: 'ORDER_ERROR'
+          });
+        }
+
         const errorMessage = error instanceof Error ? error.message : 'Unknown error';
         logger.error({ err: error }, 'Order processing failed');
-        res.status(500).json({ error: "Failed to process order", details: errorMessage });
+        return res.status(500).json({ error: "Failed to process order", details: errorMessage });
       }
     });
   });

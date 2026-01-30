@@ -78,16 +78,17 @@ export function TradeForm({ currentUser: propUser, walletAddress: propAddress }:
     const queryClient = useQueryClient();
 
     // Get user synchronously from localStorage on mount to avoid race conditions
-    const [currentUser, setCurrentUser] = useState<string>(() => {
+    const [currentUser, setCurrentUser] = useState<string | null>(() => {
         if (propUser) return propUser;
         try {
             const userData = localStorage.getItem('user');
             if (userData) {
                 const parsed = JSON.parse(userData);
-                return parsed.email || parsed.id || 'seed.user.primary@krystaline.io';
+                // Only accept UUID format - no email fallback
+                return parsed.id || null;
             }
         } catch { /* ignore parse errors */ }
-        return 'seed.user.primary@krystaline.io';
+        return null;
     });
 
     const [walletAddress, setWalletAddress] = useState<string | undefined>(() => {
@@ -271,12 +272,36 @@ export function TradeForm({ currentUser: propUser, walletAddress: propAddress }:
                 queryClient.invalidateQueries({ queryKey: ["/api/v1/traces"] });
             }, 1500);
         },
-        onError: (error) => {
-            toast({
-                title: "Order Failed",
-                description: error.message,
-                variant: "destructive",
-            });
+        onError: (error: any) => {
+            // Parse error response for semantic status codes
+            const status = error.response?.status;
+            const errorData = error.response?.data || {};
+
+            if (status === 422 && errorData.code === 'INSUFFICIENT_FUNDS') {
+                toast({
+                    title: "Insufficient Funds",
+                    description: `You need ${errorData.details?.required} ${errorData.details?.asset} but only have ${errorData.details?.available}`,
+                    variant: "destructive",
+                });
+            } else if (status === 503 && errorData.code === 'SERVICE_UNAVAILABLE') {
+                toast({
+                    title: "Service Unavailable",
+                    description: "Trading is temporarily unavailable. Please try again later.",
+                    variant: "destructive",
+                });
+            } else if (status === 400) {
+                toast({
+                    title: "Invalid Request",
+                    description: errorData.error || "Please check your input and try again.",
+                    variant: "destructive",
+                });
+            } else {
+                toast({
+                    title: "Order Failed",
+                    description: errorData.error || error.message || "An error occurred",
+                    variant: "destructive",
+                });
+            }
         },
     });
 
@@ -435,7 +460,7 @@ export function TradeForm({ currentUser: propUser, walletAddress: propAddress }:
                         {/* Submit Button */}
                         <Button
                             type="submit"
-                            disabled={orderMutation.isPending || !priceAvailable}
+                            disabled={orderMutation.isPending || !priceAvailable || !currentUser}
                             className={`w-full h-14 text-lg font-bold ${side === "BUY"
                                 ? "bg-green-600 hover:bg-green-700 disabled:bg-green-600/50"
                                 : "bg-red-600 hover:bg-red-700 disabled:bg-red-600/50"
@@ -446,6 +471,8 @@ export function TradeForm({ currentUser: propUser, walletAddress: propAddress }:
                                     <Loader2 className="w-5 h-5 mr-2 animate-spin" />
                                     Processing...
                                 </>
+                            ) : !currentUser ? (
+                                <>Please log in to trade</>
                             ) : !priceAvailable ? (
                                 <>Waiting for prices...</>
                             ) : (

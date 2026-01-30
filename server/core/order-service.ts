@@ -193,148 +193,123 @@ export class OrderService {
             userId
         });
 
-        // Process via RabbitMQ - MUST preserve the current context for proper trace propagation
+        // Check RabbitMQ availability - REQUIRED for trading
         const isRabbitConnected = rabbitMQClient.isConnected();
         logger.info({
             orderId,
             rabbitMQConnected: isRabbitConnected
         }, 'Order processing - checking RabbitMQ connection');
 
-        if (isRabbitConnected) {
-            // Capture the current context to ensure it's passed to RabbitMQ
-            const currentContext = context.active();
-            const activeSpanForRabbit = trace.getSpan(currentContext);
+        if (!isRabbitConnected) {
+            logger.error({ orderId }, 'RabbitMQ not available - cannot process order');
+
+            // Mark order as rejected due to service unavailability
+            await this.updateOrderRecord(orderId, {
+                status: 'REJECTED',
+                fillPrice: price,
+                totalValue
+            });
+
+            throw new OrderError('Order matching service unavailable. Please try again later.');
+        }
+
+        // Execute via RabbitMQ - MUST preserve the current context for proper trace propagation
+        const currentContext = context.active();
+        const activeSpanForRabbit = trace.getSpan(currentContext);
+
+        logger.info({
+            hasContext: !!activeSpanForRabbit,
+            contextTraceId: activeSpanForRabbit?.spanContext().traceId,
+        }, 'Calling RabbitMQ with captured context');
+
+        try {
+            // Execute within the captured context to ensure trace propagation
+            const executionResponse = await context.with(currentContext, () =>
+                rabbitMQClient.publishOrderAndWait({
+                    orderId,
+                    correlationId,
+                    pair: request.pair,
+                    side: request.side,
+                    quantity: request.quantity,
+                    orderType: request.orderType,
+                    currentPrice: price,
+                    traceId,
+                    spanId,
+                    userId,
+                    timestamp: new Date().toISOString()
+                }, 5000)
+            );
 
             logger.info({
-                hasContext: !!activeSpanForRabbit,
-                contextTraceId: activeSpanForRabbit?.spanContext().traceId,
-            }, 'Calling RabbitMQ with captured context');
+                orderId,
+                status: executionResponse.status,
+                fillPrice: executionResponse.fillPrice,
+                processorId: executionResponse.processorId
+            }, 'Order execution response received');
 
-            try {
-                // Execute within the captured context to ensure trace propagation
-                const executionResponse = await context.with(currentContext, () =>
-                    rabbitMQClient.publishOrderAndWait({
+            if (executionResponse.status === 'FILLED') {
+                try {
+                    await this.updateUserWallet(userId, request.side, request.quantity, executionResponse.fillPrice);
+                    // Emit business metrics for successful trade
+                    recordTrade(request.pair, request.side, request.quantity, executionResponse.totalValue);
+                    recordOrderMetrics(request.side, 'FILLED', 0); // Duration tracked separately
+                    // Check for whale transaction
+                    amountAnomalyDetector.checkOrder({
                         orderId,
-                        correlationId,
-                        pair: request.pair,
-                        side: request.side,
-                        quantity: request.quantity,
-                        orderType: request.orderType,
-                        currentPrice: price,
-                        traceId,
-                        spanId,
                         userId,
-                        timestamp: new Date().toISOString()
-                    }, 5000)
-                );
+                        side: request.side,
+                        pair: request.pair,
+                        amount: request.quantity,
+                        traceId,
+                    });
+                } catch (walletError: unknown) {
+                    // Wallet update failed (e.g., balance constraint violation)
+                    // Mark order as rejected to prevent stuck pending orders
+                    logger.error({
+                        err: walletError,
+                        orderId,
+                        userId,
+                        side: request.side,
+                        quantity: request.quantity
+                    }, 'Wallet update failed - marking order as rejected');
 
-                logger.info({
-                    orderId,
-                    status: executionResponse.status,
-                    fillPrice: executionResponse.fillPrice,
-                    processorId: executionResponse.processorId
-                }, 'Order execution response received');
-
-                if (executionResponse.status === 'FILLED') {
-                    try {
-                        await this.updateUserWallet(userId, request.side, request.quantity, executionResponse.fillPrice);
-                        // Emit business metrics for successful trade
-                        recordTrade(request.pair, request.side, request.quantity, executionResponse.totalValue);
-                        recordOrderMetrics(request.side, 'FILLED', 0); // Duration tracked separately
-                        // Check for whale transaction
-                        amountAnomalyDetector.checkOrder({
-                            orderId,
-                            userId,
-                            side: request.side,
-                            pair: request.pair,
-                            amount: request.quantity,
-                            traceId,
-                        });
-                    } catch (walletError: unknown) {
-                        // Wallet update failed (e.g., balance constraint violation)
-                        // Mark order as rejected to prevent stuck pending orders
-                        logger.error({
-                            err: walletError,
-                            orderId,
-                            userId,
-                            side: request.side,
-                            quantity: request.quantity
-                        }, 'Wallet update failed - marking order as rejected');
-
-                        await this.updateOrderRecord(orderId, {
-                            status: 'REJECTED',
-                            fillPrice: executionResponse.fillPrice,
-                            totalValue: executionResponse.totalValue
-                        });
-
-                        return {
-                            orderId, traceId, spanId,
-                            order,
-                            execution: {
-                                status: 'REJECTED',
-                                fillPrice: executionResponse.fillPrice,
-                                totalValue: executionResponse.totalValue,
-                                processedAt: executionResponse.processedAt,
-                                processorId: 'settlement-failed'
-                            }
-                        };
-                    }
-                }
-
-                await this.updateOrderRecord(orderId, {
-                    status: executionResponse.status as "PENDING" | "FILLED" | "REJECTED",
-                    fillPrice: executionResponse.fillPrice,
-                    totalValue: executionResponse.totalValue
-                });
-
-                return {
-                    orderId, traceId, spanId,
-                    order,
-                    execution: {
-                        status: executionResponse.status,
+                    await this.updateOrderRecord(orderId, {
+                        status: 'REJECTED',
                         fillPrice: executionResponse.fillPrice,
-                        totalValue: executionResponse.totalValue,
-                        processedAt: executionResponse.processedAt,
-                        processorId: executionResponse.processorId
-                    }
-                };
-            } catch (error: unknown) {
-                logger.warn({
-                    err: error,
-                    orderId
-                }, 'Order matcher timeout');
-                return { orderId, traceId, spanId, order };
+                        totalValue: executionResponse.totalValue
+                    });
+
+                    throw new OrderError('Settlement failed - order rejected');
+                }
             }
-        } else {
-            // Fallback: local execution
-            logger.warn({
-                orderId,
-                reason: 'RabbitMQ not connected - using local fallback'
-            }, 'Order processed locally (kx-matcher bypassed)');
-            await this.updateUserWallet(userId, request.side, request.quantity, price);
-            // Emit business metrics for successful local trade
-            recordTrade(request.pair, request.side, request.quantity, totalValue);
-            recordOrderMetrics(request.side, 'FILLED', 0);
-            // Check for whale transaction
-            amountAnomalyDetector.checkOrder({
-                orderId,
-                userId,
-                side: request.side,
-                pair: request.pair,
-                amount: request.quantity,
-                traceId,
+
+            await this.updateOrderRecord(orderId, {
+                status: executionResponse.status as "PENDING" | "FILLED" | "REJECTED",
+                fillPrice: executionResponse.fillPrice,
+                totalValue: executionResponse.totalValue
             });
+
             return {
                 orderId, traceId, spanId,
                 order,
                 execution: {
-                    status: 'FILLED',
-                    fillPrice: price,
-                    totalValue,
-                    processedAt: new Date().toISOString(),
-                    processorId: 'local-fallback'
+                    status: executionResponse.status,
+                    fillPrice: executionResponse.fillPrice,
+                    totalValue: executionResponse.totalValue,
+                    processedAt: executionResponse.processedAt,
+                    processorId: executionResponse.processorId
                 }
             };
+        } catch (error: unknown) {
+            logger.error({
+                err: error,
+                orderId
+            }, 'Order execution failed');
+
+            // Mark as rejected
+            await this.updateOrderRecord(orderId, { status: 'REJECTED' });
+
+            throw error;
         }
     }
 
