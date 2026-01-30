@@ -14,6 +14,7 @@ import db from "../db";
 import authRoutes from "./auth-routes";
 import twoFactorRoutes from "./2fa-routes";
 import { validateUUID } from "../middleware/uuid-validation";
+import { tradingHealthCheck } from "../middleware/health-check";
 
 const logger = createLogger('api-routes');
 
@@ -25,6 +26,9 @@ export function registerRoutes(app: Express) {
 
   // Register 2FA routes
   app.use('/api/v1/auth/2fa', twoFactorRoutes);
+
+  // Health check for trading services
+  app.get('/api/v1/health/trading', tradingHealthCheck);
   // ============================================
 
   // Get all verified users (for transfers)

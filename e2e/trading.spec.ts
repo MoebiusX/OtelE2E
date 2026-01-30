@@ -67,9 +67,13 @@ test.describe('Trading Flow', () => {
             await page.fill('input[type="number"]', '1000');
             await page.getByRole('button', { name: /Buy.*BTC/i }).click();
 
-            // Should show rejection/error - wait for toast or error message
+            // Should show rejection/error - wait for toast with "Insufficient Funds" message
             const hasError = await isOrderRejected(page);
             expect(hasError).toBe(true);
+
+            // Verify semantic error message is shown
+            const insufficientFundsToast = page.getByText(/Insufficient Funds|Insufficient.*USD/i);
+            await expect(insufficientFundsToast).toBeVisible({ timeout: 5000 });
         });
     });
 
@@ -94,6 +98,10 @@ test.describe('Trading Flow', () => {
             // Should show rejection/error
             const hasError = await isOrderRejected(page);
             expect(hasError).toBe(true);
+
+            // Verify semantic error message is shown
+            const insufficientFundsToast = page.getByText(/Insufficient Funds|Insufficient.*BTC/i);
+            await expect(insufficientFundsToast).toBeVisible({ timeout: 5000 });
         });
     });
 
