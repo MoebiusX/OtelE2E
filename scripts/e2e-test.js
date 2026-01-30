@@ -10,6 +10,7 @@ import config from './config.js';
 const PAYMENT_API = `${config.server.url}/api/v1/payments`;
 const KONG_API = `${config.kong.gatewayUrl}/api/v1/payments`;
 const JAEGER_API = `${config.observability.jaegerUrl}/api`;
+const REGISTER_API = `${config.server.url}/api/v1/auth/register`;
 
 async function delay(ms) {
     return new Promise(resolve => setTimeout(resolve, ms));
@@ -70,6 +71,24 @@ async function submitPayment(url, payload, headers = {}) {
     return response.json();
 }
 
+/**
+ * Register a test user and return their UUID
+ */
+async function registerTestUser(email, password = 'E2ETest123!') {
+    try {
+        const response = await fetch(REGISTER_API, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ email, password })
+        });
+        const data = await response.json();
+        return data.user?.id || null;
+    } catch (error) {
+        console.error('Failed to register user:', error.message);
+        return null;
+    }
+}
+
 async function queryJaegerTraces(service, lookback = '1m') {
     const url = `${JAEGER_API}/traces?service=${service}&lookback=${lookback}&limit=10`;
     const response = await fetch(url);
@@ -127,13 +146,23 @@ async function testCase1_EmptyHeaders() {
     // Use Case 1: Send request through Kong WITHOUT trace headers
     // Expected: API Gateway creates and injects trace context
 
-    // Generate unique test ID to validate we find the right trace
+    // Generate unique test ID and email
     const testId = `test1-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
-    console.log('📤 Sending payment through Kong (no trace headers)...');
+    const testEmail = `e2e-test1-${Date.now()}@test.krystaline.io`;
+
+    console.log('📤 Registering test user and sending payment through Kong...');
     console.log(`   Test ID: ${testId}`);
+    console.log(`   Test Email: ${testEmail}`);
+
+    // Register test user to get UUID
+    const userId = await registerTestUser(testEmail);
+    if (!userId) {
+        return { success: false, reason: 'Failed to register test user' };
+    }
+    console.log(`   User ID (UUID): ${userId}`);
 
     const payment = await submitPayment(KONG_API, {
-        userId: 'seed.user.primary@krystaline.io',
+        userId,  // Use UUID instead of email
         amount: 1001,
         currency: 'USD',
         recipient: 'e2e-test1@example.com',
@@ -268,14 +297,24 @@ async function testCase2_ClientHeaders() {
         Math.floor(Math.random() * 16).toString(16)
     ).join('');
 
-    // Generate unique test ID
+    // Generate unique test ID and email
     const testId = `test2-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
-    console.log(`📤 Sending payment through Kong with random trace ID`);
+    const testEmail = `e2e-test2-${Date.now()}@test.krystaline.io`;
+
+    console.log(`📤 Registering test user and sending payment through Kong with random trace ID`);
     console.log(`   Test ID: ${testId}`);
+    console.log(`   Test Email: ${testEmail}`);
     console.log(`   Client Trace ID: ${clientTraceId}`);
 
+    // Register test user to get UUID
+    const userId = await registerTestUser(testEmail);
+    if (!userId) {
+        return { success: false, reason: 'Failed to register test user' };
+    }
+    console.log(`   User ID (UUID): ${userId}`);
+
     const payment = await submitPayment(KONG_API, {
-        userId: 'seed.user.primary@krystaline.io',
+        userId,  // Use UUID instead of email
         amount: 2002,
         currency: 'USD',
         recipient: 'e2e-test2@example.com',
