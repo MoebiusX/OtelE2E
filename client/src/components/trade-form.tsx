@@ -21,7 +21,7 @@ const getErrorMessage = (error: unknown): string =>
 const orderSchema = z.object({
     pair: z.literal("BTC/USD"),
     side: z.enum(["BUY", "SELL"]),
-    quantity: z.number().positive().max(10),
+    quantity: z.number().positive().max(100000000),
     orderType: z.literal("MARKET"),
 });
 
@@ -77,24 +77,31 @@ export function TradeForm({ currentUser: propUser, walletAddress: propAddress }:
     const { toast } = useToast();
     const queryClient = useQueryClient();
 
-    // Get user and wallet address from props or localStorage
-    const [currentUser, setCurrentUser] = useState<string>(propUser || 'seed.user.primary@krystaline.io');
-    const [walletAddress, setWalletAddress] = useState<string | undefined>(propAddress);
-
-    useEffect(() => {
-        if (!propUser) {
+    // Get user synchronously from localStorage on mount to avoid race conditions
+    const [currentUser, setCurrentUser] = useState<string>(() => {
+        if (propUser) return propUser;
+        try {
             const userData = localStorage.getItem('user');
             if (userData) {
-                try {
-                    const parsed = JSON.parse(userData);
-                    // Use email as userId since wallets are keyed by email
-                    setCurrentUser(parsed.email || parsed.id || 'seed.user.primary@krystaline.io');
-                    // Get wallet address if stored
-                    setWalletAddress(parsed.walletAddress);
-                } catch { }
+                const parsed = JSON.parse(userData);
+                return parsed.email || parsed.id || 'seed.user.primary@krystaline.io';
             }
-        }
-    }, [propUser]);
+        } catch { /* ignore parse errors */ }
+        return 'seed.user.primary@krystaline.io';
+    });
+
+    const [walletAddress, setWalletAddress] = useState<string | undefined>(() => {
+        if (propAddress) return propAddress;
+        try {
+            const userData = localStorage.getItem('user');
+            if (userData) {
+                const parsed = JSON.parse(userData);
+                return parsed.walletAddress;
+            }
+        } catch { /* ignore parse errors */ }
+        return undefined;
+    });
+
 
     // Fetch wallet balance for current user
     const kongUrl = import.meta.env.VITE_KONG_URL || 'http://localhost:8000';
@@ -255,8 +262,8 @@ export function TradeForm({ currentUser: propUser, walletAddress: propAddress }:
                 ),
             });
 
-            // Refresh data
-            queryClient.invalidateQueries({ queryKey: ["/api/v1/wallet"] });
+            // Refresh data - use partial match to invalidate all wallet queries
+            queryClient.invalidateQueries({ queryKey: ["/api/v1/wallet"], exact: false });
             queryClient.invalidateQueries({ queryKey: ["/api/v1/orders"] });
             queryClient.invalidateQueries({ queryKey: ["/api/v1/traces"] });
 
@@ -403,7 +410,7 @@ export function TradeForm({ currentUser: propUser, walletAddress: propAddress }:
                                             type="number"
                                             step="0.001"
                                             min="0.001"
-                                            max="10"
+                                            max="100000000"
                                             placeholder="0.01"
                                             {...field}
                                             onChange={(e) => field.onChange(parseFloat(e.target.value) || 0)}

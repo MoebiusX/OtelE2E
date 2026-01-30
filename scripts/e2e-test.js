@@ -133,6 +133,7 @@ async function testCase1_EmptyHeaders() {
     console.log(`   Test ID: ${testId}`);
 
     const payment = await submitPayment(KONG_API, {
+        userId: 'seed.user.primary@krystaline.io',
         amount: 1001,
         currency: 'USD',
         recipient: 'e2e-test1@example.com',
@@ -274,6 +275,7 @@ async function testCase2_ClientHeaders() {
     console.log(`   Client Trace ID: ${clientTraceId}`);
 
     const payment = await submitPayment(KONG_API, {
+        userId: 'seed.user.primary@krystaline.io',
         amount: 2002,
         currency: 'USD',
         recipient: 'e2e-test2@example.com',

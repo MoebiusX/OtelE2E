@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { useLocation } from "wouter";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useTranslation } from "react-i18next";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -49,6 +50,7 @@ interface Session {
 
 export default function Profile() {
     const [, navigate] = useLocation();
+    const { t } = useTranslation('auth');
     const [user, setUser] = useState<UserProfile | null>(null);
     const [showPasswordForm, setShowPasswordForm] = useState(false);
     const [currentPassword, setCurrentPassword] = useState("");
@@ -274,8 +276,8 @@ export default function Profile() {
                         <User className="w-10 h-10 text-cyan-400" />
                     </div>
                     <div>
-                        <h1 className="text-3xl font-bold text-cyan-100">Profile</h1>
-                        <p className="text-cyan-100/60">Manage your account and security settings</p>
+                        <h1 className="text-3xl font-bold text-cyan-100">{t('profile.title')}</h1>
+                        <p className="text-cyan-100/60">{t('profile.twoFactorDescription')}</p>
                     </div>
                 </div>
 
@@ -285,7 +287,7 @@ export default function Profile() {
                         <CardHeader>
                             <CardTitle className="text-cyan-100 flex items-center gap-2">
                                 <Mail className="w-5 h-5 text-cyan-400" />
-                                Account Information
+                                {t('profile.accountInfo')}
                             </CardTitle>
                             <CardDescription className="text-cyan-100/50">
                                 Your personal account details

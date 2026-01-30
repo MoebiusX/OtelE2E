@@ -1,6 +1,6 @@
-# Krystaline Exchange - OpenTelemetry Demo
+# Krystaline Exchange - AI-Powered Observability Platform
 
-A **multi-user cryptocurrency exchange** demonstrating end-to-end distributed tracing with OpenTelemetry. Trade BTC/USD with proper blockchain-style wallet addresses (`kx1...`), and watch your requests flow through the entire system in Jaeger.
+An **institutional-grade cryptocurrency exchange** that uses **Statistical Anomaly Detection + LLMs to extract maximum value from observability signals**. Combines OpenTelemetry distributed tracing, adaptive anomaly detection, and AI-powered analysis to automatically identify, diagnose, and explain performance issues.
 
 ## Quick Start
 
@@ -86,10 +86,11 @@ Browser (order.response.received)
 - **BUY/SELL orders** with fill price and slippage
 - **Real-time wallet** balance updates
 
-### Multi-User
-- **User switcher** - Toggle between Primary User 👩 and Secondary User 👨
-- **BTC transfers** - Send BTC between users
-- **Per-user wallets** - Each user has separate BTC/USD balance
+### Authentication
+- **Email-based registration** with verification codes
+- **JWT authentication** with refresh tokens
+- **Session management** with secure logout
+- **Optional 2FA** with TOTP support
 
 ### Tracing
 - **17 spans** for order flow
@@ -97,32 +98,52 @@ Browser (order.response.received)
 - **Context propagation** through RabbitMQ
 - **Client-side spans** showing response processing
 
+### Monitoring & Anomaly Detection
+- **Trace duration anomalies** - Automatic detection of slow operations
+- **Amount anomaly detection** - Whale transaction monitoring (pluggable)
+  - Enable: `ENABLE_AMOUNT_ANOMALY_DETECTION=true`
+  - Thresholds: SEV 5 (3σ) → SEV 1 (7σ) for 6-order-of-magnitude detection
+  - Passive logging with 🐋 WHALE ALERT
+
+### AI-Powered Analysis
+- **LLM trace analysis** - Automatic root cause identification for anomalies
+- **Context-aware diagnostics** - Analyzes full trace context, span attributes, and timing
+- **Actionable recommendations** - Suggests specific fixes, not just symptoms
+- **Training data collection** - Human feedback loop for continuous improvement
+- **Fine-tuning ready** - Export training examples as JSONL for model optimization
+
 ## API Endpoints
 
 | Endpoint | Method | Description |
 |----------|--------|-------------|
-| `/api/users` | GET | List users |
-| `/api/wallet?userId=seed.user.primary@krystaline.io` | GET | Get user's wallet |
+| `/api/auth/register` | POST | Register new user |
+| `/api/auth/login` | POST | Login with email/password |
+| `/api/auth/verify` | POST | Verify email with code |
+| `/api/wallet` | GET | Get authenticated user's wallet |
 | `/api/orders` | POST | Submit trade order |
-| `/api/transfer` | POST | Transfer BTC between users |
-| `/api/transfers` | GET | List recent transfers |
+| `/api/orders` | GET | Get user's order history |
+| `/api/transfers` | POST | Transfer crypto to another user |
 | `/api/price` | GET | Current BTC price |
+| `/api/monitor/health` | GET | System health status |
+| `/api/monitor/anomalies` | GET | Active trace anomalies |
+| `/api/monitor/amount-anomalies` | GET | Active whale anomalies |
 
 ## Testing
 
-### Manual Test - Order
+### Manual Test - Trading
 1. Go to http://localhost:5173
-2. Select Primary User or Secondary User
-3. Enter BTC amount (e.g., 0.01)
-4. Click BUY or SELL
-5. Check Jaeger at http://localhost:16686 → service `kx-wallet` or `kx-exchange`
+2. Register a new account or login
+3. Verify your email (check MailDev at http://localhost:1080)
+4. Enter BTC amount to trade
+5. Click BUY or SELL
+6. Check Jaeger at http://localhost:16686 → service `kx-wallet` or `kx-exchange`
 
 ### Manual Test - Transfer
-1. Select Primary User
-2. Click "Transfer BTC" tab
-3. Enter amount (e.g., 0.1)
-4. Click Send → BTC moves to Secondary User
-5. Switch to Secondary User to verify balance
+1. Register a second account
+2. Navigate to Transfer page
+3. Enter recipient's wallet address (`kx1...`)
+4. Enter amount and confirm
+5. Verify balance updates for both users
 
 ## Technical Stack
 

@@ -6,6 +6,7 @@
  * the primary call-to-action, not just a secondary link.
  */
 
+import { useTranslation } from 'react-i18next';
 import { Button } from '@/components/ui/button';
 import {
     Dialog,
@@ -40,6 +41,8 @@ export function TradeVerifiedModal({
     price,
     executionTimeMs,
 }: TradeVerifiedModalProps) {
+    const { t } = useTranslation('trading');
+
     const handleViewTrace = () => {
         if (traceId) {
             window.open(getJaegerTraceUrl(traceId), '_blank');
@@ -74,11 +77,11 @@ export function TradeVerifiedModal({
                     </div>
 
                     <DialogTitle className="text-2xl font-bold text-center text-emerald-100">
-                        Trade Verified ✓
+                        {t('tradeVerified.title')}
                     </DialogTitle>
 
                     <DialogDescription className="text-center text-slate-300">
-                        Your transaction has been cryptographically verified and recorded.
+                        {t('tradeVerified.subtitle')}
                     </DialogDescription>
                 </DialogHeader>
 
@@ -86,10 +89,10 @@ export function TradeVerifiedModal({
                 <div className="bg-slate-800/50 rounded-xl p-4 my-4 border border-slate-700/50">
                     <div className="flex items-center justify-between mb-3">
                         <span className={`px-3 py-1 rounded-full text-sm font-bold ${side === 'BUY'
-                                ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30'
-                                : 'bg-rose-500/20 text-rose-400 border border-rose-500/30'
+                            ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30'
+                            : 'bg-rose-500/20 text-rose-400 border border-rose-500/30'
                             }`}>
-                            {side}
+                            {t(`orderHistory.side.${side.toLowerCase()}`)}
                         </span>
                         {executionTimeMs !== undefined && (
                             <span className="flex items-center gap-1 text-amber-400 text-sm">
@@ -101,13 +104,13 @@ export function TradeVerifiedModal({
 
                     <div className="grid grid-cols-2 gap-4 text-sm">
                         <div>
-                            <p className="text-slate-400">Amount</p>
+                            <p className="text-slate-400">{t('tradeForm.amount')}</p>
                             <p className="text-lg font-bold text-white">
                                 {amount.toFixed(asset === 'BTC' ? 8 : 2)} {asset}
                             </p>
                         </div>
                         <div>
-                            <p className="text-slate-400">Price</p>
+                            <p className="text-slate-400">{t('tradeForm.price')}</p>
                             <p className="text-lg font-bold text-white">
                                 ${price.toLocaleString()}
                             </p>
@@ -116,7 +119,7 @@ export function TradeVerifiedModal({
 
                     {/* Trade ID */}
                     <div className="mt-3 pt-3 border-t border-slate-700/50">
-                        <p className="text-slate-400 text-sm">Trade ID</p>
+                        <p className="text-slate-400 text-sm">{t('tradeVerified.traceId')}</p>
                         <code className="text-cyan-400 font-mono text-sm break-all">
                             {tradeId}
                         </code>
@@ -131,9 +134,9 @@ export function TradeVerifiedModal({
                                 <Eye className="w-5 h-5 text-purple-400" />
                             </div>
                             <div>
-                                <h4 className="font-semibold text-purple-100">Proof of Observability</h4>
+                                <h4 className="font-semibold text-purple-100">{t('tradeVerified.whyMatters')}</h4>
                                 <p className="text-sm text-purple-300/70">
-                                    See exactly what happened - every step traced
+                                    {t('tradeVerified.viewTraceSubtitle')}
                                 </p>
                             </div>
                         </div>
@@ -147,7 +150,7 @@ export function TradeVerifiedModal({
                             className="w-full bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-500 hover:to-blue-500 text-white font-bold py-5 text-lg group"
                         >
                             <Eye className="w-5 h-5 mr-2" />
-                            View Full Trace in Jaeger
+                            {t('tradeVerified.viewTrace')}
                             <ExternalLink className="w-4 h-4 ml-2 group-hover:translate-x-1 transition-transform" />
                         </Button>
                     </div>
@@ -161,7 +164,7 @@ export function TradeVerifiedModal({
                         className="flex-1 border-slate-600 text-slate-300 hover:bg-slate-800"
                     >
                         <TrendingUp className="w-4 h-4 mr-2" />
-                        Continue Trading
+                        {t('tradeVerified.tradeAgain')}
                     </Button>
                     <Button
                         variant="ghost"
@@ -171,7 +174,7 @@ export function TradeVerifiedModal({
                         }}
                         className="flex-1 text-slate-400 hover:text-slate-300"
                     >
-                        View Portfolio
+                        {t('tradeVerified.close')}
                         <ArrowRight className="w-4 h-4 ml-2" />
                     </Button>
                 </div>

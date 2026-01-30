@@ -9,6 +9,7 @@ import { authService, registerSchema, loginSchema, verifySchema, User } from './
 import { ZodError } from 'zod';
 import { createLogger } from '../lib/logger';
 import { AuthenticationError, ValidationError, getErrorMessage } from '../lib/errors';
+import { recordLogin } from '../metrics/prometheus';
 
 const logger = createLogger('auth-routes');
 const router = Router();
@@ -164,6 +165,7 @@ router.post('/login', async (req, res) => {
         }
 
         // Normal login response with tokens
+        recordLogin('success');
         res.json({
             success: true,
             user: {
@@ -175,6 +177,7 @@ router.post('/login', async (req, res) => {
             tokens: result.tokens,
         });
     } catch (error: unknown) {
+        recordLogin('failure');
         if (error instanceof ZodError) {
             return res.status(400).json({
                 error: 'Validation failed',

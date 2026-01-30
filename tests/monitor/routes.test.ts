@@ -30,7 +30,10 @@ vi.mock('../../server/monitor/history-store', () => ({
     historyStore: {
         getAnomalyHistory: vi.fn(() => []),
         getHourlyTrend: vi.fn(() => []),
-        getAnalysis: vi.fn(() => undefined)
+        getAnalysis: vi.fn(() => undefined),
+        getBaselines: vi.fn(() => Promise.resolve([
+            { service: 'kx-wallet', operation: 'transfer', mean: 100, stdDev: 20, sampleCount: 500 }
+        ]))
     }
 }));
 

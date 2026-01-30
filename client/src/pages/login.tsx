@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useLocation } from "wouter";
 import { useMutation } from "@tanstack/react-query";
+import { useTranslation } from "react-i18next";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -10,6 +11,7 @@ import { Shield, ArrowLeft } from "lucide-react";
 
 export default function Login() {
     const [, setLocation] = useLocation();
+    const { t } = useTranslation('auth');
     const [email, setEmail] = useState("");
     const [password, setPassword] = useState("");
     const [error, setError] = useState("");
@@ -102,7 +104,7 @@ export default function Login() {
             {/* Back to Home */}
             <a href="/" className="absolute top-6 left-6 flex items-center gap-2 text-cyan-100/70 hover:text-cyan-100 transition-colors group">
                 <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="group-hover:-translate-x-1 transition-transform"><path d="m15 18-6-6 6-6" /></svg>
-                <span className="text-sm font-medium">Back to Home</span>
+                <span className="text-sm font-medium">{t('login.backToHome')}</span>
             </a>
 
             <Card className="w-full max-w-md bg-slate-900/80 border-cyan-500/20 backdrop-blur-xl shadow-2xl">
@@ -111,10 +113,10 @@ export default function Login() {
                     <>
                         <CardHeader className="text-center">
                             <CardTitle className="text-3xl font-bold bg-gradient-to-r from-cyan-400 via-blue-400 to-indigo-400 bg-clip-text text-transparent">
-                                Welcome Back
+                                {t('login.title')}
                             </CardTitle>
                             <CardDescription className="text-cyan-100/60">
-                                Sign in to your Krystaline account
+                                {t('login.subtitle')}
                             </CardDescription>
                         </CardHeader>
 
@@ -127,11 +129,11 @@ export default function Login() {
 
                             <form onSubmit={handleLogin} className="space-y-4">
                                 <div className="space-y-2">
-                                    <Label htmlFor="email" className="text-cyan-100">Email</Label>
+                                    <Label htmlFor="email" className="text-cyan-100">{t('login.email')}</Label>
                                     <Input
                                         id="email"
                                         type="email"
-                                        placeholder="you@example.com"
+                                        placeholder={t('login.emailPlaceholder')}
                                         value={email}
                                         onChange={(e) => setEmail(e.target.value)}
                                         required
@@ -140,11 +142,11 @@ export default function Login() {
                                 </div>
 
                                 <div className="space-y-2">
-                                    <Label htmlFor="password" className="text-cyan-100">Password</Label>
+                                    <Label htmlFor="password" className="text-cyan-100">{t('login.password')}</Label>
                                     <Input
                                         id="password"
                                         type="password"
-                                        placeholder="Your password"
+                                        placeholder={t('login.passwordPlaceholder')}
                                         value={password}
                                         onChange={(e) => setPassword(e.target.value)}
                                         required
@@ -157,16 +159,16 @@ export default function Login() {
                                     className="w-full bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-cyan-500 hover:to-blue-500 shadow-lg shadow-cyan-500/25"
                                     disabled={loginMutation.isPending}
                                 >
-                                    {loginMutation.isPending ? "Signing in..." : "Sign In"}
+                                    {loginMutation.isPending ? t('login.submitting') : t('login.submit')}
                                 </Button>
                             </form>
                         </CardContent>
 
                         <CardFooter className="flex flex-col gap-2">
                             <div className="text-sm text-slate-400">
-                                Don't have an account?{" "}
+                                {t('login.noAccount')}{" "}
                                 <a href="/register" className="text-purple-400 hover:underline">
-                                    Create one
+                                    {t('login.createAccount')}
                                 </a>
                             </div>
                         </CardFooter>
@@ -179,10 +181,10 @@ export default function Login() {
                                 <Shield className="w-8 h-8 text-cyan-400" />
                             </div>
                             <CardTitle className="text-2xl font-bold text-cyan-100">
-                                Two-Factor Authentication
+                                {t('twoFactor.title')}
                             </CardTitle>
                             <CardDescription className="text-cyan-100/60">
-                                Enter the 6-digit code from your authenticator app
+                                {t('twoFactor.subtitle')}
                             </CardDescription>
                         </CardHeader>
 
@@ -195,12 +197,12 @@ export default function Login() {
 
                             <form onSubmit={handle2FAVerify} className="space-y-6">
                                 <div className="space-y-2">
-                                    <Label htmlFor="totp" className="text-cyan-100">Verification Code</Label>
+                                    <Label htmlFor="totp" className="text-cyan-100">{t('twoFactor.codeLabel')}</Label>
                                     <Input
                                         id="totp"
                                         type="text"
                                         inputMode="numeric"
-                                        placeholder="000000"
+                                        placeholder={t('twoFactor.codePlaceholder')}
                                         value={totpCode}
                                         onChange={(e) => setTotpCode(e.target.value.replace(/\D/g, '').slice(0, 6))}
                                         required
@@ -209,7 +211,7 @@ export default function Login() {
                                         autoFocus
                                     />
                                     <p className="text-xs text-cyan-100/50 text-center mt-2">
-                                        Open your authenticator app (Google Authenticator, Authy, etc.) and enter the code
+                                        {t('twoFactor.codeHint')}
                                     </p>
                                 </div>
 
@@ -218,7 +220,7 @@ export default function Login() {
                                     className="w-full bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-cyan-500 hover:to-blue-500 shadow-lg shadow-cyan-500/25"
                                     disabled={verify2FAMutation.isPending || totpCode.length !== 6}
                                 >
-                                    {verify2FAMutation.isPending ? "Verifying..." : "Verify & Sign In"}
+                                    {verify2FAMutation.isPending ? t('twoFactor.verifying') : t('twoFactor.verify')}
                                 </Button>
                             </form>
                         </CardContent>
@@ -230,7 +232,7 @@ export default function Login() {
                                 className="text-cyan-100/60 hover:text-cyan-100"
                             >
                                 <ArrowLeft className="w-4 h-4 mr-2" />
-                                Back to login
+                                {t('twoFactor.backToLogin')}
                             </Button>
                         </CardFooter>
                     </>

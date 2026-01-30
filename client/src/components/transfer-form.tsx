@@ -21,7 +21,7 @@ const transferSchema = z.object({
     toAddress: z.string().min(1, "Enter recipient wallet address"),
     toUserId: z.string().optional(),  // Legacy, derived from address
     asset: z.string().default("BTC"),
-    amount: z.number().positive().max(10),
+    amount: z.number().positive().max(10000000),
 });
 
 type TransferFormData = z.infer<typeof transferSchema>;
@@ -332,7 +332,7 @@ export function TransferForm() {
                                                 type="number"
                                                 step="0.001"
                                                 min="0.001"
-                                                max="10"
+                                                max="10000000"
                                                 placeholder="0.1"
                                                 {...field}
                                                 onChange={(e) => field.onChange(parseFloat(e.target.value) || 0)}

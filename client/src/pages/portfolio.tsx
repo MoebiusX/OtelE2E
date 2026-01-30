@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { useLocation } from "wouter";
 import { useQuery } from "@tanstack/react-query";
+import { useTranslation } from "react-i18next";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import Layout from "@/components/Layout";
@@ -27,20 +28,28 @@ interface PriceData {
     source: string;
 }
 
-// Asset icons and colors
-const ASSET_CONFIG: Record<string, { icon: string; color: string; name: string }> = {
-    BTC: { icon: "₿", color: "text-orange-400", name: "Bitcoin" },
-    ETH: { icon: "Ξ", color: "text-purple-400", name: "Ethereum" },
-    USDT: { icon: "₮", color: "text-emerald-400", name: "Tether" },
-    USD: { icon: "$", color: "text-green-400", name: "US Dollar" },
-    EUR: { icon: "€", color: "text-blue-400", name: "Euro" },
-};
-
 export default function Portfolio() {
     const [, navigate] = useLocation();
+    const { t } = useTranslation(['dashboard', 'trading']);
     const [user, setUser] = useState<User | null>(null);
     const [isNewUser, setIsNewUser] = useState(false);
     const { isOpen: showWelcome, close: closeWelcome } = useWelcomeModal();
+
+    // Asset icons and colors - use translations for names
+    const getAssetConfig = (asset: string) => {
+        const configs: Record<string, { icon: string; color: string }> = {
+            BTC: { icon: "₿", color: "text-orange-400" },
+            ETH: { icon: "Ξ", color: "text-purple-400" },
+            USDT: { icon: "₮", color: "text-emerald-400" },
+            USD: { icon: "$", color: "text-green-400" },
+            EUR: { icon: "€", color: "text-blue-400" },
+        };
+        return {
+            icon: configs[asset]?.icon || "?",
+            color: configs[asset]?.color || "text-slate-400",
+            name: t(`trading:assets.${asset}`, asset),
+        };
+    };
 
     useEffect(() => {
         const storedUser = localStorage.getItem("user");
@@ -114,12 +123,9 @@ export default function Portfolio() {
                 <Card className="bg-gradient-to-r from-cyan-900/30 to-blue-900/30 border-cyan-500/30 mb-8 backdrop-blur">
                     <CardContent className="py-8">
                         <div className="text-center">
-                            <p className="text-cyan-100/60 mb-2">Total Balance (Est.)</p>
+                            <p className="text-cyan-100/60 mb-2">{t('portfolio.totalBalance')}</p>
                             <p className="text-5xl font-bold text-cyan-100">
                                 ${calculateTotalUSD().toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                            </p>
-                            <p className="text-cyan-100/60 mt-2 text-sm">
-                                Welcome bonus credited! Start trading now.
                             </p>
                         </div>
                     </CardContent>
@@ -136,21 +142,20 @@ export default function Portfolio() {
                                 </div>
                                 <div className="flex-1 text-center md:text-left">
                                     <h3 className="text-2xl font-bold text-white mb-2">
-                                        Ready for Your First Trade? 🚀
+                                        {t('portfolio.firstTrade.title')} 🚀
                                     </h3>
                                     <p className="text-purple-100/70 mb-4 max-w-lg">
-                                        Experience <span className="text-cyan-400 font-semibold">Proof of Observability</span> -
-                                        every trade is traced end-to-end. See exactly what happens behind the scenes.
+                                        {t('portfolio.firstTrade.subtitle')}
                                     </p>
                                     <div className="flex flex-wrap items-center justify-center md:justify-start gap-3 text-sm text-purple-200/60">
                                         <span className="flex items-center gap-1">
-                                            <Zap className="w-4 h-4 text-yellow-400" /> Real-time execution
+                                            <Zap className="w-4 h-4 text-yellow-400" /> {t('metrics.avgExecutionTime')}
                                         </span>
                                         <span className="flex items-center gap-1">
-                                            <Eye className="w-4 h-4 text-cyan-400" /> Full trace visibility
+                                            <Eye className="w-4 h-4 text-cyan-400" /> {t('hero.title')}
                                         </span>
                                         <span className="flex items-center gap-1">
-                                            <TrendingUp className="w-4 h-4 text-green-400" /> Live market prices
+                                            <TrendingUp className="w-4 h-4 text-green-400" /> {t('metrics.totalTrades')}
                                         </span>
                                     </div>
                                 </div>
@@ -159,7 +164,7 @@ export default function Portfolio() {
                                     onClick={() => navigate("/trade?welcome=true")}
                                     className="bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-500 hover:to-pink-500 text-lg px-8 py-6 shadow-xl shadow-purple-500/25 group"
                                 >
-                                    Make First Trade
+                                    {t('portfolio.firstTrade.cta')}
                                     <ArrowRight className="w-5 h-5 ml-2 group-hover:translate-x-1 transition-transform" />
                                 </Button>
                             </div>
@@ -173,37 +178,37 @@ export default function Portfolio() {
                         className="h-16 bg-emerald-600 hover:bg-emerald-700 text-lg font-semibold"
                         onClick={() => navigate("/trade")}
                     >
-                        Deposit
+                        {t('portfolio.deposit')}
                     </Button>
                     <Button
                         className="h-16 bg-blue-600 hover:bg-blue-700 text-lg font-semibold"
                         onClick={() => navigate("/trade")}
                     >
-                        Withdraw
+                        {t('portfolio.withdraw')}
                     </Button>
                     <Button
                         className="h-16 bg-cyan-600 hover:bg-cyan-700 text-lg font-semibold"
                         onClick={() => navigate("/convert")}
                     >
-                        Convert
+                        {t('portfolio.convert')}
                     </Button>
                     <Button
                         className="h-16 bg-indigo-600 hover:bg-indigo-700 text-lg font-semibold"
                         onClick={() => navigate("/trade")}
                     >
-                        Trade
+                        {t('portfolio.trade')}
                     </Button>
                 </div>
 
                 {/* Wallets Grid */}
-                <h2 className="text-2xl font-semibold text-cyan-100 mb-4">Your Assets</h2>
+                <h2 className="text-2xl font-semibold text-cyan-100 mb-4">{t('portfolio.yourAssets')}</h2>
 
                 {isLoading ? (
-                    <div className="text-center py-8 text-slate-400">Loading wallets...</div>
+                    <div className="text-center py-8 text-slate-400">{t('common:buttons.loading')}</div>
                 ) : (
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                         {walletsData?.wallets.map((wallet) => {
-                            const config = ASSET_CONFIG[wallet.asset] || { icon: "?", color: "text-slate-400", name: wallet.asset };
+                            const config = getAssetConfig(wallet.asset);
                             const balance = parseFloat(wallet.balance);
                             const usdValue = balance * getRate(wallet.asset);
 

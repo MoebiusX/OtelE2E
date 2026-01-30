@@ -131,6 +131,57 @@ export function recordCircuitBreakerTrip(service: string, fromState: string, toS
 }
 
 // ============================================
+// Business KPI Metrics
+// ============================================
+
+// Active users (users with activity in last 15 minutes)
+export const activeUsersGauge = new Gauge({
+    name: 'kx_active_users_current',
+    help: 'Users with activity in the last 15 minutes',
+    registers: [register],
+});
+
+// Login attempts counter
+export const loginsTotal = new Counter({
+    name: 'kx_logins_total',
+    help: 'Total user login attempts',
+    labelNames: ['status'],  // 'success' | 'failure'
+    registers: [register],
+});
+
+// Trade volume in asset units (both pair-only and pair+side queryable)
+export const tradeVolumeTotal = new Counter({
+    name: 'kx_trade_volume_total',
+    help: 'Total trade volume in asset units',
+    labelNames: ['pair', 'side'],
+    registers: [register],
+});
+
+// Trade value in USD
+export const tradeValueUsdTotal = new Counter({
+    name: 'kx_trade_value_usd_total',
+    help: 'Total USD value of trades',
+    labelNames: ['pair', 'side'],
+    registers: [register],
+});
+
+// Trades count (for "trades today" - values synced from database)
+export const tradesTodayGauge = new Gauge({
+    name: 'kx_trades_today',
+    help: 'Number of trades since midnight (user timezone)',
+    labelNames: ['pair', 'side'],
+    registers: [register],
+});
+
+// Trade count total (cumulative)
+export const tradesTotal = new Counter({
+    name: 'kx_trades_total',
+    help: 'Total number of trades executed',
+    labelNames: ['pair', 'side'],
+    registers: [register],
+});
+
+// ============================================
 // Middleware
 // ============================================
 
@@ -206,4 +257,36 @@ export function recordOrderMetrics(side: string, status: string, durationSeconds
 // Export helper to record anomaly detection
 export function recordAnomalyDetected(service: string, severity: number): void {
     anomaliesDetectedTotal.inc({ service, severity: `SEV${severity}` });
+}
+
+// ============================================
+// Business KPI Helpers
+// ============================================
+
+// Record login attempt
+export function recordLogin(status: 'success' | 'failure'): void {
+    loginsTotal.inc({ status });
+}
+
+// Record a trade execution
+export function recordTrade(pair: string, side: string, quantity: number, valueUsd: number): void {
+    const normalizedSide = side.toUpperCase();
+    tradeVolumeTotal.inc({ pair, side: normalizedSide }, quantity);
+    tradeValueUsdTotal.inc({ pair, side: normalizedSide }, valueUsd);
+    tradesTotal.inc({ pair, side: normalizedSide });
+}
+
+// Sync "trades today" gauge from database counts
+export function syncTradesToday(counts: Array<{ pair: string; side: string; count: number }>): void {
+    // Reset all values first
+    tradesTodayGauge.reset();
+    // Set current counts
+    for (const { pair, side, count } of counts) {
+        tradesTodayGauge.set({ pair, side: side.toUpperCase() }, count);
+    }
+}
+
+// Update active users gauge
+export function setActiveUsers(count: number): void {
+    activeUsersGauge.set(count);
 }

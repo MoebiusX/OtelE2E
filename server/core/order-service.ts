@@ -8,21 +8,21 @@ import { walletService } from '../wallet/wallet-service';
 import { trace, context, SpanStatusCode } from '@opentelemetry/api';
 import { createLogger } from '../lib/logger';
 import { OrderError, ValidationError, InsufficientFundsError, getErrorMessage } from '../lib/errors';
+import { recordTrade, recordOrderMetrics } from '../metrics/prometheus';
+import { amountAnomalyDetector } from '../monitor/amount-anomaly-detector';
+import { priceService } from '../services/price-service';
 import type { Order } from '@shared/schema';
 
 const logger = createLogger('order');
 
 // ============================================
-// PRICE SIMULATION
+// PRICE SERVICE (Real Binance prices)
 // ============================================
 
-let currentPrice = 42500;
-
-export function getPrice() {
-    const fluctuation = (Math.random() - 0.5) * 0.01;
-    currentPrice = currentPrice * (1 + fluctuation);
-    currentPrice = Math.max(35000, Math.min(55000, currentPrice));
-    return Math.round(currentPrice * 100) / 100;
+// Get real market price - NO SIMULATION
+export function getPrice(): number | null {
+    const priceData = priceService.getPrice('BTC');
+    return priceData?.price ?? null;
 }
 
 // ============================================
@@ -74,8 +74,11 @@ export class OrderService {
     private orderCounter = 0;
     private transferCounter = 0;
 
-    // Get wallet for a specific user
-    async getWallet(userId: string = 'seed.user.primary@krystaline.io') {
+    // Get wallet for a specific user - requires explicit userId
+    async getWallet(userId: string) {
+        if (!userId) {
+            throw new ValidationError('userId', 'User ID is required');
+        }
         return walletService.getWalletSummary(userId);
     }
 
@@ -100,7 +103,10 @@ export class OrderService {
         const spanId = spanContext?.spanId || this.generateSpanId();
         const correlationId = this.generateCorrelationId();
         const orderId = `ORD-${Date.now()}-${++this.orderCounter}`;
-        const userId = request.userId || 'seed.user.primary@krystaline.io';
+        const userId = request.userId;
+        if (!userId) {
+            throw new ValidationError('userId', 'User ID is required for order submission');
+        }
 
         // WARN if we had to generate our own trace ID (indicates context propagation failure)
         if (!spanContext?.traceId) {
@@ -117,28 +123,53 @@ export class OrderService {
             orderId
         }, 'Submitting trade order');
 
+        // Get REAL price from Binance feed
         const price = getPrice();
+        if (price === null) {
+            logger.warn({ userId, orderId }, 'Price feed unavailable');
+            throw new OrderError('Price feed temporarily unavailable. Please try again later.');
+        }
         const totalValue = price * request.quantity;
 
         // Get user's wallet balances from database
-        const usdWallet = await walletService.getWallet(userId, 'USD');
-        const btcWallet = await walletService.getWallet(userId, 'BTC');
+        let usdWallet = await walletService.getWallet(userId, 'USD');
+        let btcWallet = await walletService.getWallet(userId, 'BTC');
+
+        // Initialize demo wallets for new users who don't have wallets yet
+        if (!usdWallet || !btcWallet) {
+            logger.info({ userId }, 'Initializing demo wallet for new user before trade');
+            // New users start with 1 BTC and $5000 USD (demo balance)
+            const demoBalanceBtc = 1.0;
+            const demoBalanceUsd = 5000;
+            await walletService.updateBalance(userId, 'BTC', demoBalanceBtc);
+            await walletService.updateBalance(userId, 'USD', demoBalanceUsd);
+            // Re-fetch wallets after initialization
+            usdWallet = await walletService.getWallet(userId, 'USD');
+            btcWallet = await walletService.getWallet(userId, 'BTC');
+        }
 
         const usdBalance = usdWallet ? parseFloat(usdWallet.available) : 0;
         const btcBalance = btcWallet ? parseFloat(btcWallet.available) : 0;
 
-        // Validation - reject if insufficient funds
+        // Debug: Log wallet lookup results
+        logger.info({
+            userId,
+            side: request.side,
+            quantity: request.quantity,
+            hasUsdWallet: !!usdWallet,
+            hasBtcWallet: !!btcWallet,
+            usdBalance,
+            btcBalance,
+        }, 'Pre-trade balance check');
+
+        // Validation - reject if insufficient funds (throw error for semantic HTTP status)
         if (request.side === 'BUY' && totalValue > usdBalance) {
             logger.warn({
                 userId,
                 required: totalValue,
                 available: usdBalance
             }, 'Order rejected - insufficient USD');
-            return {
-                orderId, traceId, spanId,
-                order: null,
-                execution: { status: 'REJECTED', fillPrice: price, totalValue, processedAt: new Date().toISOString(), processorId: 'local-validator' }
-            };
+            throw new InsufficientFundsError('USD', totalValue, usdBalance);
         }
 
         if (request.side === 'SELL' && request.quantity > btcBalance) {
@@ -147,11 +178,7 @@ export class OrderService {
                 required: request.quantity,
                 available: btcBalance
             }, 'Order rejected - insufficient BTC');
-            return {
-                orderId, traceId, spanId,
-                order: null,
-                execution: { status: 'REJECTED', fillPrice: price, totalValue, processedAt: new Date().toISOString(), processorId: 'local-validator' }
-            };
+            throw new InsufficientFundsError('BTC', request.quantity, btcBalance);
         }
 
         // Store order
@@ -211,6 +238,18 @@ export class OrderService {
                 if (executionResponse.status === 'FILLED') {
                     try {
                         await this.updateUserWallet(userId, request.side, request.quantity, executionResponse.fillPrice);
+                        // Emit business metrics for successful trade
+                        recordTrade(request.pair, request.side, request.quantity, executionResponse.totalValue);
+                        recordOrderMetrics(request.side, 'FILLED', 0); // Duration tracked separately
+                        // Check for whale transaction
+                        amountAnomalyDetector.checkOrder({
+                            orderId,
+                            userId,
+                            side: request.side,
+                            pair: request.pair,
+                            amount: request.quantity,
+                            traceId,
+                        });
                     } catch (walletError: unknown) {
                         // Wallet update failed (e.g., balance constraint violation)
                         // Mark order as rejected to prevent stuck pending orders
@@ -273,6 +312,18 @@ export class OrderService {
                 reason: 'RabbitMQ not connected - using local fallback'
             }, 'Order processed locally (kx-matcher bypassed)');
             await this.updateUserWallet(userId, request.side, request.quantity, price);
+            // Emit business metrics for successful local trade
+            recordTrade(request.pair, request.side, request.quantity, totalValue);
+            recordOrderMetrics(request.side, 'FILLED', 0);
+            // Check for whale transaction
+            amountAnomalyDetector.checkOrder({
+                orderId,
+                userId,
+                side: request.side,
+                pair: request.pair,
+                amount: request.quantity,
+                traceId,
+            });
             return {
                 orderId, traceId, spanId,
                 order,
@@ -388,8 +439,18 @@ export class OrderService {
 
     // Update user's wallet after trade
     private async updateUserWallet(userId: string, side: "BUY" | "SELL", quantity: number, price: number) {
-        const wallet = await walletService.getWalletSummary(userId);
-        if (!wallet) return;
+        let wallet = await walletService.getWalletSummary(userId);
+
+        // Initialize demo wallet for new users if they don't have one
+        if (!wallet) {
+            logger.info({ userId }, 'Initializing demo wallet for new user');
+            // New users start with 1 BTC and $5000 USD (demo balance)
+            const demoBalanceBtc = 1.0;
+            const demoBalanceUsd = 5000;
+            await walletService.updateBalance(userId, 'BTC', demoBalanceBtc);
+            await walletService.updateBalance(userId, 'USD', demoBalanceUsd);
+            wallet = { userId, btc: demoBalanceBtc, usd: demoBalanceUsd, lastUpdated: new Date() };
+        }
 
         const totalValue = quantity * price;
 
@@ -449,6 +510,7 @@ export class OrderService {
             case 'filled': return 'FILLED';
             case 'cancelled':
             case 'rejected': return 'REJECTED';
+            case 'accepted': return 'PENDING'; // Map 'accepted' to PENDING for backward compatibility
             default: return 'PENDING';
         }
     }
@@ -477,7 +539,7 @@ export class OrderService {
 
         const { rows } = await db.query(
             `INSERT INTO orders (order_id, user_id, pair, side, type, quantity, status, trace_id)
-             VALUES ($1, $2, $3, $4, $5, $6, 'open', $7)
+             VALUES ($1, $2, $3, $4, $5, $6, 'accepted', $7)
              RETURNING id, order_id, pair, side, type, quantity, status, trace_id, created_at`,
             [
                 orderData.orderId,

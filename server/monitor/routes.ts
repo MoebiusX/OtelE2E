@@ -10,12 +10,16 @@ import { anomalyDetector } from './anomaly-detector';
 import { historyStore } from './history-store';
 import { metricsCorrelator } from './metrics-correlator';
 import { trainingStore } from './training-store';
+import { amountProfiler } from './amount-profiler';
+import { amountAnomalyDetector } from './amount-anomaly-detector';
 import { createLogger } from '../lib/logger';
 import { getErrorMessage } from '../lib/errors';
 import type {
     HealthResponse,
     AnomaliesResponse,
-    BaselinesResponse
+    BaselinesResponse,
+    AmountAnomaliesResponse,
+    AmountBaselinesResponse,
 } from './types';
 
 const logger = createLogger('monitor-routes');
@@ -332,4 +336,122 @@ router.delete('/training/:id', (req, res) => {
     res.json({ success: deleted });
 });
 
+// ============================================
+// Amount Anomaly Detection Routes (Whale Detection)
+// ============================================
+
+/**
+ * GET /api/monitor/amount-anomalies
+ * Get active amount anomalies (whale transactions)
+ */
+router.get('/amount-anomalies', (req, res) => {
+    const active = amountAnomalyDetector.getActiveAnomalies();
+    const enabled = amountAnomalyDetector.isEnabled();
+
+    const response: AmountAnomaliesResponse = {
+        active,
+        recentCount: active.length,
+        enabled,
+    };
+
+    res.json(response);
+});
+
+/**
+ * GET /api/monitor/amount-baselines
+ * Get amount baselines for each operation type and asset
+ */
+router.get('/amount-baselines', (req, res) => {
+    const baselines = amountProfiler.getBaselines();
+
+    const response: AmountBaselinesResponse = {
+        baselines: baselines.sort((a, b) => b.sampleCount - a.sampleCount),
+        operationCount: baselines.length,
+    };
+
+    res.json(response);
+});
+
+// ============================================
+// Business KPI Admin Dashboard Routes
+// ============================================
+
+/**
+ * GET /api/monitor/admin/stats
+ * Get comprehensive business KPIs
+ * Query params: ?tz=-60 (timezone offset in minutes from UTC)
+ */
+router.get('/admin/stats', async (req, res) => {
+    try {
+        const { businessStatsService } = await import('../services/business-stats-service');
+
+        // Parse timezone offset (positive for west of UTC, negative for east)
+        const tzOffset = parseInt(req.query.tz as string) || 0;
+
+        const stats = await businessStatsService.getStats(tzOffset);
+        res.json(stats);
+    } catch (error: unknown) {
+        logger.error({ err: error }, 'Failed to get business stats');
+        res.status(500).json({ error: 'Failed to get business stats', details: getErrorMessage(error) });
+    }
+});
+
+/**
+ * GET /api/monitor/admin/activity
+ * Get recent user activity (last 15 minutes)
+ */
+router.get('/admin/activity', async (req, res) => {
+    try {
+        const { businessStatsService } = await import('../services/business-stats-service');
+
+        const limit = parseInt(req.query.limit as string) || 20;
+        const activity = await businessStatsService.getRecentActivity(limit);
+
+        res.json({
+            activity,
+            count: activity.length,
+            timestamp: new Date(),
+        });
+    } catch (error: unknown) {
+        logger.error({ err: error }, 'Failed to get user activity');
+        res.status(500).json({ error: 'Failed to get user activity' });
+    }
+});
+
+/**
+ * GET /api/monitor/admin/volume
+ * Get volume breakdown by trading pair
+ * Query params: ?period=today|all (default: today, respects tz param)
+ */
+router.get('/admin/volume', async (req, res) => {
+    try {
+        const { businessStatsService } = await import('../services/business-stats-service');
+
+        const period = req.query.period as string || 'today';
+        const tzOffset = parseInt(req.query.tz as string) || 0;
+
+        let volumeByPair;
+        if (period === 'all') {
+            volumeByPair = await businessStatsService.getAllTimeVolume();
+        } else {
+            // Get today's volume (uses timezone offset for midnight calculation)
+            const stats = await businessStatsService.getStats(tzOffset);
+            volumeByPair = stats.volumeByPair;
+        }
+
+        const totalVolumeUsd = volumeByPair.reduce((sum, v) => sum + v.valueUsd, 0);
+
+        res.json({
+            volumeByPair,
+            totalVolumeUsd,
+            period,
+            timestamp: new Date(),
+        });
+    } catch (error: unknown) {
+        logger.error({ err: error }, 'Failed to get volume stats');
+        res.status(500).json({ error: 'Failed to get volume stats' });
+    }
+});
+
 export default router;
+

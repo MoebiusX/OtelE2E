@@ -101,10 +101,13 @@ export function registerRoutes(app: Express) {
     }
   });
 
-  // Get wallet balance for a user (default: seed.user.primary@krystaline.io)
+  // Get wallet balance for a user - requires explicit userId
   app.get("/api/v1/wallet", async (req: Request, res: Response) => {
     try {
-      const userId = (req.query.userId as string) || 'seed.user.primary@krystaline.io';
+      const userId = req.query.userId as string;
+      if (!userId) {
+        return res.status(400).json({ error: "userId query parameter is required" });
+      }
       const wallet = await orderService.getWallet(userId);
       if (!wallet) {
         return res.status(404).json({ error: "User not found" });
@@ -161,15 +164,19 @@ export function registerRoutes(app: Express) {
 
         const orderData = validation.data;
 
+        if (!orderData.userId) {
+          return res.status(400).json({ error: "userId is required" });
+        }
+
         const result = await orderService.submitOrder({
-          userId: orderData.userId || 'seed.user.primary@krystaline.io',
+          userId: orderData.userId,
           pair: orderData.pair,
           side: orderData.side,
           quantity: orderData.quantity,
           orderType: orderData.orderType
         });
 
-        const wallet = await orderService.getWallet(orderData.userId || 'seed.user.primary@krystaline.io');
+        const wallet = await orderService.getWallet(orderData.userId);
 
         res.json({
           success: true,
@@ -271,12 +278,17 @@ export function registerRoutes(app: Express) {
   });
 
   // ============================================
-  // LEGACY PAYMENT ROUTES (backwards compat)
+  // LEGACY PAYMENT ROUTES (backwards compat) - requires userId
   // ============================================
 
   app.post("/api/v1/payments", async (req: Request, res: Response) => {
+    const userId = req.body.userId;
+    if (!userId) {
+      return res.status(400).json({ error: "userId is required" });
+    }
+
     const orderRequest = {
-      userId: 'seed.user.primary@krystaline.io',
+      userId,
       pair: "BTC/USD" as const,
       side: "BUY" as const,
       quantity: (req.body.amount || 100) / getPrice(),
@@ -285,7 +297,7 @@ export function registerRoutes(app: Express) {
 
     try {
       const result = await orderService.submitOrder(orderRequest);
-      const wallet = await orderService.getWallet('seed.user.primary@krystaline.io');
+      const wallet = await orderService.getWallet(userId);
 
       res.json({
         success: true,

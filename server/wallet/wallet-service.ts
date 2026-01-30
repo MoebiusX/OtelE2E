@@ -547,6 +547,7 @@ export const walletService = {
 
     /**
      * Update absolute balance for a wallet
+     * Uses upsert pattern - creates wallet if it doesn't exist
      * Replaces storage.updateWallet()
      */
     async updateBalance(userId: string, asset: string, newBalance: number): Promise<boolean> {
@@ -556,15 +557,18 @@ export const walletService = {
             return false;
         }
 
+        // Use upsert pattern - insert if not exists, update if exists
         const result = await db.query(
-            `UPDATE wallets SET balance = $1, available = $1, updated_at = NOW()
-             WHERE user_id = $2 AND asset = $3
+            `INSERT INTO wallets (user_id, asset, balance, available, locked, updated_at)
+             VALUES ($1, $2, $3, $3, 0, NOW())
+             ON CONFLICT (user_id, asset) DO UPDATE SET
+             balance = $3, available = $3, updated_at = NOW()
              RETURNING id`,
-            [newBalance, resolvedId, asset.toUpperCase()]
+            [resolvedId, asset.toUpperCase(), newBalance]
         );
 
         if (result.rows.length === 0) {
-            logger.warn({ userId, asset }, 'Wallet not found for balance update');
+            logger.warn({ userId, asset }, 'Failed to upsert wallet balance');
             return false;
         }
 

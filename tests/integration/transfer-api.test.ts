@@ -100,8 +100,11 @@ vi.mock('@opentelemetry/api', () => ({
     })),
   },
   context: {
-    active: vi.fn(),
+    active: vi.fn(() => ({})),
     with: vi.fn((ctx, fn) => fn()),
+  },
+  propagation: {
+    extract: vi.fn((context) => context),
   },
   SpanStatusCode: { OK: 0, ERROR: 1 },
 }));
@@ -387,6 +390,7 @@ describe('Transfer API Integration', () => {
       } as any);
 
       const paymentRequest = {
+        userId: 'seed.user.primary@krystaline.io',
         amount: 100,
       };
 
@@ -412,7 +416,7 @@ describe('Transfer API Integration', () => {
 
       const response = await request(app)
         .post('/api/v1/payments')
-        .send({});
+        .send({ userId: 'seed.user.primary@krystaline.io' });
 
       expect(response.status).toBe(200);
       expect(response.body.payment.amount).toBe(100);
@@ -430,7 +434,7 @@ describe('Transfer API Integration', () => {
 
       const response = await request(app)
         .post('/api/v1/payments')
-        .send({ amount: 50 });
+        .send({ userId: 'seed.user.primary@krystaline.io', amount: 50 });
 
       expect(response.body.traceId).toBeDefined();
     });

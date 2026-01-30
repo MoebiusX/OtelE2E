@@ -19,34 +19,49 @@ export async function getWalletBalance(page: Page): Promise<WalletBalance> {
         await page.goto('/trade');
     }
 
-    // Wait for portfolio to load
-    await page.getByText('Your Portfolio').waitFor({ timeout: 10000 });
+    // Wait for portfolio to load - use regex for i18n
+    await page.getByText(/Your Portfolio|Tu Portafolio/i).waitFor({ timeout: 10000 });
 
-    // Try to extract balances from the portfolio panel
-    // These are approximate - actual selectors depend on DOM structure
+    // Wait a bit for data to load
+    await page.waitForTimeout(500);
+
     let btc = 0;
     let usd = 0;
     let totalValue = 0;
 
     try {
-        // Look for BTC indicator and grab the balance
-        const btcSection = page.locator('div').filter({ hasText: /BTC|Bitcoin/i }).first();
-        const btcText = await btcSection.locator('p').first().textContent() || '0';
-        btc = parseFloat(btcText.replace(/[^0-9.]/g, '')) || 0;
+        // Find the paragraph that contains "BTC Balance" text, then get the next sibling paragraph with the value
+        // Based on error context: paragraph "BTC Balance" [ref=e100], paragraph "1.000000" [ref=e101]
+        const btcLabelLocator = page.locator('p').filter({ hasText: /^BTC Balance$/i });
+        if (await btcLabelLocator.count() > 0) {
+            // The balance value is in a sibling paragraph immediately after the label
+            const btcValueLocator = btcLabelLocator.locator('xpath=following-sibling::p[1]');
+            const btcText = await btcValueLocator.textContent() || '0';
+            btc = parseFloat(btcText.replace(/[^0-9.]/g, '')) || 0;
+        }
     } catch { btc = 0; }
 
     try {
-        // Look for USD indicator and grab the balance
-        const usdSection = page.locator('div').filter({ hasText: /USD|Dollar/i }).first();
-        const usdText = await usdSection.locator('p').first().textContent() || '0';
-        usd = parseFloat(usdText.replace(/[^0-9.]/g, '')) || 0;
+        // Find the paragraph that contains "USD Balance" text, then get the next sibling paragraph with the value
+        const usdLabelLocator = page.locator('p').filter({ hasText: /^USD Balance$/i });
+        if (await usdLabelLocator.count() > 0) {
+            const usdValueLocator = usdLabelLocator.locator('xpath=following-sibling::p[1]');
+            const usdText = await usdValueLocator.textContent() || '0';
+            usd = parseFloat(usdText.replace(/[^0-9,.]/g, '')) || 0;
+        }
     } catch { usd = 0; }
 
     try {
         // Get total balance from header section
-        const totalText = await page.getByText(/Total Balance/i).locator('xpath=following-sibling::p').textContent() || '0';
-        totalValue = parseFloat(totalText.replace(/[^0-9.]/g, '')) || 0;
-    } catch { totalValue = btc * 40000 + usd; }
+        const totalLocator = page.locator('p').filter({ hasText: /^Total Balance \(USD\)$/i });
+        if (await totalLocator.count() > 0) {
+            const totalValueLocator = totalLocator.locator('xpath=following-sibling::p[1]');
+            const totalText = await totalValueLocator.textContent() || '0';
+            totalValue = parseFloat(totalText.replace(/[^0-9,.]/g, '')) || 0;
+        } else {
+            totalValue = btc * 80000 + usd; // Fallback calculation
+        }
+    } catch { totalValue = btc * 80000 + usd; }
 
     return { btc, usd, totalValue };
 }
@@ -60,8 +75,8 @@ export async function submitBuyOrder(page: Page, amount: number): Promise<void> 
         await page.goto('/trade');
     }
 
-    // Wait for trade form to load
-    await page.getByText('BTC/USD Trade').waitFor({ timeout: 10000 });
+    // Wait for trade form to load - look for BUY button instead of translated text
+    await page.getByRole('button', { name: /^BUY$/i }).waitFor({ timeout: 10000 });
 
     // Click BUY toggle button
     await page.getByRole('button', { name: /^BUY$/i }).click();
@@ -72,8 +87,8 @@ export async function submitBuyOrder(page: Page, amount: number): Promise<void> 
     // Submit order - button text is "Buy X.XXXX BTC"
     await page.getByRole('button', { name: /Buy.*BTC/i }).click();
 
-    // Wait for execution toast or confirmation
-    await page.getByText(/Trade.*Verified|Order Submitted|Executed/i).waitFor({ timeout: 15000 });
+    // Wait for execution toast or confirmation - target the heading specifically to avoid strict mode violation
+    await page.getByRole('heading', { name: /Trade.*Executed|Order Submitted|Operaci.n.*Ejecutad/i }).first().waitFor({ timeout: 15000 });
 }
 
 /**
@@ -85,8 +100,8 @@ export async function submitSellOrder(page: Page, amount: number): Promise<void>
         await page.goto('/trade');
     }
 
-    // Wait for trade form to load
-    await page.getByText('BTC/USD Trade').waitFor({ timeout: 10000 });
+    // Wait for trade form to load - look for SELL button instead of translated text
+    await page.getByRole('button', { name: /^SELL$/i }).waitFor({ timeout: 10000 });
 
     // Click SELL toggle button
     await page.getByRole('button', { name: /^SELL$/i }).click();
@@ -97,8 +112,8 @@ export async function submitSellOrder(page: Page, amount: number): Promise<void>
     // Submit order - button text is "Sell X.XXXX BTC"
     await page.getByRole('button', { name: /Sell.*BTC/i }).click();
 
-    // Wait for execution toast or confirmation
-    await page.getByText(/Trade.*Verified|Order Submitted|Executed/i).waitFor({ timeout: 15000 });
+    // Wait for execution toast or confirmation - target the heading specifically to avoid strict mode violation
+    await page.getByRole('heading', { name: /Trade.*Executed|Order Submitted|Operaci.n.*Ejecutad/i }).first().waitFor({ timeout: 15000 });
 }
 
 /**
@@ -110,13 +125,49 @@ export async function waitForTradeInActivity(page: Page, side: 'BUY' | 'SELL'): 
 
 /**
  * Check if order was rejected (insufficient funds)
+ * Checks multiple UI elements: toasts, alerts, and inline error messages
  */
 export async function isOrderRejected(page: Page): Promise<boolean> {
-    const rejectedText = page.getByText(/insufficient|rejected|failed|error/i);
+    // Wait a bit for any error to appear
+    await page.waitForTimeout(2000);
+
+    // Check for various error indicators
+    const errorPatterns = [
+        // Text patterns for insufficient funds
+        /insufficient|rejected|failed|error|not enough|can't process/i,
+        // Toast-specific patterns  
+        /balance.*insufficient|Insufficient.*balance/i,
+    ];
+
+    // Check toasts (often in a separate region)
+    const toastRegion = page.locator('[role="region"]').filter({ hasText: /notification/i });
+    const alerts = page.locator('[role="alert"]');
+    const errorClasses = page.locator('[class*="error"], [class*="destructive"], [class*="toast"]');
+    const errorText = page.getByText(/insufficient|rejected|failed|error/i);
+
     try {
-        await rejectedText.first().waitFor({ timeout: 5000 });
+        // Wait for any of these error indicators
+        await Promise.race([
+            toastRegion.waitFor({ state: 'visible', timeout: 5000 }),
+            alerts.first().waitFor({ state: 'visible', timeout: 5000 }),
+            errorClasses.first().waitFor({ state: 'visible', timeout: 5000 }),
+            errorText.first().waitFor({ state: 'visible', timeout: 5000 }),
+        ]);
         return true;
     } catch {
-        return false;
+        // If no error visible, also check if order is still pending/disabled
+        const processingButton = page.locator('button:disabled').filter({ hasText: /processing/i });
+        const pendingOrder = page.getByText(/pending|processing/i);
+
+        try {
+            await Promise.race([
+                processingButton.waitFor({ state: 'visible', timeout: 2000 }),
+                pendingOrder.waitFor({ state: 'visible', timeout: 2000 }),
+            ]);
+            // Order is being processed, not rejected
+            return false;
+        } catch {
+            return false;
+        }
     }
 }

@@ -144,7 +144,7 @@ export class PostgresStorage implements IStorage {
           [
             seed.walletId + '_btc',
             userId,
-            name === 'primary' ? 150000000 : 50000000,  // 1.5 or 0.5 BTC in satoshis
+            name === 'primary' ? 15000000000 : 50000000,  // 1.5 or 0.5 BTC in satoshis
             seed.walletId + '_usd',
             name === 'primary' ? 5000000 : 1000000,     // $50k or $10k in cents
           ]

@@ -1,5 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { useState, useEffect } from "react";
+import { useTranslation } from "react-i18next";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -97,6 +98,7 @@ const SERVICE_DISPLAY_NAMES: Record<string, { name: string; description: string;
 
 export default function TransparencyPage() {
     const [lastRefresh, setLastRefresh] = useState(new Date());
+    const { t } = useTranslation(['trading', 'common']);
 
     // Fetch service health
     const { data: healthData, refetch: refetchHealth, isLoading: healthLoading } = useQuery<{ services: ServiceHealth[] }>({
@@ -166,9 +168,9 @@ export default function TransparencyPage() {
                 {/* Header */}
                 <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-8">
                     <div>
-                        <h1 className="text-3xl font-bold text-cyan-100">System Transparency</h1>
+                        <h1 className="text-3xl font-bold text-cyan-100">{t('trading:transparency.title')}</h1>
                         <p className="text-cyan-100/60 mt-1">
-                            Real-time visibility into how your trades are processed
+                            {t('trading:transparency.subtitle')}
                         </p>
                     </div>
                     <div className="flex items-center gap-3">
@@ -182,7 +184,7 @@ export default function TransparencyPage() {
                             className="border-cyan-500/30 text-cyan-100 hover:bg-cyan-500/10"
                         >
                             <RefreshCw className="w-4 h-4 mr-2" />
-                            Refresh
+                            {t('common:buttons.refresh')}
                         </Button>
                     </div>
                 </div>
@@ -287,9 +289,9 @@ export default function TransparencyPage() {
                                         <div className="flex items-start justify-between mb-3">
                                             <div className="flex items-center gap-3">
                                                 <div className={`p-2 rounded-lg ${service.status === 'healthy' ? 'bg-emerald-500/20 text-emerald-400' :
-                                                        service.status === 'warning' ? 'bg-yellow-500/20 text-yellow-400' :
-                                                            service.status === 'critical' ? 'bg-red-500/20 text-red-400' :
-                                                                'bg-slate-500/20 text-slate-400'
+                                                    service.status === 'warning' ? 'bg-yellow-500/20 text-yellow-400' :
+                                                        service.status === 'critical' ? 'bg-red-500/20 text-red-400' :
+                                                            'bg-slate-500/20 text-slate-400'
                                                     }`}>
                                                     {displayInfo.icon}
                                                 </div>

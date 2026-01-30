@@ -9,6 +9,7 @@
 
 import { useState, useEffect } from 'react';
 import { useLocation } from 'wouter';
+import { useTranslation } from 'react-i18next';
 import { Button } from '@/components/ui/button';
 import {
     Dialog,
@@ -28,6 +29,7 @@ const STORAGE_KEY = 'krystaline_welcome_shown';
 
 export function WelcomeModal({ isOpen, onClose }: WelcomeModalProps) {
     const [, navigate] = useLocation();
+    const { t } = useTranslation('dashboard');
     const [step, setStep] = useState(0);
 
     const handleStartTrading = () => {
@@ -45,23 +47,23 @@ export function WelcomeModal({ isOpen, onClose }: WelcomeModalProps) {
         {
             icon: Sparkles,
             color: 'from-purple-500 to-pink-500',
-            title: 'Welcome to Krystaline',
-            description: "You're about to experience crypto trading like never before.",
-            highlight: 'Every trade is traced, verified, and auditable.',
+            titleKey: 'welcome.step1Title',
+            descriptionKey: 'welcome.step1Subtitle',
+            highlight: t('welcome.step1Subtitle'),
         },
         {
             icon: Eye,
             color: 'from-cyan-500 to-blue-500',
-            title: 'Make a Trade',
-            description: 'Execute your first buy or sell order.',
-            highlight: 'Watch it flow through our system in real-time.',
+            titleKey: 'welcome.step2Title',
+            descriptionKey: 'welcome.step2Subtitle',
+            highlight: t('welcome.step2Subtitle'),
         },
         {
             icon: Shield,
             color: 'from-emerald-500 to-cyan-500',
-            title: 'See the Trace',
-            description: 'Every transaction creates an OpenTelemetry trace.',
-            highlight: 'Click "View in Jaeger" to see exactly what happened.',
+            titleKey: 'welcome.step3Title',
+            descriptionKey: 'welcome.step3Subtitle',
+            highlight: t('welcome.step3Subtitle'),
         },
     ];
 
@@ -78,10 +80,10 @@ export function WelcomeModal({ isOpen, onClose }: WelcomeModalProps) {
                             <div
                                 key={i}
                                 className={`h-2 rounded-full transition-all duration-300 ${i === step
-                                        ? 'w-6 bg-gradient-to-r from-cyan-400 to-blue-500'
-                                        : i < step
-                                            ? 'w-2 bg-cyan-400'
-                                            : 'w-2 bg-slate-600'
+                                    ? 'w-6 bg-gradient-to-r from-cyan-400 to-blue-500'
+                                    : i < step
+                                        ? 'w-2 bg-cyan-400'
+                                        : 'w-2 bg-slate-600'
                                     }`}
                             />
                         ))}
@@ -95,13 +97,10 @@ export function WelcomeModal({ isOpen, onClose }: WelcomeModalProps) {
                     </div>
 
                     <DialogTitle className="text-2xl font-bold text-center text-cyan-100">
-                        {currentStep.title}
+                        {t(currentStep.titleKey)}
                     </DialogTitle>
 
                     <DialogDescription className="text-center space-y-3">
-                        <p className="text-slate-300 text-base">
-                            {currentStep.description}
-                        </p>
                         <p className="text-cyan-400 font-semibold text-base">
                             {currentStep.highlight}
                         </p>
@@ -112,16 +111,16 @@ export function WelcomeModal({ isOpen, onClose }: WelcomeModalProps) {
                 {step === 2 && (
                     <div className="py-4">
                         <div className="flex items-center justify-between">
-                            {['Trade', 'Trace', 'Verify'].map((label, i) => (
+                            {[t('common:nav.trade'), 'Trace', 'Verify'].map((label, i) => (
                                 <div key={label} className="flex items-center">
                                     <div className="flex flex-col items-center">
                                         <div className={`w-10 h-10 rounded-full flex items-center justify-center ${i === 0 ? 'bg-cyan-500/20 border-2 border-cyan-400' :
-                                                i === 1 ? 'bg-purple-500/20 border-2 border-purple-400' :
-                                                    'bg-emerald-500/20 border-2 border-emerald-400'
+                                            i === 1 ? 'bg-purple-500/20 border-2 border-purple-400' :
+                                                'bg-emerald-500/20 border-2 border-emerald-400'
                                             }`}>
                                             <CheckCircle2 className={`w-5 h-5 ${i === 0 ? 'text-cyan-400' :
-                                                    i === 1 ? 'text-purple-400' :
-                                                        'text-emerald-400'
+                                                i === 1 ? 'text-purple-400' :
+                                                    'text-emerald-400'
                                                 }`} />
                                         </div>
                                         <span className="text-sm text-slate-400 mt-2">{label}</span>
@@ -143,7 +142,7 @@ export function WelcomeModal({ isOpen, onClose }: WelcomeModalProps) {
                                 onClick={() => setStep(step + 1)}
                                 className="w-full bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-white font-semibold"
                             >
-                                Next
+                                {t('common:buttons.next')}
                                 <ArrowRight className="w-4 h-4 ml-2" />
                             </Button>
                             <Button
@@ -151,7 +150,7 @@ export function WelcomeModal({ isOpen, onClose }: WelcomeModalProps) {
                                 onClick={handleSkip}
                                 className="text-slate-400 hover:text-slate-300"
                             >
-                                Skip for now
+                                {t('welcome.skipTour')}
                             </Button>
                         </>
                     ) : (
@@ -161,7 +160,7 @@ export function WelcomeModal({ isOpen, onClose }: WelcomeModalProps) {
                                 className="w-full bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-white font-semibold py-6 text-lg group"
                             >
                                 <Zap className="w-5 h-5 mr-2 group-hover:animate-pulse" />
-                                Make My First Trade
+                                {t('portfolio.firstTrade.cta')}
                                 <ArrowRight className="w-5 h-5 ml-2 group-hover:translate-x-1 transition-transform" />
                             </Button>
                             <Button
@@ -169,7 +168,7 @@ export function WelcomeModal({ isOpen, onClose }: WelcomeModalProps) {
                                 onClick={handleSkip}
                                 className="text-slate-400 hover:text-slate-300"
                             >
-                                I'll explore first
+                                {t('welcome.skipTour')}
                             </Button>
                         </>
                     )}
