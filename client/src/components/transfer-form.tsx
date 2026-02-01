@@ -21,7 +21,7 @@ const transferSchema = z.object({
     toAddress: z.string().min(1, "Enter recipient wallet address"),
     toUserId: z.string().optional(),  // Legacy, derived from address
     asset: z.string().default("BTC"),
-    amount: z.number().positive().max(10),
+    amount: z.number().positive().max(10000000),
 });
 
 type TransferFormData = z.infer<typeof transferSchema>;
@@ -63,7 +63,7 @@ export function TransferForm() {
 
     // Fetch all verified users
     const { data: users, isLoading: usersLoading } = useQuery<User[]>({
-        queryKey: ["/api/users"],
+        queryKey: ["/api/v1/users"],
         enabled: !!currentUser,
     });
 
@@ -93,7 +93,7 @@ export function TransferForm() {
                     parentSpan.setAttribute('transfer.amount', data.amount);
                     parentSpan.setAttribute('transfer.asset', data.asset);
 
-                    const response = await fetch('/api/wallet/transfer', {
+                    const response = await fetch('/api/v1/wallet/transfer', {
                         method: 'POST',
                         headers: {
                             'Content-Type': 'application/json',
@@ -162,9 +162,9 @@ export function TransferForm() {
             });
 
             // Refresh data
-            queryClient.invalidateQueries({ queryKey: ["/api/wallet"] });
-            queryClient.invalidateQueries({ queryKey: ["/api/wallet/balances"] });
-            queryClient.invalidateQueries({ queryKey: ["/api/transfers"] });
+            queryClient.invalidateQueries({ queryKey: ["/api/v1/wallet"] });
+            queryClient.invalidateQueries({ queryKey: ["/api/v1/wallet/balances"] });
+            queryClient.invalidateQueries({ queryKey: ["/api/v1/transfers"] });
 
             // Reset form
             form.reset({ toUserId: "", asset: "BTC", amount: 0.01 });
@@ -332,7 +332,7 @@ export function TransferForm() {
                                                 type="number"
                                                 step="0.001"
                                                 min="0.001"
-                                                max="10"
+                                                max="10000000"
                                                 placeholder="0.1"
                                                 {...field}
                                                 onChange={(e) => field.onChange(parseFloat(e.target.value) || 0)}

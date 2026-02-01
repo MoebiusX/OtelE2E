@@ -92,10 +92,10 @@ The system creates these authentic OpenTelemetry spans:
 
 ## Development vs Production
 
-### Development (Replit)
+### Development (Local)
 - In-memory storage
 - Single process
-- Hot reloading
+- Hot reloading via Vite
 
 ### Production (Containers)
 - PostgreSQL persistence

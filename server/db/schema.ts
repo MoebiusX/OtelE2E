@@ -68,11 +68,13 @@ export const wallets = pgTable('wallets', {
     balance: decimal('balance', { precision: 24, scale: 8 }).default('0').notNull(),
     available: decimal('available', { precision: 24, scale: 8 }).default('0').notNull(),
     locked: decimal('locked', { precision: 24, scale: 8 }).default('0').notNull(),
+    address: varchar('address', { length: 64 }),  // Krystaline wallet address (kx1...)
     createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
     updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),
 }, (table) => [
     index('idx_wallets_user').on(table.userId),
     uniqueIndex('wallets_user_asset_unique').on(table.userId, table.asset),
+    index('idx_wallets_address').on(table.address),
 ]);
 
 export const transactions = pgTable('transactions', {
@@ -147,6 +149,78 @@ export const kycSubmissions = pgTable('kyc_submissions', {
     reviewedAt: timestamp('reviewed_at', { withTimezone: true }),
     reviewerNotes: text('reviewer_notes'),
 });
+
+// ============================================
+// MONITORING & OBSERVABILITY
+// ============================================
+
+/**
+ * Span Baselines - Overall statistics per span type
+ */
+export const spanBaselines = pgTable('span_baselines', {
+    id: uuid('id').primaryKey().defaultRandom(),
+    spanKey: varchar('span_key', { length: 255 }).unique().notNull(),
+    service: varchar('service', { length: 100 }).notNull(),
+    operation: varchar('operation', { length: 255 }).notNull(),
+    mean: decimal('mean', { precision: 18, scale: 4 }).notNull(),
+    stdDev: decimal('std_dev', { precision: 18, scale: 4 }).notNull(),
+    variance: decimal('variance', { precision: 24, scale: 8 }).notNull(),
+    p50: decimal('p50', { precision: 18, scale: 4 }),
+    p95: decimal('p95', { precision: 18, scale: 4 }),
+    p99: decimal('p99', { precision: 18, scale: 4 }),
+    min: decimal('min', { precision: 18, scale: 4 }),
+    max: decimal('max', { precision: 18, scale: 4 }),
+    sampleCount: integer('sample_count').default(0).notNull(),
+    updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),
+}, (table) => [
+    index('idx_span_baselines_service').on(table.service),
+]);
+
+/**
+ * Time Baselines - Time-bucketed statistics (168 buckets per span: 24h x 7 days)
+ */
+export const timeBaselines = pgTable('time_baselines', {
+    id: uuid('id').primaryKey().defaultRandom(),
+    spanKey: varchar('span_key', { length: 255 }).notNull(),
+    service: varchar('service', { length: 100 }).notNull(),
+    operation: varchar('operation', { length: 255 }).notNull(),
+    dayOfWeek: integer('day_of_week').notNull(),  // 0-6 (Sunday-Saturday)
+    hourOfDay: integer('hour_of_day').notNull(),  // 0-23
+    mean: decimal('mean', { precision: 18, scale: 4 }).notNull(),
+    stdDev: decimal('std_dev', { precision: 18, scale: 4 }).notNull(),
+    sampleCount: integer('sample_count').default(0).notNull(),
+    thresholds: jsonb('thresholds'),  // AdaptiveThresholds
+    updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),
+}, (table) => [
+    uniqueIndex('time_baselines_key_day_hour').on(table.spanKey, table.dayOfWeek, table.hourOfDay),
+    index('idx_time_baselines_span').on(table.spanKey),
+]);
+
+/**
+ * Anomalies - Historical anomaly records
+ */
+export const anomalies = pgTable('anomalies', {
+    id: uuid('id').primaryKey().defaultRandom(),
+    traceId: varchar('trace_id', { length: 64 }).notNull(),
+    spanId: varchar('span_id', { length: 64 }).notNull(),
+    service: varchar('service', { length: 100 }).notNull(),
+    operation: varchar('operation', { length: 255 }).notNull(),
+    duration: decimal('duration', { precision: 18, scale: 4 }).notNull(),
+    expectedMean: decimal('expected_mean', { precision: 18, scale: 4 }).notNull(),
+    expectedStdDev: decimal('expected_std_dev', { precision: 18, scale: 4 }).notNull(),
+    deviation: decimal('deviation', { precision: 10, scale: 4 }).notNull(),
+    severity: integer('severity').notNull(),  // 1-5
+    severityName: varchar('severity_name', { length: 20 }).notNull(),
+    attributes: jsonb('attributes'),
+    dayOfWeek: integer('day_of_week'),
+    hourOfDay: integer('hour_of_day'),
+    createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+}, (table) => [
+    index('idx_anomalies_service').on(table.service),
+    index('idx_anomalies_severity').on(table.severity),
+    index('idx_anomalies_created').on(table.createdAt),
+    index('idx_anomalies_trace').on(table.traceId),
+]);
 
 // ============================================
 // RELATIONS
@@ -238,6 +312,24 @@ export const insertKycSubmissionSchema = createInsertSchema(kycSubmissions);
 export const selectKycSubmissionSchema = createSelectSchema(kycSubmissions);
 export type KycSubmission = typeof kycSubmissions.$inferSelect;
 export type NewKycSubmission = typeof kycSubmissions.$inferInsert;
+
+// Span baseline schemas
+export const insertSpanBaselineSchema = createInsertSchema(spanBaselines);
+export const selectSpanBaselineSchema = createSelectSchema(spanBaselines);
+export type SpanBaselineRecord = typeof spanBaselines.$inferSelect;
+export type NewSpanBaselineRecord = typeof spanBaselines.$inferInsert;
+
+// Time baseline schemas
+export const insertTimeBaselineSchema = createInsertSchema(timeBaselines);
+export const selectTimeBaselineSchema = createSelectSchema(timeBaselines);
+export type TimeBaselineRecord = typeof timeBaselines.$inferSelect;
+export type NewTimeBaselineRecord = typeof timeBaselines.$inferInsert;
+
+// Anomaly schemas
+export const insertAnomalySchema = createInsertSchema(anomalies);
+export const selectAnomalySchema = createSelectSchema(anomalies);
+export type AnomalyRecord = typeof anomalies.$inferSelect;
+export type NewAnomalyRecord = typeof anomalies.$inferInsert;
 
 // ============================================
 // ADDITIONAL FORM SCHEMAS

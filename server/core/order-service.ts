@@ -2,25 +2,27 @@
 // Handles trade orders and BTC transfers between users
 
 import { storage } from '../storage';
+import db from '../db';
 import { rabbitMQClient } from '../services/rabbitmq-client';
 import { walletService } from '../wallet/wallet-service';
 import { trace, context, SpanStatusCode } from '@opentelemetry/api';
 import { createLogger } from '../lib/logger';
 import { OrderError, ValidationError, InsufficientFundsError, getErrorMessage } from '../lib/errors';
+import { recordTrade, recordOrderMetrics } from '../metrics/prometheus';
+import { amountAnomalyDetector } from '../monitor/amount-anomaly-detector';
+import { priceService } from '../services/price-service';
+import type { Order } from '@shared/schema';
 
 const logger = createLogger('order');
 
 // ============================================
-// PRICE SIMULATION
+// PRICE SERVICE (Real Binance prices)
 // ============================================
 
-let currentPrice = 42500;
-
-export function getPrice() {
-    const fluctuation = (Math.random() - 0.5) * 0.01;
-    currentPrice = currentPrice * (1 + fluctuation);
-    currentPrice = Math.max(35000, Math.min(55000, currentPrice));
-    return Math.round(currentPrice * 100) / 100;
+// Get real market price - NO SIMULATION
+export function getPrice(): number | null {
+    const priceData = priceService.getPrice('BTC');
+    return priceData?.price ?? null;
 }
 
 // ============================================
@@ -72,8 +74,11 @@ export class OrderService {
     private orderCounter = 0;
     private transferCounter = 0;
 
-    // Get wallet for a specific user
-    async getWallet(userId: string = 'seed.user.primary@krystaline.io') {
+    // Get wallet for a specific user - requires explicit userId
+    async getWallet(userId: string) {
+        if (!userId) {
+            throw new ValidationError('userId', 'User ID is required');
+        }
         return walletService.getWalletSummary(userId);
     }
 
@@ -87,11 +92,29 @@ export class OrderService {
         const activeSpan = trace.getActiveSpan();
         const spanContext = activeSpan?.spanContext();
 
+        // DIAGNOSTIC: Log whether context was properly received
+        logger.info({
+            hasActiveSpan: !!activeSpan,
+            activeTraceId: spanContext?.traceId,
+            activeSpanId: spanContext?.spanId,
+        }, 'Order submission - checking trace context from HTTP layer');
+
         const traceId = spanContext?.traceId || this.generateTraceId();
         const spanId = spanContext?.spanId || this.generateSpanId();
         const correlationId = this.generateCorrelationId();
         const orderId = `ORD-${Date.now()}-${++this.orderCounter}`;
-        const userId = request.userId || 'seed.user.primary@krystaline.io';
+        const userId = request.userId;
+        if (!userId) {
+            throw new ValidationError('userId', 'User ID is required for order submission');
+        }
+
+        // WARN if we had to generate our own trace ID (indicates context propagation failure)
+        if (!spanContext?.traceId) {
+            logger.warn({
+                userId,
+                side: request.side,
+            }, 'NO TRACE CONTEXT - generating fallback trace ID (this is a bug!)');
+        }
 
         logger.info({
             userId,
@@ -100,28 +123,53 @@ export class OrderService {
             orderId
         }, 'Submitting trade order');
 
+        // Get REAL price from Binance feed
         const price = getPrice();
+        if (price === null) {
+            logger.warn({ userId, orderId }, 'Price feed unavailable');
+            throw new OrderError('Price feed temporarily unavailable. Please try again later.');
+        }
         const totalValue = price * request.quantity;
 
         // Get user's wallet balances from database
-        const usdWallet = await walletService.getWallet(userId, 'USD');
-        const btcWallet = await walletService.getWallet(userId, 'BTC');
+        let usdWallet = await walletService.getWallet(userId, 'USD');
+        let btcWallet = await walletService.getWallet(userId, 'BTC');
+
+        // Initialize demo wallets for new users who don't have wallets yet
+        if (!usdWallet || !btcWallet) {
+            logger.info({ userId }, 'Initializing demo wallet for new user before trade');
+            // New users start with 1 BTC and $5000 USD (demo balance)
+            const demoBalanceBtc = 1.0;
+            const demoBalanceUsd = 5000;
+            await walletService.updateBalance(userId, 'BTC', demoBalanceBtc);
+            await walletService.updateBalance(userId, 'USD', demoBalanceUsd);
+            // Re-fetch wallets after initialization
+            usdWallet = await walletService.getWallet(userId, 'USD');
+            btcWallet = await walletService.getWallet(userId, 'BTC');
+        }
 
         const usdBalance = usdWallet ? parseFloat(usdWallet.available) : 0;
         const btcBalance = btcWallet ? parseFloat(btcWallet.available) : 0;
 
-        // Validation - reject if insufficient funds
+        // Debug: Log wallet lookup results
+        logger.info({
+            userId,
+            side: request.side,
+            quantity: request.quantity,
+            hasUsdWallet: !!usdWallet,
+            hasBtcWallet: !!btcWallet,
+            usdBalance,
+            btcBalance,
+        }, 'Pre-trade balance check');
+
+        // Validation - reject if insufficient funds (throw error for semantic HTTP status)
         if (request.side === 'BUY' && totalValue > usdBalance) {
             logger.warn({
                 userId,
                 required: totalValue,
                 available: usdBalance
             }, 'Order rejected - insufficient USD');
-            return {
-                orderId, traceId, spanId,
-                order: null,
-                execution: { status: 'REJECTED', fillPrice: price, totalValue, processedAt: new Date().toISOString(), processorId: 'local-validator' }
-            };
+            throw new InsufficientFundsError('USD', totalValue, usdBalance);
         }
 
         if (request.side === 'SELL' && request.quantity > btcBalance) {
@@ -130,15 +178,11 @@ export class OrderService {
                 required: request.quantity,
                 available: btcBalance
             }, 'Order rejected - insufficient BTC');
-            return {
-                orderId, traceId, spanId,
-                order: null,
-                execution: { status: 'REJECTED', fillPrice: price, totalValue, processedAt: new Date().toISOString(), processorId: 'local-validator' }
-            };
+            throw new InsufficientFundsError('BTC', request.quantity, btcBalance);
         }
 
         // Store order
-        const order = await storage.createOrder({
+        const order = await this.createOrderRecord({
             orderId,
             pair: request.pair,
             side: request.side,
@@ -149,124 +193,123 @@ export class OrderService {
             userId
         });
 
-        // Process via RabbitMQ - MUST preserve the current context for proper trace propagation
+        // Check RabbitMQ availability - REQUIRED for trading
         const isRabbitConnected = rabbitMQClient.isConnected();
         logger.info({
             orderId,
             rabbitMQConnected: isRabbitConnected
         }, 'Order processing - checking RabbitMQ connection');
 
-        if (isRabbitConnected) {
-            // Capture the current context to ensure it's passed to RabbitMQ
-            const currentContext = context.active();
-            const activeSpanForRabbit = trace.getSpan(currentContext);
+        if (!isRabbitConnected) {
+            logger.error({ orderId }, 'RabbitMQ not available - cannot process order');
+
+            // Mark order as rejected due to service unavailability
+            await this.updateOrderRecord(orderId, {
+                status: 'REJECTED',
+                fillPrice: price,
+                totalValue
+            });
+
+            throw new OrderError('Order matching service unavailable. Please try again later.');
+        }
+
+        // Execute via RabbitMQ - MUST preserve the current context for proper trace propagation
+        const currentContext = context.active();
+        const activeSpanForRabbit = trace.getSpan(currentContext);
+
+        logger.info({
+            hasContext: !!activeSpanForRabbit,
+            contextTraceId: activeSpanForRabbit?.spanContext().traceId,
+        }, 'Calling RabbitMQ with captured context');
+
+        try {
+            // Execute within the captured context to ensure trace propagation
+            const executionResponse = await context.with(currentContext, () =>
+                rabbitMQClient.publishOrderAndWait({
+                    orderId,
+                    correlationId,
+                    pair: request.pair,
+                    side: request.side,
+                    quantity: request.quantity,
+                    orderType: request.orderType,
+                    currentPrice: price,
+                    traceId,
+                    spanId,
+                    userId,
+                    timestamp: new Date().toISOString()
+                }, 5000)
+            );
 
             logger.info({
-                hasContext: !!activeSpanForRabbit,
-                contextTraceId: activeSpanForRabbit?.spanContext().traceId,
-            }, 'Calling RabbitMQ with captured context');
-
-            try {
-                // Execute within the captured context to ensure trace propagation
-                const executionResponse = await context.with(currentContext, () =>
-                    rabbitMQClient.publishOrderAndWait({
-                        orderId,
-                        correlationId,
-                        pair: request.pair,
-                        side: request.side,
-                        quantity: request.quantity,
-                        orderType: request.orderType,
-                        currentPrice: price,
-                        traceId,
-                        spanId,
-                        userId,
-                        timestamp: new Date().toISOString()
-                    }, 5000)
-                );
-
-                logger.info({
-                    orderId,
-                    status: executionResponse.status,
-                    fillPrice: executionResponse.fillPrice,
-                    processorId: executionResponse.processorId
-                }, 'Order execution response received');
-
-                if (executionResponse.status === 'FILLED') {
-                    try {
-                        await this.updateUserWallet(userId, request.side, request.quantity, executionResponse.fillPrice);
-                    } catch (walletError: unknown) {
-                        // Wallet update failed (e.g., balance constraint violation)
-                        // Mark order as rejected to prevent stuck pending orders
-                        logger.error({
-                            err: walletError,
-                            orderId,
-                            userId,
-                            side: request.side,
-                            quantity: request.quantity
-                        }, 'Wallet update failed - marking order as rejected');
-
-                        await storage.updateOrder(orderId, {
-                            status: 'REJECTED',
-                            fillPrice: executionResponse.fillPrice,
-                            totalValue: executionResponse.totalValue
-                        });
-
-                        return {
-                            orderId, traceId, spanId,
-                            order,
-                            execution: {
-                                status: 'REJECTED',
-                                fillPrice: executionResponse.fillPrice,
-                                totalValue: executionResponse.totalValue,
-                                processedAt: executionResponse.processedAt,
-                                processorId: 'settlement-failed'
-                            }
-                        };
-                    }
-                }
-
-                await storage.updateOrder(orderId, {
-                    status: executionResponse.status as "PENDING" | "FILLED" | "REJECTED",
-                    fillPrice: executionResponse.fillPrice,
-                    totalValue: executionResponse.totalValue
-                });
-
-                return {
-                    orderId, traceId, spanId,
-                    order,
-                    execution: {
-                        status: executionResponse.status,
-                        fillPrice: executionResponse.fillPrice,
-                        totalValue: executionResponse.totalValue,
-                        processedAt: executionResponse.processedAt,
-                        processorId: executionResponse.processorId
-                    }
-                };
-            } catch (error: unknown) {
-                logger.warn({
-                    err: error,
-                    orderId
-                }, 'Order matcher timeout');
-                return { orderId, traceId, spanId, order };
-            }
-        } else {
-            // Fallback: local execution
-            logger.warn({
                 orderId,
-                reason: 'RabbitMQ not connected - using local fallback'
-            }, 'Order processed locally (kx-matcher bypassed)');
-            await this.updateUserWallet(userId, request.side, request.quantity, price);
+                status: executionResponse.status,
+                fillPrice: executionResponse.fillPrice,
+                processorId: executionResponse.processorId
+            }, 'Order execution response received');
+
+            if (executionResponse.status === 'FILLED') {
+                try {
+                    await this.updateUserWallet(userId, request.side, request.quantity, executionResponse.fillPrice);
+                    // Emit business metrics for successful trade
+                    recordTrade(request.pair, request.side, request.quantity, executionResponse.totalValue);
+                    recordOrderMetrics(request.side, 'FILLED', 0); // Duration tracked separately
+                    // Check for whale transaction
+                    amountAnomalyDetector.checkOrder({
+                        orderId,
+                        userId,
+                        side: request.side,
+                        pair: request.pair,
+                        amount: request.quantity,
+                        traceId,
+                    });
+                } catch (walletError: unknown) {
+                    // Wallet update failed (e.g., balance constraint violation)
+                    // Mark order as rejected to prevent stuck pending orders
+                    logger.error({
+                        err: walletError,
+                        orderId,
+                        userId,
+                        side: request.side,
+                        quantity: request.quantity
+                    }, 'Wallet update failed - marking order as rejected');
+
+                    await this.updateOrderRecord(orderId, {
+                        status: 'REJECTED',
+                        fillPrice: executionResponse.fillPrice,
+                        totalValue: executionResponse.totalValue
+                    });
+
+                    throw new OrderError('Settlement failed - order rejected');
+                }
+            }
+
+            await this.updateOrderRecord(orderId, {
+                status: executionResponse.status as "PENDING" | "FILLED" | "REJECTED",
+                fillPrice: executionResponse.fillPrice,
+                totalValue: executionResponse.totalValue
+            });
+
             return {
                 orderId, traceId, spanId,
                 order,
                 execution: {
-                    status: 'FILLED',
-                    fillPrice: price,
-                    totalValue,
-                    processedAt: new Date().toISOString(),
-                    processorId: 'local-fallback'
+                    status: executionResponse.status,
+                    fillPrice: executionResponse.fillPrice,
+                    totalValue: executionResponse.totalValue,
+                    processedAt: executionResponse.processedAt,
+                    processorId: executionResponse.processorId
                 }
             };
+        } catch (error: unknown) {
+            logger.error({
+                err: error,
+                orderId
+            }, 'Order execution failed');
+
+            // Mark as rejected
+            await this.updateOrderRecord(orderId, { status: 'REJECTED' });
+
+            throw error;
         }
     }
 
@@ -371,8 +414,18 @@ export class OrderService {
 
     // Update user's wallet after trade
     private async updateUserWallet(userId: string, side: "BUY" | "SELL", quantity: number, price: number) {
-        const wallet = await walletService.getWalletSummary(userId);
-        if (!wallet) return;
+        let wallet = await walletService.getWalletSummary(userId);
+
+        // Initialize demo wallet for new users if they don't have one
+        if (!wallet) {
+            logger.info({ userId }, 'Initializing demo wallet for new user');
+            // New users start with 1 BTC and $5000 USD (demo balance)
+            const demoBalanceBtc = 1.0;
+            const demoBalanceUsd = 5000;
+            await walletService.updateBalance(userId, 'BTC', demoBalanceBtc);
+            await walletService.updateBalance(userId, 'USD', demoBalanceUsd);
+            wallet = { userId, btc: demoBalanceBtc, usd: demoBalanceUsd, lastUpdated: new Date() };
+        }
 
         const totalValue = quantity * price;
 
@@ -391,8 +444,28 @@ export class OrderService {
         }, 'Wallet updated after trade');
     }
 
-    async getOrders(limit: number = 10) {
-        return storage.getOrders(limit);
+    async getOrders(limit: number = 10): Promise<Order[]> {
+        const { rows } = await db.query(
+            `SELECT id, order_id, pair, side, type, quantity, filled, status, price, trace_id, created_at
+             FROM orders
+             ORDER BY created_at DESC
+             LIMIT $1`,
+            [limit]
+        );
+
+        return rows.map(row => ({
+            orderId: row.order_id || row.id,
+            pair: 'BTC/USD' as const,
+            side: row.side.toUpperCase() as 'BUY' | 'SELL',
+            quantity: parseFloat(row.quantity),
+            orderType: 'MARKET' as const,
+            status: this.mapOrderStatus(row.status),
+            fillPrice: row.price ? parseFloat(row.price) : undefined,
+            totalValue: row.price && row.filled ? parseFloat(row.price) * parseFloat(row.filled) : undefined,
+            traceId: row.trace_id || '',
+            spanId: '',
+            createdAt: row.created_at,
+        }));
     }
 
     async getTransfers(limit: number = 10) {
@@ -401,6 +474,123 @@ export class OrderService {
 
     async clearAllData() {
         return storage.clearAllData();
+    }
+
+    // ============================================
+    // PRIVATE ORDER DB METHODS
+    // ============================================
+
+    private mapOrderStatus(status: string): 'PENDING' | 'FILLED' | 'REJECTED' {
+        switch (status.toLowerCase()) {
+            case 'filled': return 'FILLED';
+            case 'cancelled':
+            case 'rejected': return 'REJECTED';
+            case 'accepted': return 'PENDING'; // Map 'accepted' to PENDING for backward compatibility
+            default: return 'PENDING';
+        }
+    }
+
+    private async createOrderRecord(orderData: {
+        orderId: string;
+        pair: string;
+        side: string;
+        quantity: number;
+        orderType: string;
+        traceId: string;
+        spanId: string;
+        userId?: string;
+    }): Promise<Order> {
+        // Resolve user ID if provided
+        let dbUserId: string | null = null;
+        if (orderData.userId) {
+            const { rows } = await db.query(
+                `SELECT id FROM users WHERE email = $1 OR id::text = $1`,
+                [orderData.userId]
+            );
+            if (rows.length > 0) {
+                dbUserId = rows[0].id;
+            }
+        }
+
+        const { rows } = await db.query(
+            `INSERT INTO orders (order_id, user_id, pair, side, type, quantity, status, trace_id)
+             VALUES ($1, $2, $3, $4, $5, $6, 'accepted', $7)
+             RETURNING id, order_id, pair, side, type, quantity, status, trace_id, created_at`,
+            [
+                orderData.orderId,
+                dbUserId || '00000000-0000-0000-0000-000000000000',
+                orderData.pair || 'BTC/USD',
+                orderData.side.toLowerCase(),
+                orderData.orderType.toLowerCase(),
+                orderData.quantity,
+                orderData.traceId,
+            ]
+        );
+
+        const row = rows[0];
+        return {
+            orderId: orderData.orderId,
+            pair: 'BTC/USD' as const,
+            side: row.side.toUpperCase() as 'BUY' | 'SELL',
+            quantity: parseFloat(row.quantity),
+            orderType: 'MARKET' as const,
+            status: 'PENDING',
+            traceId: orderData.traceId,
+            spanId: orderData.spanId,
+            createdAt: row.created_at,
+        };
+    }
+
+    private async updateOrderRecord(orderId: string, updates: {
+        status?: 'PENDING' | 'FILLED' | 'REJECTED';
+        fillPrice?: number;
+        totalValue?: number;
+    }): Promise<Order | undefined> {
+        const setClauses: string[] = ['updated_at = NOW()'];
+        const values: unknown[] = [];
+        let paramIndex = 1;
+
+        if (updates.status) {
+            const pgStatus = updates.status === 'FILLED' ? 'filled' :
+                updates.status === 'REJECTED' ? 'cancelled' : 'open';
+            setClauses.push(`status = $${paramIndex++}`);
+            values.push(pgStatus);
+
+            if (updates.status === 'FILLED') {
+                setClauses.push(`filled = quantity`);
+            }
+        }
+
+        if (updates.fillPrice) {
+            setClauses.push(`price = $${paramIndex++}`);
+            values.push(updates.fillPrice);
+        }
+
+        values.push(orderId);
+
+        const { rows } = await db.query(
+            `UPDATE orders SET ${setClauses.join(', ')}
+             WHERE order_id = $${paramIndex}
+             RETURNING id, order_id, pair, side, type, quantity, filled, status, price, created_at`,
+            values
+        );
+
+        if (rows.length === 0) return undefined;
+
+        const row = rows[0];
+        return {
+            orderId: row.order_id,
+            pair: 'BTC/USD' as const,
+            side: row.side.toUpperCase() as 'BUY' | 'SELL',
+            quantity: parseFloat(row.quantity),
+            orderType: 'MARKET' as const,
+            status: this.mapOrderStatus(row.status),
+            fillPrice: row.price ? parseFloat(row.price) : undefined,
+            totalValue: row.price && row.filled ? parseFloat(row.price) * parseFloat(row.filled) : undefined,
+            traceId: '',
+            spanId: '',
+            createdAt: row.created_at,
+        };
     }
 
     private generateCorrelationId(): string {

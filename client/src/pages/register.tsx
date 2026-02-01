@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useLocation } from "wouter";
 import { useMutation } from "@tanstack/react-query";
+import { useTranslation } from "react-i18next";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -9,6 +10,7 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 
 export default function Register() {
     const [, setLocation] = useLocation();
+    const { t } = useTranslation('auth');
     const [email, setEmail] = useState("");
     const [password, setPassword] = useState("");
     const [confirmPassword, setConfirmPassword] = useState("");
@@ -18,7 +20,7 @@ export default function Register() {
 
     const registerMutation = useMutation({
         mutationFn: async () => {
-            const res = await fetch("/api/auth/register", {
+            const res = await fetch("/api/v1/auth/register", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({ email, password }),
@@ -40,7 +42,7 @@ export default function Register() {
 
     const verifyMutation = useMutation({
         mutationFn: async () => {
-            const res = await fetch("/api/auth/verify", {
+            const res = await fetch("/api/v1/auth/verify", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({ email, code: verificationCode }),
@@ -88,19 +90,19 @@ export default function Register() {
         <div className="min-h-screen bg-gradient-to-br from-slate-950 via-blue-950 to-slate-900 flex items-center justify-center p-4">
             {/* Back to Home */}
             <a href="/" className="absolute top-6 left-6 flex items-center gap-2 text-cyan-100/70 hover:text-cyan-100 transition-colors group">
-                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="group-hover:-translate-x-1 transition-transform"><path d="m15 18-6-6 6-6"/></svg>
-                <span className="text-sm font-medium">Back to Home</span>
+                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="group-hover:-translate-x-1 transition-transform"><path d="m15 18-6-6 6-6" /></svg>
+                <span className="text-sm font-medium">{t('login.backToHome')}</span>
             </a>
-            
+
             <Card className="w-full max-w-md bg-slate-900/80 border-cyan-500/20 backdrop-blur-xl shadow-2xl">
                 <CardHeader className="text-center">
                     <CardTitle className="text-3xl font-bold bg-gradient-to-r from-cyan-400 via-blue-400 to-indigo-400 bg-clip-text text-transparent">
-                        {step === "register" ? "Create Account" : "Verify Email"}
+                        {step === "register" ? t('register.title') : t('verify.title')}
                     </CardTitle>
                     <CardDescription className="text-cyan-100/60">
                         {step === "register"
-                            ? "Join Krystaline and start trading"
-                            : `We sent a code to ${email}`}
+                            ? t('register.subtitle')
+                            : t('verify.subtitle', { email })}
                     </CardDescription>
                 </CardHeader>
 
@@ -114,11 +116,11 @@ export default function Register() {
                     {step === "register" ? (
                         <form onSubmit={handleRegister} className="space-y-4">
                             <div className="space-y-2">
-                                <Label htmlFor="email" className="text-cyan-100">Email</Label>
+                                <Label htmlFor="email" className="text-cyan-100">{t('register.email')}</Label>
                                 <Input
                                     id="email"
                                     type="email"
-                                    placeholder="you@example.com"
+                                    placeholder={t('login.emailPlaceholder')}
                                     value={email}
                                     onChange={(e) => setEmail(e.target.value)}
                                     required
@@ -127,11 +129,11 @@ export default function Register() {
                             </div>
 
                             <div className="space-y-2">
-                                <Label htmlFor="password" className="text-cyan-100">Password</Label>
+                                <Label htmlFor="password" className="text-cyan-100">{t('register.password')}</Label>
                                 <Input
                                     id="password"
                                     type="password"
-                                    placeholder="Min 8 chars, 1 uppercase, 1 number"
+                                    placeholder={t('register.passwordRequirements')}
                                     value={password}
                                     onChange={(e) => setPassword(e.target.value)}
                                     required
@@ -140,11 +142,11 @@ export default function Register() {
                             </div>
 
                             <div className="space-y-2">
-                                <Label htmlFor="confirmPassword" className="text-cyan-100">Confirm Password</Label>
+                                <Label htmlFor="confirmPassword" className="text-cyan-100">{t('register.confirmPassword')}</Label>
                                 <Input
                                     id="confirmPassword"
                                     type="password"
-                                    placeholder="Repeat password"
+                                    placeholder={t('register.confirmPassword')}
                                     value={confirmPassword}
                                     onChange={(e) => setConfirmPassword(e.target.value)}
                                     required
@@ -157,17 +159,17 @@ export default function Register() {
                                 className="w-full bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-cyan-500 hover:to-blue-500 shadow-lg shadow-cyan-500/25"
                                 disabled={registerMutation.isPending}
                             >
-                                {registerMutation.isPending ? "Creating Account..." : "Create Account"}
+                                {registerMutation.isPending ? t('register.submitting') : t('register.submit')}
                             </Button>
                         </form>
                     ) : (
                         <form onSubmit={handleVerify} className="space-y-4">
                             <div className="space-y-2">
-                                <Label htmlFor="code" className="text-cyan-100">Verification Code</Label>
+                                <Label htmlFor="code" className="text-cyan-100">{t('verify.code')}</Label>
                                 <Input
                                     id="code"
                                     type="text"
-                                    placeholder="Enter 6-digit code"
+                                    placeholder="000000"
                                     value={verificationCode}
                                     onChange={(e) => setVerificationCode(e.target.value)}
                                     maxLength={6}
@@ -175,7 +177,7 @@ export default function Register() {
                                     className="bg-slate-800/50 border-cyan-500/30 text-cyan-100 text-center text-2xl tracking-widest placeholder:text-cyan-100/30"
                                 />
                                 <p className="text-sm text-cyan-100/60 text-center">
-                                    Check your email or view at <a href="http://localhost:1080" target="_blank" className="text-cyan-400 hover:text-cyan-300 underline">localhost:1080</a>
+                                    Check your email or view at <a href={import.meta.env.VITE_MAILDEV_URL || "http://localhost:1080"} target="_blank" className="text-cyan-400 hover:text-cyan-300 underline">Mail Inbox</a>
                                 </p>
                             </div>
 
@@ -184,7 +186,7 @@ export default function Register() {
                                 className="w-full bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-cyan-500 hover:to-blue-500 shadow-lg shadow-cyan-500/25"
                                 disabled={verifyMutation.isPending}
                             >
-                                {verifyMutation.isPending ? "Verifying..." : "Verify & Continue"}
+                                {verifyMutation.isPending ? t('verify.submitting') : t('verify.submit')}
                             </Button>
                         </form>
                     )}
@@ -192,9 +194,9 @@ export default function Register() {
 
                 <CardFooter className="flex flex-col gap-2">
                     <div className="text-sm text-cyan-100/60">
-                        Already have an account?{" "}
+                        {t('register.hasAccount')}{" "}
                         <a href="/login" className="text-cyan-400 hover:text-cyan-300 font-medium">
-                            Sign in
+                            {t('register.signIn')}
                         </a>
                     </div>
                 </CardFooter>

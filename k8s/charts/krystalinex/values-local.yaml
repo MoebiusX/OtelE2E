@@ -1,0 +1,128 @@
+# KrystalineX Helm Chart - Local Development Values
+# Use this file for docker-desktop testing
+
+global:
+  storageClass: ""  # Use default storage class
+
+# Enable dev-only secrets creation (not for production!)
+secrets:
+  create: true
+
+# Enable standalone PostgreSQL and RabbitMQ (not Bitnami subcharts)
+postgresql:
+  enabled: true
+  primary:
+    persistence:
+      enabled: true
+      size: 2Gi
+    resources:
+      limits:
+        cpu: 1000m
+        memory: 1Gi
+      requests:
+        cpu: 200m
+        memory: 512Mi
+
+kongPostgresql:
+  enabled: false
+
+rabbitmq:
+  enabled: true
+  persistence:
+    enabled: true
+    size: 2Gi
+  resources:
+    limits:
+      cpu: 1000m
+      memory: 1Gi
+    requests:
+      cpu: 200m
+      memory: 512Mi
+
+# Use production images from private registry
+server:
+  image:
+    repository: bizait-nas:5000/krystalinex/server
+    tag: v1.0.8
+    pullPolicy: IfNotPresent
+  resources:
+    limits:
+      cpu: 1000m
+      memory: 1Gi
+    requests:
+      cpu: 200m
+      memory: 512Mi
+  # Increased initial delay for slow-starting TypeScript server
+  livenessProbe:
+    httpGet:
+      path: /health
+      port: 5000
+    initialDelaySeconds: 90
+    periodSeconds: 30
+    timeoutSeconds: 10
+    failureThreshold: 5
+  readinessProbe:
+    httpGet:
+      path: /ready
+      port: 5000
+    initialDelaySeconds: 30
+    periodSeconds: 10
+    timeoutSeconds: 5
+    failureThreshold: 3
+
+paymentProcessor:
+  image:
+    repository: bizait-nas:5000/krystalinex/payment-processor
+    tag: v1.0.0
+    pullPolicy: IfNotPresent
+  resources:
+    limits:
+      cpu: 500m
+      memory: 1Gi
+    requests:
+      cpu: 100m
+      memory: 256Mi
+  # Increased initial delay to allow RabbitMQ connection
+  livenessProbe:
+    httpGet:
+      path: /health
+      port: 3001
+    initialDelaySeconds: 120
+    periodSeconds: 30
+    timeoutSeconds: 10
+    failureThreshold: 5
+  readinessProbe:
+    httpGet:
+      path: /health
+      port: 3001
+    initialDelaySeconds: 60
+    periodSeconds: 10
+    timeoutSeconds: 5
+    failureThreshold: 5
+
+frontend:
+  image:
+    repository: bizait-nas:5000/krystalinex/frontend
+    tag: v1.0.3
+    pullPolicy: IfNotPresent
+  resources:
+    limits:
+      cpu: 200m
+      memory: 256Mi
+    requests:
+      cpu: 50m
+      memory: 128Mi
+
+# Simpler networking for local dev
+networkPolicy:
+  enabled: false
+
+ingress:
+  enabled: false  # Use port-forward for local access
+
+prometheus:
+  persistence:
+    enabled: false  # Use emptyDir for local dev
+
+ollama:
+  enabled: false  # Skip for local dev

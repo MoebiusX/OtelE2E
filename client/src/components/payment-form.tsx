@@ -43,9 +43,10 @@ export function PaymentForm() {
       if (disableBrowserTrace) {
         // Use XMLHttpRequest to bypass OTEL fetch instrumentation
         // This simulates a client without OTEL - Kong will create the trace
+        const kongUrl = import.meta.env.VITE_KONG_URL || '';
         return new Promise((resolve, reject) => {
           const xhr = new XMLHttpRequest();
-          xhr.open('POST', 'http://localhost:8000/api/payments');
+          xhr.open('POST', `${kongUrl}/api/v1/payments`);
           xhr.setRequestHeader('Content-Type', 'application/json');
           xhr.onload = () => {
             if (xhr.status >= 200 && xhr.status < 300) {
@@ -60,7 +61,7 @@ export function PaymentForm() {
       }
 
       // Normal path: OTEL auto-injects traceparent header
-      const response = await apiRequest("POST", "/api/payments", data);
+      const response = await apiRequest("POST", "/api/v1/payments", data);
       return response.json();
     },
     onSuccess: (data) => {
@@ -88,16 +89,16 @@ export function PaymentForm() {
         ),
       });
       // Invalidate immediately
-      queryClient.invalidateQueries({ queryKey: ["/api/payments"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/traces"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/metrics"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/v1/payments"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/v1/traces"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/v1/metrics"] });
 
       // Also refetch after a delay to catch traces that are still being collected
       setTimeout(() => {
-        queryClient.invalidateQueries({ queryKey: ["/api/traces"] });
+        queryClient.invalidateQueries({ queryKey: ["/api/v1/traces"] });
       }, 1000);
       setTimeout(() => {
-        queryClient.invalidateQueries({ queryKey: ["/api/traces"] });
+        queryClient.invalidateQueries({ queryKey: ["/api/v1/traces"] });
       }, 2500);
 
 

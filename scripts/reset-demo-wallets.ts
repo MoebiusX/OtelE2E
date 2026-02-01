@@ -23,7 +23,7 @@ const DEMO_USERS = [
 ];
 
 const INITIAL_BALANCES: Record<string, number> = {
-    BTC: 1,
+    BTC: 100000000,
     ETH: 10,
     USDT: 10000,
     USD: 5000,

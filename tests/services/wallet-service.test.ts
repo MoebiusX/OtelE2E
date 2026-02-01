@@ -20,8 +20,8 @@ vi.mock('../../server/storage', () => ({
     generateWalletAddress: vi.fn((userId: string) => `kx1test${userId.slice(0, 20)}`),
     generateWalletId: vi.fn(() => 'wallet-id-123'),
     SEED_WALLETS: {
-        primary: { ownerId: 'primary-user-id', address: 'kx1testprimary' },
-        secondary: { ownerId: 'secondary-user-id', address: 'kx1testsecondary' },
+        primary: { ownerId: 'seed.user.primary@krystaline.io', address: 'kx1testprimary123456789abcdefgh' },
+        secondary: { ownerId: 'seed.user.secondary@krystaline.io', address: 'kx1testsecondary123456789abcde' },
     },
     storage: {
         createWallet: vi.fn(),
@@ -85,13 +85,12 @@ describe('Wallet Service', () => {
             };
 
             (db.transaction as Mock).mockImplementation(async (callback) => callback(mockClient));
-            (storage.createWallet as Mock).mockResolvedValue({});
 
             const wallets = await walletService.createDefaultWallets('user1');
 
             expect(wallets).toHaveLength(5);
             expect(generateWalletAddress).toHaveBeenCalledWith('user1');
-            expect(storage.createWallet).toHaveBeenCalledWith('user1', 'Main Trading Wallet');
+            // storage.createWallet is no longer called after refactoring
         });
 
         it('should handle in-memory storage errors gracefully', async () => {
@@ -101,9 +100,8 @@ describe('Wallet Service', () => {
             };
 
             (db.transaction as Mock).mockImplementation(async (callback) => callback(mockClient));
-            (storage.createWallet as Mock).mockRejectedValue(new Error('Already exists'));
 
-            // Should not throw despite storage error
+            // Should not throw
             await expect(walletService.createDefaultWallets('user1')).resolves.toBeDefined();
         });
     });
@@ -113,26 +111,32 @@ describe('Wallet Service', () => {
     // ============================================
     describe('getKXAddress', () => {
         it('should return address when wallet exists', async () => {
-            (storage.getDefaultWallet as Mock).mockResolvedValue({ address: 'kx1testaddress123' });
+            // Now uses db.query directly instead of storage.getDefaultWallet
+            (db.query as Mock)
+                .mockResolvedValueOnce({ rows: [{ id: 'user-uuid' }] }) // resolve email
+                .mockResolvedValueOnce({ rows: [{ address: 'kx1testaddress123' }] }); // wallet query
 
-            const address = await walletService.getKXAddress('user1');
+            const address = await walletService.getKXAddress('user1@example.com');
 
             expect(address).toBe('kx1testaddress123');
-            expect(storage.getDefaultWallet).toHaveBeenCalledWith('user1');
         });
 
         it('should return null when no wallet exists', async () => {
-            (storage.getDefaultWallet as Mock).mockResolvedValue(null);
+            (db.query as Mock)
+                .mockResolvedValueOnce({ rows: [{ id: 'user-uuid' }] })
+                .mockResolvedValueOnce({ rows: [] });
 
-            const address = await walletService.getKXAddress('user1');
+            const address = await walletService.getKXAddress('user1@example.com');
 
             expect(address).toBeNull();
         });
 
         it('should return null when wallet has no address', async () => {
-            (storage.getDefaultWallet as Mock).mockResolvedValue({ id: '1' });
+            (db.query as Mock)
+                .mockResolvedValueOnce({ rows: [{ id: 'user-uuid' }] })
+                .mockResolvedValueOnce({ rows: [{ id: '1', address: null }] });
 
-            const address = await walletService.getKXAddress('user1');
+            const address = await walletService.getKXAddress('user1@example.com');
 
             expect(address).toBeNull();
         });
@@ -142,17 +146,25 @@ describe('Wallet Service', () => {
     // resolveAddress
     // ============================================
     describe('resolveAddress', () => {
-        it('should return address for valid identifier', async () => {
-            (storage.resolveAddress as Mock).mockResolvedValue('kx1resolved123');
+        it('should return kx1 address as-is', async () => {
+            const address = await walletService.resolveAddress('kx1somewallet123456789');
+
+            expect(address).toBe('kx1somewallet123456789');
+        });
+
+        it('should resolve email to address via getKXAddress', async () => {
+            (db.query as Mock)
+                .mockResolvedValueOnce({ rows: [{ id: 'user-uuid' }] })
+                .mockResolvedValueOnce({ rows: [{ address: 'kx1resolved123' }] });
 
             const address = await walletService.resolveAddress('user@example.com');
 
             expect(address).toBe('kx1resolved123');
-            expect(storage.resolveAddress).toHaveBeenCalledWith('user@example.com');
         });
 
         it('should return null for unknown identifier', async () => {
-            (storage.resolveAddress as Mock).mockResolvedValue(null);
+            (db.query as Mock)
+                .mockResolvedValueOnce({ rows: [] });
 
             const address = await walletService.resolveAddress('unknown@example.com');
 
@@ -164,15 +176,18 @@ describe('Wallet Service', () => {
     // getWallets
     // ============================================
     describe('getWallets', () => {
-        it('should return all wallets with KX address', async () => {
+        it('should return all wallets with address', async () => {
+            const userUuid = 'user-uuid-123';
             const mockWallets = [
-                { id: '1', user_id: 'user1', asset: 'BTC', balance: '1', available: '1', locked: '0' },
-                { id: '2', user_id: 'user1', asset: 'ETH', balance: '10', available: '10', locked: '0' },
+                { id: '1', user_id: userUuid, asset: 'BTC', balance: '1', available: '1', locked: '0', address: 'kx1test123' },
+                { id: '2', user_id: userUuid, asset: 'ETH', balance: '10', available: '10', locked: '0', address: 'kx1test123' },
             ];
-            (db.query as Mock).mockResolvedValue({ rows: mockWallets });
-            (storage.getDefaultWallet as Mock).mockResolvedValue({ address: 'kx1test123' });
+            // Mock sequence: resolveUserId -> wallets query
+            (db.query as Mock)
+                .mockResolvedValueOnce({ rows: [{ id: userUuid }] }) // resolveUserId
+                .mockResolvedValueOnce({ rows: mockWallets }); // wallets query
 
-            const wallets = await walletService.getWallets('user1');
+            const wallets = await walletService.getWallets('user1@example.com');
 
             expect(wallets).toHaveLength(2);
             expect(wallets[0].address).toBe('kx1test123');
@@ -180,10 +195,10 @@ describe('Wallet Service', () => {
         });
 
         it('should return empty array for user with no wallets', async () => {
-            (db.query as Mock).mockResolvedValue({ rows: [] });
-            (storage.getDefaultWallet as Mock).mockResolvedValue(null);
+            // User not found returns null from resolveUserId
+            (db.query as Mock).mockResolvedValueOnce({ rows: [] });
 
-            const wallets = await walletService.getWallets('newuser');
+            const wallets = await walletService.getWallets('newuser@example.com');
 
             expect(wallets).toEqual([]);
         });
@@ -194,34 +209,39 @@ describe('Wallet Service', () => {
     // ============================================
     describe('getWallet', () => {
         it('should return wallet for valid asset', async () => {
-            const mockWallet = { id: '1', user_id: 'user1', asset: 'BTC', balance: '1' };
-            (db.query as Mock).mockResolvedValue({ rows: [mockWallet] });
+            const userUuid = 'user-uuid-123';
+            const mockWallet = { id: '1', user_id: userUuid, asset: 'BTC', balance: '1' };
+            (db.query as Mock)
+                .mockResolvedValueOnce({ rows: [{ id: userUuid }] }) // resolve email
+                .mockResolvedValueOnce({ rows: [mockWallet] }); // wallet query
 
-            const wallet = await walletService.getWallet('user1', 'btc');
+            const wallet = await walletService.getWallet('user1@example.com', 'btc');
 
             expect(wallet).toEqual(mockWallet);
-            expect(db.query).toHaveBeenCalledWith(
-                expect.any(String),
-                ['user1', 'BTC']
-            );
         });
 
         it('should return null for non-existent wallet', async () => {
-            (db.query as Mock).mockResolvedValue({ rows: [] });
+            (db.query as Mock)
+                .mockResolvedValueOnce({ rows: [{ id: 'user-uuid' }] })
+                .mockResolvedValueOnce({ rows: [] });
 
-            const wallet = await walletService.getWallet('user1', 'XYZ');
+            const wallet = await walletService.getWallet('user1@example.com', 'XYZ');
 
             expect(wallet).toBeNull();
         });
 
         it('should normalize asset to uppercase', async () => {
-            (db.query as Mock).mockResolvedValue({ rows: [] });
+            const userUuid = 'user-uuid-123';
+            (db.query as Mock)
+                .mockResolvedValueOnce({ rows: [{ id: userUuid }] })
+                .mockResolvedValueOnce({ rows: [] });
 
-            await walletService.getWallet('user1', 'eth');
+            await walletService.getWallet('user1@example.com', 'eth');
 
-            expect(db.query).toHaveBeenCalledWith(
+            // Check that the last db.query call used uppercase asset
+            expect(db.query).toHaveBeenLastCalledWith(
                 expect.any(String),
-                ['user1', 'ETH']
+                [userUuid, 'ETH']
             );
         });
     });

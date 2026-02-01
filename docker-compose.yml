@@ -61,14 +61,14 @@ services:
       KONG_TRACING_INSTRUMENTATIONS: all
       KONG_TRACING_SAMPLING_RATE: 1.0
     ports:
-      - "8000:8000"   # Kong Gateway proxy
-      - "8443:8443"   # Kong Gateway proxy SSL
-      - "8001:8001"   # Kong Admin API
-      - "8444:8444"   # Kong Admin API SSL
-      - "8002:8002"   # Kong Manager (GUI)
-      - "8445:8445"   # Kong Manager SSL
-      - "8003:8003"   # Kong Dev Portal
-      - "8446:8446"   # Kong Dev Portal SSL
+      - "0.0.0.0:8000:8000"   # Kong Gateway proxy (bound to all interfaces)
+      - "0.0.0.0:8443:8443"   # Kong Gateway proxy SSL
+      - "0.0.0.0:8001:8001"   # Kong Admin API
+      - "0.0.0.0:8444:8444"   # Kong Admin API SSL
+      - "0.0.0.0:8002:8002"   # Kong Manager (GUI)
+      - "0.0.0.0:8445:8445"   # Kong Manager SSL
+      - "0.0.0.0:8003:8003"   # Kong Dev Portal
+      - "0.0.0.0:8446:8446"   # Kong Dev Portal SSL
     networks:
       - kong-net
     restart: unless-stopped

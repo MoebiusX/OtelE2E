@@ -3,6 +3,7 @@ import { trace, context, SpanStatusCode, SpanKind, propagation } from '@opentele
 import { config } from '../config';
 import { createLogger } from '../lib/logger';
 import { ExternalServiceError, TimeoutError, getErrorMessage } from '../lib/errors';
+import { createCircuitBreaker, CircuitBreaker } from '../lib/circuit-breaker';
 
 const logger = createLogger('rabbitmq');
 
@@ -42,6 +43,7 @@ export class RabbitMQClient {
   private tracer;
 
   private pendingResponses: Map<string, ResponseCallback> = new Map();
+  private circuitBreaker: CircuitBreaker;
 
   constructor() {
     this.ORDERS_QUEUE = config.rabbitmq.ordersQueue;
@@ -49,6 +51,14 @@ export class RabbitMQClient {
     this.LEGACY_QUEUE = config.rabbitmq.legacyQueue;
     this.LEGACY_RESPONSE = config.rabbitmq.legacyResponseQueue;
     this.tracer = trace.getTracer('kx-exchange', '1.0.0');
+    this.circuitBreaker = createCircuitBreaker('rabbitmq', {
+      failureThreshold: 3,
+      successThreshold: 2,
+      timeout: 30000,
+      onStateChange: (from, to) => {
+        logger.warn({ from, to }, 'RabbitMQ circuit breaker state changed');
+      },
+    });
   }
 
   async connect(): Promise<boolean> {
@@ -75,13 +85,32 @@ export class RabbitMQClient {
     }
   }
 
-  /**
-   * Publish order and wait for execution response from matcher
-   */
   async publishOrderAndWait(order: OrderMessage, timeoutMs: number = 5000): Promise<ExecutionResponse> {
+    // Use circuit breaker to protect against RabbitMQ failures
+    return this.circuitBreaker.execute(async () => {
+      return this.doPublishOrderAndWait(order, timeoutMs);
+    });
+  }
+
+  /**
+   * Internal method that actually publishes the order
+   */
+  private async doPublishOrderAndWait(order: OrderMessage, timeoutMs: number): Promise<ExecutionResponse> {
     if (!this.channel) {
       throw new ExternalServiceError('RabbitMQ', new Error('No channel available'));
     }
+
+    // CRITICAL: Capture context BEFORE entering Promise constructor
+    // Inside Promise callbacks, context.active() may return different/empty context
+    // due to async timing issues with OpenTelemetry's zone-based context propagation
+    const capturedContext = context.active();
+    const capturedSpan = trace.getSpan(capturedContext);
+
+    logger.info({
+      hasActiveSpan: !!capturedSpan,
+      activeTraceId: capturedSpan?.spanContext().traceId,
+      activeSpanId: capturedSpan?.spanContext().spanId,
+    }, 'Captured context BEFORE Promise - this ensures trace propagation');
 
     return new Promise((resolve, reject) => {
       const correlationId = order.correlationId;
@@ -97,9 +126,9 @@ export class RabbitMQClient {
         resolve(response);
       });
 
-      // Create span as child of the current active span
-      const parentContext = context.active();
-      const activeSpan = trace.getSpan(parentContext);
+      // Use the pre-captured context from BEFORE the Promise
+      const parentContext = capturedContext;
+      const activeSpan = capturedSpan;
       logger.info({
         hasActiveSpan: !!activeSpan,
         activeTraceId: activeSpan?.spanContext().traceId,

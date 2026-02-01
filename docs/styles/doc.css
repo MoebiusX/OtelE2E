@@ -26,8 +26,9 @@ p img{margin:18px auto}
 figcaption{font-size:13px;color:var(--muted);margin-top:6px}
 h2{font-size:20px;color:var(--accent);margin-top:28px}
 ul{margin-left:20px}
-code, pre{font-family: SFMono-Regular, Menlo, Monaco, 'Roboto Mono', 'Courier New', monospace;background:#f7f7f7;padding:0.2em 0.4em;border-radius:4px}
-pre{padding:12px;overflow:auto}
+code, pre{font-family: SFMono-Regular, Menlo, Monaco, 'Roboto Mono', 'Courier New', monospace;background:#f7f7f7;border-radius:4px}
+code{padding:0.2em 0.4em}
+pre{padding:16px;overflow-x:auto;font-size:13px;line-height:1.45;max-width:100%;white-space:pre;word-wrap:normal}
 .block-note{background:#f9fafb;border-left:4px solid #e6e6e6;padding:10px 14px;margin:14px 0;color:var(--muted)}
 .footer{margin-top:36px;border-top:1px solid #eee;padding-top:16px;color:var(--muted);font-size:13px}
 @media print{body{padding:24px} .article-wrapper{box-shadow:none;}}

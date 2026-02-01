@@ -5,6 +5,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import Dashboard from "@/pages/dashboard";
 import Monitor from "@/pages/monitor";
+import Admin from "@/pages/admin";
 import Register from "@/pages/register";
 import Login from "@/pages/login";
 import Convert from "@/pages/convert";
@@ -36,6 +37,7 @@ function Router() {
 
       {/* Advanced monitoring (for power users/devs) */}
       <Route path="/monitor" component={Monitor} />
+      <Route path="/monitor/admin" component={Admin} />
 
       {/* Legacy redirect */}
       <Route path="/trading" component={Dashboard} />

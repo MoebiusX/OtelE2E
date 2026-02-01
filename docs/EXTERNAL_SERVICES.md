@@ -35,7 +35,7 @@ curl http://localhost:16686        # Jaeger UI
 
 ## Environment Variables
 
-Set these in your Replit environment or .env file:
+Set these in your .env file:
 
 ```bash
 # Kong Gateway Configuration

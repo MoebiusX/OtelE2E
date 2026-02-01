@@ -29,6 +29,11 @@ export interface PriceServiceStatus {
 const priceCache: Map<string, PriceData> = new Map();
 const CACHE_TTL_MS = 60000; // 1 minute cache
 
+// Rate-limiting for price update logs (avoid spamming logs every second)
+const lastLoggedPrice: Map<string, { price: number; time: number }> = new Map();
+const LOG_INTERVAL_MS = 30000; // Only log same price every 30 seconds
+const PRICE_CHANGE_THRESHOLD = 0.001; // Log if price changes by 0.1%
+
 // Service status
 let serviceStatus: PriceServiceStatus = {
   connected: false,
@@ -54,7 +59,7 @@ export const priceService = {
    */
   getPrice(symbol: string): PriceData | null {
     const upperSymbol = symbol.toUpperCase();
-    
+
     // Stable coins have fixed prices
     if (STABLE_PRICES[upperSymbol] !== undefined) {
       return {
@@ -64,7 +69,7 @@ export const priceService = {
         timestamp: new Date(),
       };
     }
-    
+
     // Check cache
     const cached = priceCache.get(upperSymbol);
     if (cached) {
@@ -75,7 +80,7 @@ export const priceService = {
       // Cache expired, remove it
       priceCache.delete(upperSymbol);
     }
-    
+
     // No cached price available
     return null;
   },
@@ -87,15 +92,15 @@ export const priceService = {
   getRate(fromSymbol: string, toSymbol: string): number | null {
     const fromPrice = this.getPrice(fromSymbol);
     const toPrice = this.getPrice(toSymbol);
-    
+
     if (!fromPrice || !toPrice) {
       return null;
     }
-    
+
     if (toPrice.price === 0) {
       return null;
     }
-    
+
     return fromPrice.price / toPrice.price;
   },
 
@@ -119,22 +124,39 @@ export const priceService = {
    */
   updatePrice(symbol: string, price: number, source: string): void {
     const upperSymbol = symbol.toUpperCase();
-    
+
     const priceData: PriceData = {
       symbol: upperSymbol,
       price,
       source,
       timestamp: new Date(),
     };
-    
+
     priceCache.set(upperSymbol, priceData);
-    
+
     serviceStatus.lastUpdate = new Date();
     if (!serviceStatus.availableAssets.includes(upperSymbol)) {
       serviceStatus.availableAssets.push(upperSymbol);
+      // Always log first price for an asset
+      logger.info(`Price feed started: ${upperSymbol} = $${price.toFixed(2)} (${source})`);
+      lastLoggedPrice.set(upperSymbol, { price, time: Date.now() });
+      return;
     }
-    
-    logger.debug(`Price updated: ${upperSymbol} = $${price} (${source})`);
+
+    // Rate-limited logging: only log on significant change or time interval
+    const lastLogged = lastLoggedPrice.get(upperSymbol);
+    const now = Date.now();
+    const shouldLog = !lastLogged ||
+      (now - lastLogged.time > LOG_INTERVAL_MS) ||
+      (Math.abs(price - lastLogged.price) / lastLogged.price > PRICE_CHANGE_THRESHOLD);
+
+    if (shouldLog) {
+      const changeStr = lastLogged
+        ? ` (${((price - lastLogged.price) / lastLogged.price * 100).toFixed(2)}%)`
+        : '';
+      logger.debug(`Price: ${upperSymbol} = $${price.toFixed(2)}${changeStr}`);
+      lastLoggedPrice.set(upperSymbol, { price, time: now });
+    }
   },
 
   /**
@@ -160,7 +182,7 @@ export const priceService = {
    */
   getAllPrices(): PriceData[] {
     const prices: PriceData[] = [];
-    
+
     // Add stable coins
     for (const [symbol, price] of Object.entries(STABLE_PRICES)) {
       prices.push({
@@ -170,7 +192,7 @@ export const priceService = {
         timestamp: new Date(),
       });
     }
-    
+
     // Add cached prices
     for (const priceData of Array.from(priceCache.values())) {
       const age = Date.now() - priceData.timestamp.getTime();
@@ -178,7 +200,7 @@ export const priceService = {
         prices.push(priceData);
       }
     }
-    
+
     return prices;
   },
 };

@@ -27,7 +27,11 @@ const SYMBOL_MAP: Record<string, string> = {
 
 let ws: WebSocket | null = null;
 let reconnectTimer: NodeJS.Timeout | null = null;
+let watchdogTimer: NodeJS.Timeout | null = null;
 let isRunning = false;
+
+// Watchdog interval - checks connection every 30 seconds
+const WATCHDOG_INTERVAL = 30000;
 
 /**
  * Binance Price Feed Service
@@ -41,30 +45,88 @@ export const binanceFeed = {
       logger.warn('Binance feed already running');
       return;
     }
-    
+
     isRunning = true;
     this.connect();
-    logger.info('Binance price feed started');
+    this.startWatchdog();
+    logger.info('Binance price feed started with watchdog');
   },
 
   /**
    * Stop the price feed connection
    */
   stop(): void {
+    logger.info('Stopping Binance price feed...');
     isRunning = false;
-    
+
+    if (watchdogTimer) {
+      clearInterval(watchdogTimer);
+      watchdogTimer = null;
+    }
+
     if (reconnectTimer) {
       clearTimeout(reconnectTimer);
       reconnectTimer = null;
     }
-    
+
     if (ws) {
       ws.close();
       ws = null;
     }
-    
+
     priceService.setConnected(false, 'binance');
     logger.info('Binance price feed stopped');
+  },
+
+  /**
+   * Force reconnect the price feed
+   * Used by admin API to restart without pod restart
+   */
+  reconnect(): void {
+    logger.info('Force reconnecting Binance price feed...');
+    this.stop();
+    // Small delay before reconnecting
+    setTimeout(() => {
+      isRunning = true;
+      this.connect();
+      this.startWatchdog();
+    }, 1000);
+  },
+
+  /**
+   * Get current connection status
+   */
+  getStatus(): { connected: boolean; running: boolean } {
+    return {
+      connected: ws?.readyState === WebSocket.OPEN,
+      running: isRunning,
+    };
+  },
+
+  /**
+   * Start watchdog timer to monitor connection health
+   * Auto-reconnects if connection drops
+   */
+  startWatchdog(): void {
+    if (watchdogTimer) {
+      clearInterval(watchdogTimer);
+    }
+
+    watchdogTimer = setInterval(() => {
+      if (!isRunning) {
+        logger.warn('Watchdog: isRunning is false, restarting...');
+        isRunning = true;
+        this.connect();
+        return;
+      }
+
+      if (!ws || ws.readyState !== WebSocket.OPEN) {
+        logger.warn('Watchdog: WebSocket not connected, reconnecting...');
+        this.connect();
+      }
+    }, WATCHDOG_INTERVAL);
+
+    logger.info('Watchdog timer started (30s interval)');
   },
 
   /**
@@ -72,19 +134,19 @@ export const binanceFeed = {
    */
   connect(): void {
     if (!isRunning) return;
-    
+
     try {
       // Subscribe to mini ticker streams for all symbols
       const streams = SYMBOLS.map(s => `${s}@miniTicker`).join('/');
       const url = `${BINANCE_WS_URL}/${streams}`;
-      
+
       ws = new WebSocket(url);
-      
+
       ws.on('open', () => {
         logger.info('Connected to Binance WebSocket');
         priceService.setConnected(true, 'binance');
       });
-      
+
       ws.on('message', (data: Buffer) => {
         try {
           const message = JSON.parse(data.toString());
@@ -93,18 +155,18 @@ export const binanceFeed = {
           logger.error({ err }, 'Failed to parse Binance message');
         }
       });
-      
+
       ws.on('close', () => {
         logger.warn('Binance WebSocket closed');
         priceService.setConnected(false, 'binance');
         this.scheduleReconnect();
       });
-      
+
       ws.on('error', (err) => {
         logger.error({ err }, 'Binance WebSocket error');
         priceService.setConnected(false, 'binance');
       });
-      
+
     } catch (err) {
       logger.error({ err }, 'Failed to connect to Binance');
       this.scheduleReconnect();
@@ -119,7 +181,7 @@ export const binanceFeed = {
     if (message.e === '24hrMiniTicker') {
       const symbol = message.s?.toLowerCase();
       const price = parseFloat(message.c);
-      
+
       if (symbol && !isNaN(price) && SYMBOL_MAP[symbol]) {
         priceService.updatePrice(SYMBOL_MAP[symbol], price, 'binance');
       }
@@ -131,11 +193,11 @@ export const binanceFeed = {
    */
   scheduleReconnect(): void {
     if (!isRunning) return;
-    
+
     if (reconnectTimer) {
       clearTimeout(reconnectTimer);
     }
-    
+
     // Reconnect after 5 seconds
     reconnectTimer = setTimeout(() => {
       logger.info('Attempting to reconnect to Binance...');

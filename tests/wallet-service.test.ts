@@ -14,13 +14,13 @@ describe('Address Generation Integration', () => {
     expect(address1).toBe(address2);
   });
 
-  it('should handle demo user emails correctly', () => {
-    const aliceAddress = generateWalletAddress('alice@demo.com');
-    const bobAddress = generateWalletAddress('bob@demo.com');
-    
-    expect(aliceAddress.startsWith('kx1')).toBe(true);
-    expect(bobAddress.startsWith('kx1')).toBe(true);
-    expect(aliceAddress).not.toBe(bobAddress);
+  it('should handle seed user emails correctly', () => {
+    const primaryAddress = generateWalletAddress('seed.user.primary@krystaline.io');
+    const secondaryAddress = generateWalletAddress('seed.user.secondary@krystaline.io');
+
+    expect(primaryAddress.startsWith('kx1')).toBe(true);
+    expect(secondaryAddress.startsWith('kx1')).toBe(true);
+    expect(primaryAddress).not.toBe(secondaryAddress);
   });
 
   it('should generate kx1 address from user email', () => {
@@ -55,7 +55,7 @@ describe('Address Resolution Logic', () => {
 
   it('should reject non-kx1 addresses', () => {
     expect(isKXAddress('abc123')).toBe(false);
-    expect(isKXAddress('alice@demo.com')).toBe(false);
+    expect(isKXAddress('seed.user.primary@krystaline.io')).toBe(false);
     expect(isKXAddress('')).toBe(false);
   });
 
