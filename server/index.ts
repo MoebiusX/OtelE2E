@@ -16,7 +16,8 @@ import {
 
 import express, { type Request, Response, NextFunction } from "express";
 import { registerRoutes } from "./api/routes";
-import { setupVite, serveStatic, log } from "./vite";
+// Note: ./vite is only imported dynamically in development mode
+// to avoid requiring vite package in production
 import { kongClient } from "./services/kong-client";
 import { rabbitMQClient } from "./services/rabbitmq-client";
 import { monitorRoutes, startMonitor } from "./monitor";
@@ -45,8 +46,8 @@ app.use(healthRoutes);
 // Security headers (helmet)
 app.use(securityHeaders);
 
-// Apply rate limiting to all API routes
-app.use('/api', generalRateLimiter);
+// Apply rate limiting to all API routes (v1)
+app.use('/api/v1', generalRateLimiter);
 
 // Apply metrics collection middleware
 app.use(metricsMiddleware);
@@ -116,19 +117,19 @@ app.use(corsMiddleware);
   registerRoutes(app);
 
   // Register auth routes (with stricter rate limiting)
-  app.use('/api/auth', authRateLimiter, authRoutes);
+  app.use('/api/v1/auth', authRateLimiter, authRoutes);
 
   // Register wallet routes
-  app.use('/api/wallet', walletRoutes);
+  app.use('/api/v1/wallet', walletRoutes);
 
   // Register trade routes
-  app.use('/api/trade', tradeRoutes);
+  app.use('/api/v1/trade', tradeRoutes);
 
   // Register monitor routes
-  app.use('/api/monitor', monitorRoutes);
+  app.use('/api/v1/monitor', monitorRoutes);
 
   // Register public transparency routes (unauthenticated)
-  app.use('/api/public', publicRoutes);
+  app.use('/api/v1/public', publicRoutes);
 
   // Start trace monitoring services (polls Jaeger for baselines/anomalies)
   startMonitor();
@@ -147,13 +148,17 @@ app.use(corsMiddleware);
   // Setup Vite in development or serve static in production
   // This MUST come before notFoundHandler to serve SPA routes
   if (app.get("env") === "development") {
+    // Dynamic import - only loads vite package in development
+    const { setupVite } = await import("./vite");
     await setupVite(app, server);
   } else {
+    // Production: serve static files from pre-built dist (no vite dependency)
+    const { serveStatic } = await import("./static");
     serveStatic(app);
   }
 
   // 404 handler for undefined API routes only (after Vite serves SPA)
-  app.use('/api', notFoundHandler);
+  app.use('/api/v1', notFoundHandler);
 
   // Global error handler (MUST be last)
   app.use(errorHandler);

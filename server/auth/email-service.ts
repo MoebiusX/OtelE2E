@@ -12,7 +12,7 @@ import { createLogger } from '../lib/logger';
 const logger = createLogger('email');
 
 const transporter = nodemailer.createTransport({
-    host: config.smtp?.host || 'localhost',
+    host: config.smtp?.host || '127.0.0.1',  // Use IPv4 explicitly to avoid IPv6 timeout on Windows
     port: config.smtp?.port || 1025,
     secure: config.smtp?.secure || false,
     // No auth needed for MailDev in dev

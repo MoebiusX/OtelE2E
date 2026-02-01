@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { useLocation } from "wouter";
 import { useQuery } from "@tanstack/react-query";
+import { useTranslation } from "react-i18next";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -29,6 +30,7 @@ type ActivityType = 'all' | 'trades' | 'transfers';
 
 export default function Activity() {
     const [, navigate] = useLocation();
+    const { t } = useTranslation(['common', 'trading']);
     const [user, setUser] = useState<User | null>(null);
     const [filter, setFilter] = useState<ActivityType>('all');
     const [selectedTrace, setSelectedTrace] = useState<string | null>(null);
@@ -43,19 +45,19 @@ export default function Activity() {
     }, [navigate]);
 
     const { data: orders, isLoading: ordersLoading, refetch: refetchOrders } = useQuery<Order[]>({
-        queryKey: ["/api/orders"],
+        queryKey: ["/api/v1/orders"],
         refetchInterval: 5000,
         enabled: !!user,
     });
 
     const { data: transfers, isLoading: transfersLoading, refetch: refetchTransfers } = useQuery<Transfer[]>({
-        queryKey: ["/api/transfers"],
+        queryKey: ["/api/v1/transfers"],
         refetchInterval: 5000,
         enabled: !!user,
     });
 
     const { data: priceData } = useQuery<{ BTC: number; ETH: number }>({
-        queryKey: ["/api/price"],
+        queryKey: ["/api/v1/price"],
         refetchInterval: 3000,
     });
 
@@ -113,9 +115,9 @@ export default function Activity() {
                 {/* Header */}
                 <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-8">
                     <div>
-                        <h1 className="text-3xl font-bold text-cyan-100">Activity</h1>
+                        <h1 className="text-3xl font-bold text-cyan-100">{t('common:nav.activity')}</h1>
                         <p className="text-cyan-100/60 mt-1">
-                            Track your trades and transfers with full transparency
+                            {t('trading:proofOfObservability.description')}
                         </p>
                     </div>
                     <div className="flex items-center gap-3">
@@ -126,7 +128,7 @@ export default function Activity() {
                             className="border-cyan-500/30 text-cyan-100 hover:bg-cyan-500/10"
                         >
                             <RefreshCw className="w-4 h-4 mr-2" />
-                            Refresh
+                            {t('common:buttons.refresh')}
                         </Button>
                     </div>
                 </div>
@@ -222,10 +224,10 @@ export default function Activity() {
                                             {/* Icon & Type */}
                                             <div className="flex items-center gap-4 flex-1">
                                                 <div className={`p-3 rounded-xl ${isOrder
-                                                        ? order?.side === 'BUY'
-                                                            ? 'bg-emerald-500/20'
-                                                            : 'bg-red-500/20'
-                                                        : 'bg-purple-500/20'
+                                                    ? order?.side === 'BUY'
+                                                        ? 'bg-emerald-500/20'
+                                                        : 'bg-red-500/20'
+                                                    : 'bg-purple-500/20'
                                                     }`}>
                                                     {isOrder ? (
                                                         order?.side === 'BUY'
@@ -239,10 +241,10 @@ export default function Activity() {
                                                 <div className="flex-1">
                                                     <div className="flex items-center gap-2 flex-wrap">
                                                         <span className={`font-semibold ${isOrder
-                                                                ? order?.side === 'BUY'
-                                                                    ? 'text-emerald-400'
-                                                                    : 'text-red-400'
-                                                                : 'text-purple-400'
+                                                            ? order?.side === 'BUY'
+                                                                ? 'text-emerald-400'
+                                                                : 'text-red-400'
+                                                            : 'text-purple-400'
                                                             }`}>
                                                             {isOrder
                                                                 ? `${order?.side} ${order?.pair}`

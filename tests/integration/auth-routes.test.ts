@@ -61,7 +61,7 @@ import { authService } from '../../server/auth/auth-service';
 function createApp() {
   const app = express();
   app.use(express.json());
-  app.use('/api/auth', authRoutes);
+  app.use('/api/v1/auth', authRoutes);
   return app;
 }
 
@@ -89,7 +89,7 @@ describe('Auth Routes Integration', () => {
       } as any);
 
       const response = await request(app)
-        .post('/api/auth/register')
+        .post('/api/v1/auth/register')
         .send({
           email: 'test@example.com',
           password: 'securePassword123',
@@ -102,7 +102,7 @@ describe('Auth Routes Integration', () => {
 
     it('should return 400 for missing email', async () => {
       const response = await request(app)
-        .post('/api/auth/register')
+        .post('/api/v1/auth/register')
         .send({ password: 'test123' });
 
       expect(response.status).toBe(400);
@@ -114,7 +114,7 @@ describe('Auth Routes Integration', () => {
       );
 
       const response = await request(app)
-        .post('/api/auth/register')
+        .post('/api/v1/auth/register')
         .send({
           email: 'existing@example.com',
           password: 'password123',
@@ -140,7 +140,7 @@ describe('Auth Routes Integration', () => {
       } as any);
 
       const response = await request(app)
-        .post('/api/auth/verify')
+        .post('/api/v1/auth/verify')
         .send({
           email: 'test@example.com',
           code: '123456',
@@ -157,7 +157,7 @@ describe('Auth Routes Integration', () => {
       );
 
       const response = await request(app)
-        .post('/api/auth/verify')
+        .post('/api/v1/auth/verify')
         .send({
           email: 'test@example.com',
           code: '000000',
@@ -184,7 +184,7 @@ describe('Auth Routes Integration', () => {
       } as any);
 
       const response = await request(app)
-        .post('/api/auth/login')
+        .post('/api/v1/auth/login')
         .send({
           email: 'test@example.com',
           password: 'password123',
@@ -202,7 +202,7 @@ describe('Auth Routes Integration', () => {
       );
 
       const response = await request(app)
-        .post('/api/auth/login')
+        .post('/api/v1/auth/login')
         .send({
           email: 'test@example.com',
           password: 'wrongpassword',
@@ -218,7 +218,7 @@ describe('Auth Routes Integration', () => {
       );
 
       const response = await request(app)
-        .post('/api/auth/login')
+        .post('/api/v1/auth/login')
         .send({
           email: 'unverified@example.com',
           password: 'password123',
@@ -233,7 +233,7 @@ describe('Auth Routes Integration', () => {
       vi.mocked(authService.resendVerificationCode).mockResolvedValue(undefined);
 
       const response = await request(app)
-        .post('/api/auth/resend-code')
+        .post('/api/v1/auth/resend-code')
         .send({ email: 'test@example.com' });
 
       expect(response.status).toBe(200);
@@ -243,7 +243,7 @@ describe('Auth Routes Integration', () => {
 
     it('should return 400 for missing email', async () => {
       const response = await request(app)
-        .post('/api/auth/resend-code')
+        .post('/api/v1/auth/resend-code')
         .send({});
 
       expect(response.status).toBe(400);
@@ -256,7 +256,7 @@ describe('Auth Routes Integration', () => {
       );
 
       const response = await request(app)
-        .post('/api/auth/resend-code')
+        .post('/api/v1/auth/resend-code')
         .send({ email: 'nonexistent@example.com' });
 
       expect(response.status).toBe(400);
@@ -271,7 +271,7 @@ describe('Auth Routes Integration', () => {
       });
 
       const response = await request(app)
-        .post('/api/auth/refresh')
+        .post('/api/v1/auth/refresh')
         .send({ refreshToken: 'valid-refresh-token' });
 
       expect(response.status).toBe(200);
@@ -281,7 +281,7 @@ describe('Auth Routes Integration', () => {
 
     it('should return 400 for missing refresh token', async () => {
       const response = await request(app)
-        .post('/api/auth/refresh')
+        .post('/api/v1/auth/refresh')
         .send({});
 
       expect(response.status).toBe(400);
@@ -294,7 +294,7 @@ describe('Auth Routes Integration', () => {
       );
 
       const response = await request(app)
-        .post('/api/auth/refresh')
+        .post('/api/v1/auth/refresh')
         .send({ refreshToken: 'invalid-token' });
 
       expect(response.status).toBe(401);
@@ -305,7 +305,7 @@ describe('Auth Routes Integration', () => {
     describe('POST /api/auth/logout', () => {
       it('should return 401 without token', async () => {
         const response = await request(app)
-          .post('/api/auth/logout');
+          .post('/api/v1/auth/logout');
 
         expect(response.status).toBe(401);
         expect(response.body.error).toBe('No token provided');
@@ -315,7 +315,7 @@ describe('Auth Routes Integration', () => {
         vi.mocked(authService.verifyToken).mockReturnValue(null);
 
         const response = await request(app)
-          .post('/api/auth/logout')
+          .post('/api/v1/auth/logout')
           .set('Authorization', 'Bearer invalid-token');
 
         expect(response.status).toBe(401);
@@ -332,7 +332,7 @@ describe('Auth Routes Integration', () => {
         vi.mocked(authService.logout).mockResolvedValue(undefined);
 
         const response = await request(app)
-          .post('/api/auth/logout')
+          .post('/api/v1/auth/logout')
           .set('Authorization', 'Bearer valid-token');
 
         expect(response.status).toBe(200);
@@ -353,7 +353,7 @@ describe('Auth Routes Integration', () => {
         } as any);
 
         const response = await request(app)
-          .get('/api/auth/me')
+          .get('/api/v1/auth/me')
           .set('Authorization', 'Bearer valid-token');
 
         expect(response.status).toBe(200);
@@ -367,7 +367,7 @@ describe('Auth Routes Integration', () => {
         vi.mocked(authService.getUserById).mockResolvedValue(null);
 
         const response = await request(app)
-          .get('/api/auth/me')
+          .get('/api/v1/auth/me')
           .set('Authorization', 'Bearer valid-token');
 
         expect(response.status).toBe(401);

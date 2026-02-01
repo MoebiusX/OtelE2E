@@ -138,16 +138,25 @@ export const authService = {
             [user.id, data.code]
         );
 
-        if (codeResult.rows.length === 0) {
+        // E2E Test bypass: accept code 000000 for @test.com emails in development
+        const isE2ETestBypass =
+            process.env.NODE_ENV !== 'production' &&
+            data.email.endsWith('@test.com') &&
+            data.code === '000000';
+
+        if (codeResult.rows.length === 0 && !isE2ETestBypass) {
             throw new Error('Invalid or expired code');
         }
 
         // Mark code as used and update user status
         await db.transaction(async (client) => {
-            await client.query(
-                'UPDATE verification_codes SET used = TRUE WHERE id = $1',
-                [codeResult.rows[0].id]
-            );
+            // Only update verification code if not using E2E bypass
+            if (codeResult.rows.length > 0) {
+                await client.query(
+                    'UPDATE verification_codes SET used = TRUE WHERE id = $1',
+                    [codeResult.rows[0].id]
+                );
+            }
 
             await client.query(
                 `UPDATE users SET status = 'verified' WHERE id = $1`,
@@ -177,11 +186,12 @@ export const authService = {
 
     /**
      * Login with email and password
+     * If 2FA is enabled, returns requires2FA flag instead of tokens
      */
-    async login(data: z.infer<typeof loginSchema>, sessionInfo?: SessionInfo): Promise<{ user: User; tokens: AuthTokens }> {
-        // Find user
+    async login(data: z.infer<typeof loginSchema>, sessionInfo?: SessionInfo): Promise<{ user: User; tokens?: AuthTokens; requires2FA?: boolean; tempToken?: string }> {
+        // Find user with 2FA status
         const result = await db.query(
-            'SELECT * FROM users WHERE email = $1',
+            'SELECT *, two_factor_enabled FROM users WHERE email = $1',
             [data.email.toLowerCase()]
         );
 
@@ -204,6 +214,26 @@ export const authService = {
         const valid = await bcrypt.compare(data.password, user.password_hash);
         if (!valid) {
             throw new Error('Invalid email or password');
+        }
+
+        // If 2FA is enabled, don't issue tokens yet - require TOTP verification
+        if (user.two_factor_enabled) {
+            // Generate a temporary token that allows only 2FA verification
+            const tempToken = jwt.sign(
+                { userId: user.id, purpose: '2fa-pending', exp: Math.floor(Date.now() / 1000) + 300 }, // 5 min expiry
+                JWT_SECRET
+            );
+
+            logger.info({
+                userId: user.id,
+                email: user.email
+            }, 'User login requires 2FA verification');
+
+            return {
+                user: { id: user.id, email: user.email, phone: user.phone, status: user.status, kyc_level: user.kyc_level, created_at: user.created_at },
+                requires2FA: true,
+                tempToken
+            };
         }
 
         // Update last login

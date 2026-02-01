@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { useLocation } from "wouter";
 import { useMutation, useQuery } from "@tanstack/react-query";
+import { useTranslation } from "react-i18next";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -35,6 +36,7 @@ const ASSET_CONFIG: Record<string, { icon: string; color: string }> = {
 
 export default function Convert() {
     const [, setLocation] = useLocation();
+    const { t } = useTranslation(['common', 'trading']);
     const [fromAsset, setFromAsset] = useState("USDT");
     const [toAsset, setToAsset] = useState("BTC");
     const [amount, setAmount] = useState("");
@@ -51,10 +53,10 @@ export default function Convert() {
 
     // Fetch wallets
     const { data: walletsData } = useQuery<{ wallets: Wallet[] }>({
-        queryKey: ["/api/wallet/balances"],
+        queryKey: ["/api/v1/wallet/balances"],
         queryFn: async () => {
             const token = localStorage.getItem("accessToken");
-            const res = await fetch("/api/wallet/balances", {
+            const res = await fetch("/api/v1/wallet/balances", {
                 headers: { Authorization: `Bearer ${token}` },
             });
             return res.json();
@@ -65,7 +67,7 @@ export default function Convert() {
     const quoteMutation = useMutation({
         mutationFn: async () => {
             const token = localStorage.getItem("accessToken");
-            const res = await fetch("/api/trade/convert/quote", {
+            const res = await fetch("/api/v1/trade/convert/quote", {
                 method: "POST",
                 headers: {
                     "Content-Type": "application/json",
@@ -97,7 +99,7 @@ export default function Convert() {
     const convertMutation = useMutation({
         mutationFn: async () => {
             const token = localStorage.getItem("accessToken");
-            const res = await fetch("/api/trade/convert", {
+            const res = await fetch("/api/v1/trade/convert", {
                 method: "POST",
                 headers: {
                     "Content-Type": "application/json",
@@ -163,8 +165,8 @@ export default function Convert() {
                 <Card className="bg-slate-800/50 border-slate-700">
                     <CardHeader>
                         <CardTitle className="text-2xl text-white flex items-center gap-2">
-                            🔄 Convert
-                            <span className="text-sm font-normal text-slate-400">Instant swap</span>
+                            🔄 {t('common:nav.convert')}
+                            <span className="text-sm font-normal text-slate-400">{t('trading:convert.instant')}</span>
                         </CardTitle>
                     </CardHeader>
                     <CardContent className="space-y-6">

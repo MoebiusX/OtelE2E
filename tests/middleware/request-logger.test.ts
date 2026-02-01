@@ -25,10 +25,10 @@ vi.mock('../../server/lib/logger', () => ({
     }))
 }));
 
-import { 
-    requestLogger, 
-    requestLoggerWithExclusions, 
-    sanitizeRequestData 
+import {
+    requestLogger,
+    requestLoggerWithExclusions,
+    sanitizeRequestData
 } from '../../server/middleware/request-logger';
 import { trace } from '@opentelemetry/api';
 
@@ -242,11 +242,11 @@ describe('Request Logger Middleware', () => {
     // ============================================
     describe('sanitizeRequestData', () => {
         it('should redact password fields', () => {
-            const data = { username: 'alice', password: 'secret123' };
+            const data = { username: 'testUser', password: 'secret123' };
 
             const sanitized = sanitizeRequestData(data);
 
-            expect(sanitized.username).toBe('alice');
+            expect(sanitized.username).toBe('testUser');
             expect(sanitized.password).toBe('***REDACTED***');
         });
 
@@ -300,7 +300,7 @@ describe('Request Logger Middleware', () => {
         it('should handle nested objects', () => {
             const data = {
                 user: {
-                    name: 'Alice',
+                    name: 'Test User',
                     password: 'secret',
                     settings: {
                         theme: 'dark'
@@ -310,7 +310,7 @@ describe('Request Logger Middleware', () => {
 
             const sanitized = sanitizeRequestData(data);
 
-            expect(sanitized.user.name).toBe('Alice');
+            expect(sanitized.user.name).toBe('Test User');
             expect(sanitized.user.password).toBe('***REDACTED***');
             expect(sanitized.user.settings.theme).toBe('dark');
         });

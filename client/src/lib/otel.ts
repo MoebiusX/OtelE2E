@@ -31,8 +31,9 @@ export function initBrowserOtel(): void {
     });
 
     // Configure OTLP exporter to send traces to the OTEL collector (with CORS)
+    const otelCollectorUrl = import.meta.env.VITE_OTEL_COLLECTOR_URL || 'http://localhost:4319';
     const exporter = new OTLPTraceExporter({
-        url: 'http://localhost:4319/v1/traces',
+        url: `${otelCollectorUrl}/v1/traces`,
         headers: {},
     });
 

@@ -4,16 +4,26 @@ import * as http from 'http';
 import { config } from '../config';
 import { createLogger } from '../lib/logger';
 import { ExternalServiceError } from '../lib/errors';
+import { createCircuitBreaker, CircuitBreaker } from '../lib/circuit-breaker';
 
 const logger = createLogger('kong');
 
 export class KongClient {
   private kongUrl: string;
   private adminUrl: string;
+  private circuitBreaker: CircuitBreaker;
 
   constructor() {
     this.kongUrl = config.kong.gatewayUrl;
     this.adminUrl = config.kong.adminUrl;
+    this.circuitBreaker = createCircuitBreaker('kong', {
+      failureThreshold: 2,
+      successThreshold: 1,
+      timeout: 60000,
+      onStateChange: (from, to) => {
+        logger.warn({ from, to }, 'Kong circuit breaker state changed');
+      },
+    });
   }
 
   // Create proxy middleware for routing through Kong
@@ -28,10 +38,10 @@ export class KongClient {
         // Add OpenTelemetry trace headers
         const traceId = req.headers['x-trace-id'] as string;
         const spanId = req.headers['x-span-id'] as string;
-        
+
         if (traceId) proxyReq.setHeader('x-trace-id', traceId);
         if (spanId) proxyReq.setHeader('x-parent-span-id', spanId);
-        
+
         logger.debug({
           method: req.method,
           path: req.path,
@@ -54,36 +64,38 @@ export class KongClient {
           method: req.method,
           path: req.path,
         }, 'Kong proxy error');
-        
+
         res.status(502).json({
           error: 'Bad Gateway',
           message: 'Kong Gateway is unavailable'
         });
       }
     };
-    
+
     return createProxyMiddleware(options);
   }
 
   async checkHealth(): Promise<boolean> {
-    try {
+    // Use circuit breaker to protect against Kong failures
+    return this.circuitBreaker.execute(async () => {
       const response = await fetch(`${this.adminUrl}/status`);
       const healthy = response.ok;
-      
+
       if (healthy) {
         logger.info({ adminUrl: this.adminUrl }, 'Kong Gateway is healthy');
       } else {
         logger.warn({ adminUrl: this.adminUrl, status: response.status }, 'Kong Gateway unhealthy');
+        throw new Error('Kong Gateway unhealthy');
       }
-      
+
       return healthy;
-    } catch (error) {
+    }).catch((error) => {
       logger.warn({
         err: error,
         adminUrl: this.adminUrl,
       }, 'Kong Gateway not available');
       return false;
-    }
+    });
   }
 
   // Configure Kong service for our payment API

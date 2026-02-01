@@ -212,10 +212,10 @@ describe('Insert Transfer Schema', () => {
 
   it('should accept transfer with legacy userId fields', () => {
     expect(() =>
-      insertTransferSchema.parse({ 
-        ...validTransfer, 
-        fromUserId: 'alice@demo.com',
-        toUserId: 'bob@demo.com' 
+      insertTransferSchema.parse({
+        ...validTransfer,
+        fromUserId: 'seed.user.primary@krystaline.io',
+        toUserId: 'seed.user.secondary@krystaline.io'
       })
     ).not.toThrow();
   });
@@ -259,10 +259,10 @@ describe('Full Transfer Schema', () => {
 
   it('should accept transfer with legacy userId fields', () => {
     expect(() =>
-      transferSchema.parse({ 
-        ...validFullTransfer, 
-        fromUserId: 'alice@demo.com',
-        toUserId: 'bob@demo.com' 
+      transferSchema.parse({
+        ...validFullTransfer,
+        fromUserId: 'seed.user.primary@krystaline.io',
+        toUserId: 'seed.user.secondary@krystaline.io'
       })
     ).not.toThrow();
   });

@@ -1,13 +1,11 @@
 import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react";
 import path from "path";
-import runtimeErrorOverlay from "@replit/vite-plugin-runtime-error-modal";
 import { nodePolyfills } from 'vite-plugin-node-polyfills';
 
 export default defineConfig({
   plugins: [
     react(),
-    runtimeErrorOverlay(),
     nodePolyfills({
       // Enable polyfills for Node.js modules used by OpenTelemetry
       include: ['os', 'path', 'util', 'stream', 'buffer'],
@@ -17,14 +15,6 @@ export default defineConfig({
         process: true,
       },
     }),
-    ...(process.env.NODE_ENV !== "production" &&
-      process.env.REPL_ID !== undefined
-      ? [
-        await import("@replit/vite-plugin-cartographer").then((m) =>
-          m.cartographer(),
-        ),
-      ]
-      : []),
   ],
   resolve: {
     alias: {

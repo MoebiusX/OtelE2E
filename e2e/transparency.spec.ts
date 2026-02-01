@@ -19,6 +19,9 @@ test.describe('Transparency Dashboard', () => {
         await page.goto('/');
         await page.waitForLoadState('networkidle');
 
+        // Wait for content to load past the loading state
+        await page.waitForTimeout(5000);
+
         // Should have main content sections visible
         await expect(page.locator('body')).toBeVisible();
 

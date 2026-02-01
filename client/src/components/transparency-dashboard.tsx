@@ -70,7 +70,7 @@ export function TransparencyDashboard() {
 
   useEffect(() => {
     // Check if user is logged in
-    fetch('/api/user')
+    fetch('/api/v1/user')
       .then(res => {
         setIsLoggedIn(res.ok);
       })
@@ -92,8 +92,8 @@ export function TransparencyDashboard() {
   const fetchData = async () => {
     try {
       const [statusRes, tradesRes] = await Promise.all([
-        fetch('/api/public/status'),
-        fetch('/api/public/trades?limit=10'),
+        fetch('/api/v1/public/status'),
+        fetch('/api/v1/public/trades?limit=10'),
       ]);
 
       if (!statusRes.ok || !tradesRes.ok) {

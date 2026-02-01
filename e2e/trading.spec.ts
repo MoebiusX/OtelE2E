@@ -6,7 +6,12 @@ import { getWalletBalance, submitBuyOrder, submitSellOrder, isOrderRejected } fr
  * Trading Flow E2E Tests
  * 
  * Tests buy/sell orders, balance updates, and insufficient funds rejection
+ * 
+ * NOTE: Tests run serially to avoid rate limiting on auth endpoints.
+ * Each test registers a new user which can trigger 'Too many requests' errors.
  */
+
+test.describe.configure({ mode: 'serial' });
 
 test.describe('Trading Flow', () => {
 
@@ -34,8 +39,9 @@ test.describe('Trading Flow', () => {
             // Execute small buy order
             await submitBuyOrder(page, 0.0001);
 
-            // Wait for balance to update
-            await page.waitForTimeout(2000);
+            // Reload page to ensure fresh wallet data from server
+            await page.reload();
+            await page.waitForLoadState('networkidle');
 
             // Verify balance changed
             const newBalance = await getWalletBalance(page);
@@ -54,23 +60,28 @@ test.describe('Trading Flow', () => {
             await page.goto('/trade');
             await page.waitForLoadState('networkidle');
 
-            // Try to buy way more than balance allows (user has ~$10k USD)
-            // Attempt to buy 100 BTC (~$4M worth)
-            await page.click('button:has-text("Trade BTC")');
-            await page.click('button:has-text("BUY")');
-            await page.fill('input[type="number"]', '100');
-            await page.click('button:has-text("Buy")');
+            // Demo users start with 1 BTC + $5k USD
+            // Trying to buy 1000 BTC (~$88M) will definitely fail
+            await page.getByRole('button', { name: /^BUY$/i }).waitFor({ timeout: 10000 });
+            await page.getByRole('button', { name: /^BUY$/i }).click();
+            await page.fill('input[type="number"]', '1000');
+            await page.getByRole('button', { name: /Buy.*BTC/i }).click();
 
-            // Should show rejection/error
+            // Should show rejection/error - wait for toast with "Insufficient Funds" message
             const hasError = await isOrderRejected(page);
             expect(hasError).toBe(true);
+
+            // Verify semantic error message is shown
+            const insufficientFundsToast = page.getByText(/Insufficient Funds|Insufficient.*USD/i);
+            await expect(insufficientFundsToast).toBeVisible({ timeout: 5000 });
         });
     });
 
     test.describe('Sell Orders', () => {
 
         test('should reject sell order with insufficient BTC', async ({ page }) => {
-            // Register new user (starts with 0 BTC typically)
+            // Register new user
+            // Demo users start with 1 BTC, so we need to try selling MORE than 1 BTC
             const noBtcUser = `e2e-nobtc-${Date.now()}@test.com`;
             await register(page, noBtcUser, 'NoBtc123!');
 
@@ -78,15 +89,19 @@ test.describe('Trading Flow', () => {
             await page.goto('/trade');
             await page.waitForLoadState('networkidle');
 
-            // Try to sell BTC when we have none
-            await page.click('button:has-text("Trade BTC")');
-            await page.click('button:has-text("SELL")');
-            await page.fill('input[type="number"]', '1');
-            await page.click('button:has-text("Sell")');
+            // Try to sell more BTC than available (user has 1 BTC, try to sell 100)
+            await page.getByRole('button', { name: /^SELL$/i }).waitFor({ timeout: 10000 });
+            await page.getByRole('button', { name: /^SELL$/i }).click();
+            await page.fill('input[type="number"]', '100');
+            await page.getByRole('button', { name: /Sell.*BTC/i }).click();
 
             // Should show rejection/error
             const hasError = await isOrderRejected(page);
             expect(hasError).toBe(true);
+
+            // Verify semantic error message is shown
+            const insufficientFundsToast = page.getByText(/Insufficient Funds|Insufficient.*BTC/i);
+            await expect(insufficientFundsToast).toBeVisible({ timeout: 5000 });
         });
     });
 
@@ -107,8 +122,8 @@ test.describe('Trading Flow', () => {
             // Wait for activity to update
             await page.waitForTimeout(3000);
 
-            // Check recent activity shows the trade
-            await expect(page.getByText('Recent Activity')).toBeVisible();
+            // Check recent activity shows the trade - use regex for i18n
+            await expect(page.getByText(/Recent Activity|Actividad Reciente/i)).toBeVisible();
             await expect(page.getByText(/BUY.*BTC/i)).toBeVisible({ timeout: 10000 });
 
             // Trade should have trace link (Jaeger icon)
@@ -126,13 +141,14 @@ test.describe('Trading Flow', () => {
             await page.waitForLoadState('networkidle');
 
             // Execute a trade
-            await page.click('button:has-text("Trade BTC")');
-            await page.click('button:has-text("BUY")');
+            // Wait for trade form to load
+            await page.getByRole('button', { name: /^BUY$/i }).waitFor({ timeout: 10000 });
+            await page.getByRole('button', { name: /^BUY$/i }).click();
             await page.fill('input[type="number"]', '0.0001');
-            await page.click('button:has-text("Buy")');
+            await page.getByRole('button', { name: /Buy.*BTC/i }).click();
 
             // Should show execution confirmation
-            await expect(page.getByText(/Executed|Submitted|Verified/i)).toBeVisible({ timeout: 15000 });
+            await expect(page.getByText(/Executed|Submitted|Verified|Ejecutad/i)).toBeVisible({ timeout: 15000 });
         });
     });
 });

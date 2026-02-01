@@ -13,7 +13,7 @@ import { z } from 'zod';
 
 const configSchema = z.object({
   env: z.enum(['development', 'production', 'test']).default('development'),
-  
+
   server: z.object({
     port: z.number().int().positive().default(5000),
     host: z.string().default('0.0.0.0'),
@@ -68,6 +68,11 @@ const configSchema = z.object({
     level: z.enum(['trace', 'debug', 'info', 'warn', 'error', 'fatal']).default('info'),
     pretty: z.boolean().default(false),
   }),
+
+  // Monitor/Anomaly Detection Features
+  monitor: z.object({
+    enableAmountAnomalyDetection: z.boolean().default(false),
+  }),
 });
 
 // ============================================
@@ -77,7 +82,7 @@ const configSchema = z.object({
 function loadConfig() {
   const rawConfig = {
     env: process.env.NODE_ENV || 'development',
-    
+
     server: {
       port: process.env.PORT ? parseInt(process.env.PORT, 10) : 5000,
       host: process.env.HOST || '0.0.0.0',
@@ -90,8 +95,8 @@ function loadConfig() {
       name: process.env.DB_NAME || 'crypto_exchange',
       user: process.env.DB_USER || 'exchange',
       password: process.env.DB_PASSWORD || 'exchange123',
-      maxConnections: process.env.DB_MAX_CONNECTIONS 
-        ? parseInt(process.env.DB_MAX_CONNECTIONS, 10) 
+      maxConnections: process.env.DB_MAX_CONNECTIONS
+        ? parseInt(process.env.DB_MAX_CONNECTIONS, 10)
         : 20,
       idleTimeoutMs: process.env.DB_IDLE_TIMEOUT_MS
         ? parseInt(process.env.DB_IDLE_TIMEOUT_MS, 10)
@@ -137,16 +142,21 @@ function loadConfig() {
       level: process.env.LOG_LEVEL || (process.env.NODE_ENV === 'production' ? 'info' : 'debug'),
       pretty: process.env.LOG_PRETTY === 'true' || process.env.NODE_ENV === 'development',
     },
+
+    // Monitor/Anomaly Detection Features
+    monitor: {
+      enableAmountAnomalyDetection: process.env.ENABLE_AMOUNT_ANOMALY_DETECTION === 'true',
+    },
   };
 
   try {
     const validatedConfig = configSchema.parse(rawConfig);
-    
+
     // Log successful configuration load (using console since logger isn't ready yet)
     console.log('[CONFIG] Configuration loaded and validated successfully');
     console.log(`[CONFIG] Environment: ${validatedConfig.env}`);
     console.log(`[CONFIG] Server: ${validatedConfig.server.host}:${validatedConfig.server.port}`);
-    
+
     return validatedConfig;
   } catch (error) {
     console.error('[CONFIG] ❌ Configuration validation failed:');

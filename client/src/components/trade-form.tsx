@@ -10,6 +10,7 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
 import { getJaegerTraceUrl } from "@/lib/trace-utils";
+import { TradeVerifiedModal } from "@/components/trade-verified-modal";
 import { ArrowUpRight, ArrowDownRight, Wallet, TrendingUp, Loader2, Bitcoin, CheckCircle2, Clock, ExternalLink } from "lucide-react";
 
 // Type-safe error message extraction
@@ -20,7 +21,7 @@ const getErrorMessage = (error: unknown): string =>
 const orderSchema = z.object({
     pair: z.literal("BTC/USD"),
     side: z.enum(["BUY", "SELL"]),
-    quantity: z.number().positive().max(10),
+    quantity: z.number().positive().max(100000000),
     orderType: z.literal("MARKET"),
 });
 
@@ -63,33 +64,54 @@ export function TradeForm({ currentUser: propUser, walletAddress: propAddress }:
         executionTimeMs: number;
         timestamp: Date;
     } | null>(null);
+    const [showVerifiedModal, setShowVerifiedModal] = useState(false);
+    const [verifiedTradeData, setVerifiedTradeData] = useState<{
+        tradeId: string;
+        traceId?: string;
+        side: 'BUY' | 'SELL';
+        amount: number;
+        asset: string;
+        price: number;
+        executionTimeMs?: number;
+    } | null>(null);
     const { toast } = useToast();
     const queryClient = useQueryClient();
 
-    // Get user and wallet address from props or localStorage
-    const [currentUser, setCurrentUser] = useState<string>(propUser || 'seed.user.primary@krystaline.io');
-    const [walletAddress, setWalletAddress] = useState<string | undefined>(propAddress);
-
-    useEffect(() => {
-        if (!propUser) {
+    // Get user synchronously from localStorage on mount to avoid race conditions
+    const [currentUser, setCurrentUser] = useState<string | null>(() => {
+        if (propUser) return propUser;
+        try {
             const userData = localStorage.getItem('user');
             if (userData) {
-                try {
-                    const parsed = JSON.parse(userData);
-                    // Use email as userId since wallets are keyed by email
-                    setCurrentUser(parsed.email || parsed.id || 'seed.user.primary@krystaline.io');
-                    // Get wallet address if stored
-                    setWalletAddress(parsed.walletAddress);
-                } catch { }
+                const parsed = JSON.parse(userData);
+                console.log('[TradeForm] User from localStorage:', parsed);
+                console.log('[TradeForm] Extracted ID:', parsed.id);
+                // Only accept UUID format - no email fallback
+                return parsed.id || null;
             }
-        }
-    }, [propUser]);
+        } catch { /* ignore parse errors */ }
+        return null;
+    });
+
+    const [walletAddress, setWalletAddress] = useState<string | undefined>(() => {
+        if (propAddress) return propAddress;
+        try {
+            const userData = localStorage.getItem('user');
+            if (userData) {
+                const parsed = JSON.parse(userData);
+                return parsed.walletAddress;
+            }
+        } catch { /* ignore parse errors */ }
+        return undefined;
+    });
+
 
     // Fetch wallet balance for current user
+    const kongUrl = import.meta.env.VITE_KONG_URL || '';
     const { data: wallet } = useQuery<WalletData>({
-        queryKey: ["/api/wallet", { userId: currentUser }],
+        queryKey: ["/api/v1/wallet", { userId: currentUser }],
         queryFn: async () => {
-            const res = await fetch(`http://localhost:8000/api/wallet?userId=${currentUser}`);
+            const res = await fetch(`${kongUrl}/api/v1/wallet?userId=${currentUser}`);
             return res.json();
         },
         refetchInterval: 5000,
@@ -97,7 +119,7 @@ export function TradeForm({ currentUser: propUser, walletAddress: propAddress }:
 
     // Fetch current price
     const { data: priceData } = useQuery<PriceData>({
-        queryKey: ["/api/price"],
+        queryKey: ["/api/v1/price"],
         refetchInterval: 3000,
     });
 
@@ -131,8 +153,13 @@ export function TradeForm({ currentUser: propUser, walletAddress: propAddress }:
                     parentSpan.setAttribute('order.quantity', data.quantity);
                     parentSpan.setAttribute('order.pair', data.pair);
 
+                    // DEBUG: Log what we're about to send
+                    console.log('[TradeForm] Submitting order with currentUser:', currentUser);
+                    console.log('[TradeForm] currentUser type:', typeof currentUser);
+                    console.log('[TradeForm] Order payload:', { ...data, userId: currentUser });
+
                     // Route through Kong Gateway for proper API gateway tracing
-                    const response = await fetch('http://localhost:8000/api/orders', {
+                    const response = await fetch(`${kongUrl}/api/v1/orders`, {
                         method: 'POST',
                         headers: {
                             'Content-Type': 'application/json',
@@ -192,6 +219,18 @@ export function TradeForm({ currentUser: propUser, walletAddress: propAddress }:
             // Clear success state after 10 seconds
             setTimeout(() => setLastTrade(null), 10000);
 
+            // Show verified modal for prominent trace link
+            setVerifiedTradeData({
+                tradeId: data.orderId || data.order.id,
+                traceId,
+                side: data.order.side,
+                amount: data.order.quantity,
+                asset: 'BTC',
+                price: execution?.fillPrice || 0,
+                executionTimeMs: execution?.executionTimeMs,
+            });
+            setShowVerifiedModal(true);
+
             toast({
                 title: execution?.status === 'FILLED' ? "✓ Trade Verified & Traced" : "Order Submitted",
                 description: (
@@ -231,21 +270,45 @@ export function TradeForm({ currentUser: propUser, walletAddress: propAddress }:
                 ),
             });
 
-            // Refresh data
-            queryClient.invalidateQueries({ queryKey: ["/api/wallet"] });
-            queryClient.invalidateQueries({ queryKey: ["/api/orders"] });
-            queryClient.invalidateQueries({ queryKey: ["/api/traces"] });
+            // Refresh data - use partial match to invalidate all wallet queries
+            queryClient.invalidateQueries({ queryKey: ["/api/v1/wallet"], exact: false });
+            queryClient.invalidateQueries({ queryKey: ["/api/v1/orders"] });
+            queryClient.invalidateQueries({ queryKey: ["/api/v1/traces"] });
 
             setTimeout(() => {
-                queryClient.invalidateQueries({ queryKey: ["/api/traces"] });
+                queryClient.invalidateQueries({ queryKey: ["/api/v1/traces"] });
             }, 1500);
         },
-        onError: (error) => {
-            toast({
-                title: "Order Failed",
-                description: error.message,
-                variant: "destructive",
-            });
+        onError: (error: any) => {
+            // Parse error response for semantic status codes
+            const status = error.response?.status;
+            const errorData = error.response?.data || {};
+
+            if (status === 422 && errorData.code === 'INSUFFICIENT_FUNDS') {
+                toast({
+                    title: "Insufficient Funds",
+                    description: `You need ${errorData.details?.required} ${errorData.details?.asset} but only have ${errorData.details?.available}`,
+                    variant: "destructive",
+                });
+            } else if (status === 503 && errorData.code === 'SERVICE_UNAVAILABLE') {
+                toast({
+                    title: "Service Unavailable",
+                    description: "Trading is temporarily unavailable. Please try again later.",
+                    variant: "destructive",
+                });
+            } else if (status === 400) {
+                toast({
+                    title: "Invalid Request",
+                    description: errorData.error || "Please check your input and try again.",
+                    variant: "destructive",
+                });
+            } else {
+                toast({
+                    title: "Order Failed",
+                    description: errorData.error || error.message || "An error occurred",
+                    variant: "destructive",
+                });
+            }
         },
     });
 
@@ -379,7 +442,7 @@ export function TradeForm({ currentUser: propUser, walletAddress: propAddress }:
                                             type="number"
                                             step="0.001"
                                             min="0.001"
-                                            max="10"
+                                            max="100000000"
                                             placeholder="0.01"
                                             {...field}
                                             onChange={(e) => field.onChange(parseFloat(e.target.value) || 0)}
@@ -404,7 +467,7 @@ export function TradeForm({ currentUser: propUser, walletAddress: propAddress }:
                         {/* Submit Button */}
                         <Button
                             type="submit"
-                            disabled={orderMutation.isPending || !priceAvailable}
+                            disabled={orderMutation.isPending || !priceAvailable || !currentUser}
                             className={`w-full h-14 text-lg font-bold ${side === "BUY"
                                 ? "bg-green-600 hover:bg-green-700 disabled:bg-green-600/50"
                                 : "bg-red-600 hover:bg-red-700 disabled:bg-red-600/50"
@@ -415,6 +478,8 @@ export function TradeForm({ currentUser: propUser, walletAddress: propAddress }:
                                     <Loader2 className="w-5 h-5 mr-2 animate-spin" />
                                     Processing...
                                 </>
+                            ) : !currentUser ? (
+                                <>Please log in to trade</>
                             ) : !priceAvailable ? (
                                 <>Waiting for prices...</>
                             ) : (
@@ -426,6 +491,21 @@ export function TradeForm({ currentUser: propUser, walletAddress: propAddress }:
                     </form>
                 </Form>
             </CardContent>
+
+            {/* Trade Verified Modal */}
+            {verifiedTradeData && (
+                <TradeVerifiedModal
+                    isOpen={showVerifiedModal}
+                    onClose={() => setShowVerifiedModal(false)}
+                    tradeId={verifiedTradeData.tradeId}
+                    traceId={verifiedTradeData.traceId}
+                    side={verifiedTradeData.side}
+                    amount={verifiedTradeData.amount}
+                    asset={verifiedTradeData.asset}
+                    price={verifiedTradeData.price}
+                    executionTimeMs={verifiedTradeData.executionTimeMs}
+                />
+            )}
         </Card>
     );
 }

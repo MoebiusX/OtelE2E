@@ -274,5 +274,24 @@
     "completion": "SUMMARY: The observed anomaly is likely caused by an issue with the TCP connection to kx-exchange, resulting in a significant deviation from the expected latency of 4.36ms. This discrepancy may be due to excessive network usage or resource contention.\n\nCAUSES:\n- High CPU Usage: A spike in CPU utilization might indicate that the system is struggling to handle requests efficiently.\n- Insufficient Memory: The 21MB memory usage could be a sign of temporary memory exhaustion, which might be caused by an increased number of concurrent connections.\n- Resource Contention: Overloaded network resources or competing traffic might have led to excessive latency.\n\nRECOMMENDATIONS:\n- Optimize CPU Usage: Consider implementing resource allocation strategies to prevent sudden spikes in CPU utilization.\n- Memory Reallocation: Ensure that the system has sufficient memory available to handle incoming requests without experiencing memory exhaustion.\n- Network Optimization: Review and adjust network configurations to reduce contention among concurrent connections.",
     "rating": "bad",
     "correction": "memory allocation was very low, so not significant  "
+  },
+  {
+    "id": "train_1769641464062_x6qrxc",
+    "timestamp": "2026-01-28T23:04:24.062Z",
+    "anomaly": {
+      "id": "1f4669447228127ddb5d5d6c1baf3b65-eea49c8353bd218e",
+      "traceId": "1f4669447228127ddb5d5d6c1baf3b65",
+      "service": "kx-exchange",
+      "operation": "GET",
+      "duration": 317.17,
+      "expectedMean": 75.9,
+      "deviation": 1.86,
+      "severity": 4,
+      "severityName": "Minor",
+      "timestamp": "2026-01-28T23:02:44.936Z"
+    },
+    "prompt": "You are an expert in distributed systems and observability. Analyze this performance anomaly:\n\n## Anomaly Details\n- Service: kx-exchange\n- Operation: GET\n- Duration: 317.17ms (expected: 75.9ms ± 129.85ms)\n- Deviation: 1.86σ (standard deviations from mean)\n- Severity: SEV4 (Minor)\n- Timestamp: Thu Jan 29 2026 00:02:44 GMT+0100 (Central European Standard Time)\n\n## Span Attributes\n{\n  \"http.request.method\": \"GET\",\n  \"http.request.method_original\": \"GET\",\n  \"http.response.status_code\": 200,\n  \"network.peer.address\": \"127.0.0.1\",\n  \"network.peer.port\": 16686,\n  \"otel.scope.name\": \"@opentelemetry/instrumentation-undici\",\n  \"otel.scope.version\": \"0.13.1\",\n  \"server.address\": \"localhost\",\n  \"server.port\": 16686,\n  \"span.kind\": \"client\",\n  \"url.full\": \"http://localhost:16686/api/traces?service=kx-wallet&lookback=1m&limit=20\",\n  \"url.path\": \"/api/traces\",\n  \"url.query\": \"?service=kx-wallet&lookback=1m&limit=20\",\n  \"url.scheme\": \"http\",\n  \"user_agent.original\": \"node\"\n}\n\n## Correlated System Metrics (at time of anomaly)\n- CPU Usage: 0.4%\n- Memory: 108MB\n- Request Rate: 0.0 req/s\n- Error Rate: 2.0%\n- P99 Latency: 1666ms\n- Active Connections: 0\n\n## Auto-Detected Issues\n- 📊 Notable error rate (2.0%)\n\n## Trace Context\nThe full trace contains 2 spans:\n- kx-exchange: GET (317.17ms)\n- jaeger-all-in-one: /api/traces (34.04ms)\n\n\nBased on the trace data AND correlated metrics, provide:\n1. A brief summary (1-2 sentences) of what likely caused this anomaly\n2. 2-3 possible root causes (consider resource utilization if metrics show issues)\n3. 2-3 actionable recommendations\n\nFormat your response as:\nSUMMARY: [your summary]\nCAUSES:\n- [cause 1]\n- [cause 2]\nRECOMMENDATIONS:\n- [recommendation 1]\n- [recommendation 2]\nCONFIDENCE: [low/medium/high]",
+    "completion": "SUMMARY: The GET request to the kx-exchange service experienced an unexpected delay of 317.17 milliseconds, which is significantly higher than the expected 75.9 milliseconds. This deviation could be caused by a combination of factors, including network latency, system resource utilization, or an issue with the Jaeger All-In-One tracing component.\n\nCAUSES:\n- Increased latency due to network congestion or packet loss (resource utilization)\n- System resource overload leading to increased CPU usage and memory consumption\n- Problem with the Jaeger All-In-One tracing component causing incorrect tracing data\n\nRECOMMENDATIONS:\n1. Monitor network latency using a tool like Wireshark to identify potential causes of packet loss.\n2. Increase CPU capacity by adding more nodes or optimizing current infrastructure to reduce resource utilization.\n3. Verify that Jaeger All-In-One is correctly configured and functioning as expected, ensuring accurate tracing data.\n\nCONFIDENCE: Medium",
+    "rating": "good"
   }
 ]

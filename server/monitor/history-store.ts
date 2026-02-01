@@ -1,180 +1,216 @@
 /**
  * History Store
  * 
- * Persists baselines, anomalies, and analyses to JSON file
+ * Persists baselines, anomalies, and analyses to PostgreSQL
  * for trend analysis and recovery after restart.
  */
 
-import * as fs from 'fs';
-import * as path from 'path';
+import { drizzleDb } from '../db/drizzle';
+import { spanBaselines, timeBaselines, anomalies as anomaliesTable } from '../db/schema';
+import { eq, desc, and, gte, sql } from 'drizzle-orm';
 import type {
     SpanBaseline,
     Anomaly,
     AnalysisResponse,
-    MonitorHistory,
-    TimeBaseline
+    TimeBaseline,
+    AdaptiveThresholds
 } from './types';
 import { createLogger } from '../lib/logger';
 
 const logger = createLogger('history-store');
 
-const DATA_DIR = path.join(process.cwd(), 'data');
-const HISTORY_FILE = path.join(DATA_DIR, 'monitor-history.json');
-const TIME_BASELINES_FILE = path.join(DATA_DIR, 'time-baselines.json');
-const MAX_ANOMALIES = 1000; // Keep last 1000 anomalies
-const SAVE_INTERVAL = 60000; // Save every minute
-
-interface ExtendedHistory extends MonitorHistory {
-    timeBaselines?: TimeBaseline[];
-}
+const MAX_ANOMALIES = 1000; // Keep last 1000 anomalies in memory cache
 
 export class HistoryStore {
-    private history: ExtendedHistory = {
-        baselines: [],
-        anomalies: [],
-        analyses: [],
-        timeBaselines: [],
-        lastUpdated: new Date()
-    };
-    private saveInterval: NodeJS.Timeout | null = null;
-    private dirty = false;
+    // In-memory cache for analyses (not persisted to DB - ephemeral)
+    private analysesCache: AnalysisResponse[] = [];
 
     constructor() {
-        this.ensureDataDir();
-        this.load();
+        logger.info('History store initialized (PostgreSQL-backed)');
     }
 
     /**
-     * Start auto-save interval
+     * Start - no-op for DB-backed store
      */
     start(): void {
-        this.saveInterval = setInterval(() => {
-            if (this.dirty) {
-                this.save();
-            }
-        }, SAVE_INTERVAL);
-        logger.info('History store started');
+        logger.info('History store started (PostgreSQL-backed)');
     }
 
     /**
-     * Stop and save
+     * Stop - no-op for DB-backed store
      */
     stop(): void {
-        if (this.saveInterval) {
-            clearInterval(this.saveInterval);
-            this.saveInterval = null;
-        }
-        this.save();
         logger.info('History store stopped');
     }
 
     /**
-     * Update baselines
+     * Update baselines (upsert to database)
      */
-    updateBaselines(baselines: SpanBaseline[]): void {
-        this.history.baselines = baselines;
-        this.history.lastUpdated = new Date();
-        this.dirty = true;
+    async updateBaselines(baselines: SpanBaseline[]): Promise<void> {
+        try {
+            for (const baseline of baselines) {
+                await drizzleDb.insert(spanBaselines).values({
+                    spanKey: baseline.spanKey,
+                    service: baseline.service,
+                    operation: baseline.operation,
+                    mean: baseline.mean.toString(),
+                    stdDev: baseline.stdDev.toString(),
+                    variance: baseline.variance.toString(),
+                    p50: baseline.p50?.toString(),
+                    p95: baseline.p95?.toString(),
+                    p99: baseline.p99?.toString(),
+                    min: baseline.min?.toString(),
+                    max: baseline.max?.toString(),
+                    sampleCount: baseline.sampleCount,
+                    updatedAt: new Date(),
+                }).onConflictDoUpdate({
+                    target: spanBaselines.spanKey,
+                    set: {
+                        mean: baseline.mean.toString(),
+                        stdDev: baseline.stdDev.toString(),
+                        variance: baseline.variance.toString(),
+                        p50: baseline.p50?.toString(),
+                        p95: baseline.p95?.toString(),
+                        p99: baseline.p99?.toString(),
+                        min: baseline.min?.toString(),
+                        max: baseline.max?.toString(),
+                        sampleCount: baseline.sampleCount,
+                        updatedAt: new Date(),
+                    }
+                });
+            }
+            logger.info({ count: baselines.length }, 'Updated span baselines in database');
+        } catch (error) {
+            logger.error({ err: error }, 'Failed to update baselines');
+            throw error;
+        }
     }
 
     /**
-     * Add anomaly
+     * Add anomaly to database
      */
-    addAnomaly(anomaly: Anomaly): void {
-        // Check for duplicate
-        if (this.history.anomalies.some(a => a.id === anomaly.id)) {
-            return;
+    async addAnomaly(anomaly: Anomaly): Promise<void> {
+        try {
+            await drizzleDb.insert(anomaliesTable).values({
+                id: anomaly.id,
+                traceId: anomaly.traceId,
+                spanId: anomaly.spanId,
+                service: anomaly.service,
+                operation: anomaly.operation,
+                duration: anomaly.duration.toString(),
+                expectedMean: anomaly.expectedMean.toString(),
+                expectedStdDev: anomaly.expectedStdDev.toString(),
+                deviation: anomaly.deviation.toString(),
+                severity: anomaly.severity,
+                severityName: anomaly.severityName,
+                attributes: anomaly.attributes,
+                dayOfWeek: anomaly.dayOfWeek,
+                hourOfDay: anomaly.hourOfDay,
+                createdAt: new Date(anomaly.timestamp),
+            }).onConflictDoNothing();
+
+            logger.debug({ anomalyId: anomaly.id, service: anomaly.service }, 'Anomaly persisted');
+        } catch (error) {
+            logger.error({ err: error }, 'Failed to add anomaly');
         }
-
-        this.history.anomalies.push(anomaly);
-
-        // Trim to max size
-        if (this.history.anomalies.length > MAX_ANOMALIES) {
-            this.history.anomalies = this.history.anomalies.slice(-MAX_ANOMALIES);
-        }
-
-        this.dirty = true;
     }
 
     /**
-     * Add analysis
+     * Add analysis (in-memory cache only)
      */
     addAnalysis(analysis: AnalysisResponse): void {
-        this.history.analyses.push(analysis);
-
-        // Keep last 100 analyses
-        if (this.history.analyses.length > 100) {
-            this.history.analyses = this.history.analyses.slice(-100);
+        this.analysesCache.push(analysis);
+        if (this.analysesCache.length > 100) {
+            this.analysesCache = this.analysesCache.slice(-100);
         }
-
-        this.dirty = true;
     }
 
     /**
      * Get anomaly history with optional filtering
      */
-    getAnomalyHistory(options: {
+    async getAnomalyHistory(options: {
         hours?: number;
         service?: string;
         limit?: number;
-    } = {}): Anomaly[] {
-        let anomalies = [...this.history.anomalies];
+    } = {}): Promise<Anomaly[]> {
+        try {
+            const conditions = [];
 
-        // Filter by time
-        if (options.hours) {
-            const since = Date.now() - options.hours * 60 * 60 * 1000;
-            anomalies = anomalies.filter(a => new Date(a.timestamp).getTime() > since);
+            if (options.hours) {
+                const since = new Date(Date.now() - options.hours * 60 * 60 * 1000);
+                conditions.push(gte(anomaliesTable.createdAt, since));
+            }
+
+            if (options.service) {
+                conditions.push(eq(anomaliesTable.service, options.service));
+            }
+
+            const rows = await drizzleDb.select()
+                .from(anomaliesTable)
+                .where(conditions.length > 0 ? and(...conditions) : undefined)
+                .orderBy(desc(anomaliesTable.createdAt))
+                .limit(options.limit || MAX_ANOMALIES);
+
+            return rows.map(row => ({
+                id: row.id,
+                traceId: row.traceId,
+                spanId: row.spanId,
+                service: row.service,
+                operation: row.operation,
+                duration: parseFloat(row.duration),
+                expectedMean: parseFloat(row.expectedMean),
+                expectedStdDev: parseFloat(row.expectedStdDev),
+                deviation: parseFloat(row.deviation),
+                severity: row.severity as 1 | 2 | 3 | 4 | 5,
+                severityName: row.severityName,
+                timestamp: row.createdAt,
+                attributes: row.attributes as Record<string, any> || {},
+                dayOfWeek: row.dayOfWeek ?? undefined,
+                hourOfDay: row.hourOfDay ?? undefined,
+            }));
+        } catch (error) {
+            logger.error({ err: error }, 'Failed to get anomaly history');
+            return [];
         }
-
-        // Filter by service
-        if (options.service) {
-            anomalies = anomalies.filter(a => a.service === options.service);
-        }
-
-        // Sort by timestamp descending
-        anomalies.sort((a, b) =>
-            new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()
-        );
-
-        // Limit
-        if (options.limit) {
-            anomalies = anomalies.slice(0, options.limit);
-        }
-
-        return anomalies;
     }
 
     /**
      * Get hourly anomaly counts for trend chart
      */
-    getHourlyTrend(hours: number = 24): Array<{ hour: string; count: number; critical: number }> {
+    async getHourlyTrend(hours: number = 24): Promise<Array<{ hour: string; count: number; critical: number }>> {
         const buckets = new Map<string, { count: number; critical: number }>();
 
         // Initialize hourly buckets
         const now = new Date();
         for (let i = 0; i < hours; i++) {
             const hour = new Date(now.getTime() - i * 60 * 60 * 1000);
-            const key = hour.toISOString().slice(0, 13); // "2026-01-15T08"
+            const key = hour.toISOString().slice(0, 13);
             buckets.set(key, { count: 0, critical: 0 });
         }
 
-        // Count anomalies per hour
-        for (const anomaly of this.history.anomalies) {
-            const hour = new Date(anomaly.timestamp).toISOString().slice(0, 13);
-            if (buckets.has(hour)) {
-                const bucket = buckets.get(hour)!;
-                bucket.count++;
-                // SEV 1-2 are considered critical
-                if (anomaly.severity <= 2) {
-                    bucket.critical++;
+        try {
+            const since = new Date(Date.now() - hours * 60 * 60 * 1000);
+            const rows = await drizzleDb.select()
+                .from(anomaliesTable)
+                .where(gte(anomaliesTable.createdAt, since));
+
+            for (const row of rows) {
+                const hour = new Date(row.createdAt).toISOString().slice(0, 13);
+                if (buckets.has(hour)) {
+                    const bucket = buckets.get(hour)!;
+                    bucket.count++;
+                    if (row.severity <= 2) {
+                        bucket.critical++;
+                    }
                 }
             }
+        } catch (error) {
+            logger.error({ err: error }, 'Failed to get hourly trend');
         }
 
-        // Convert to array
         return Array.from(buckets.entries())
             .map(([hour, data]) => ({
-                hour: hour.slice(11) + ':00', // "08:00"
+                hour: hour.slice(11) + ':00',
                 count: data.count,
                 critical: data.critical
             }))
@@ -182,95 +218,98 @@ export class HistoryStore {
     }
 
     /**
-     * Get stored baselines
+     * Get stored baselines from database
      */
-    getBaselines(): SpanBaseline[] {
-        return this.history.baselines;
+    async getBaselines(): Promise<SpanBaseline[]> {
+        try {
+            const rows = await drizzleDb.select().from(spanBaselines);
+            return rows.map(row => ({
+                spanKey: row.spanKey,
+                service: row.service,
+                operation: row.operation,
+                mean: parseFloat(row.mean),
+                stdDev: parseFloat(row.stdDev),
+                variance: parseFloat(row.variance),
+                p50: row.p50 ? parseFloat(row.p50) : 0,
+                p95: row.p95 ? parseFloat(row.p95) : 0,
+                p99: row.p99 ? parseFloat(row.p99) : 0,
+                min: row.min ? parseFloat(row.min) : 0,
+                max: row.max ? parseFloat(row.max) : 0,
+                sampleCount: row.sampleCount,
+                lastUpdated: row.updatedAt,
+            }));
+        } catch (error) {
+            logger.error({ err: error }, 'Failed to get baselines');
+            return [];
+        }
     }
 
     /**
-     * Get analysis for trace
+     * Get analysis for trace (from cache)
      */
     getAnalysis(traceId: string): AnalysisResponse | undefined {
-        return this.history.analyses.find(a => a.traceId === traceId);
+        return this.analysesCache.find(a => a.traceId === traceId);
     }
 
     /**
-     * Set time baselines (from calculator)
+     * Set time baselines (upsert to database)
      */
-    setTimeBaselines(baselines: TimeBaseline[]): void {
-        this.history.timeBaselines = baselines;
-        this.dirty = true;
-        this.saveTimeBaselines();
-    }
-
-    /**
-     * Get time baselines
-     */
-    getTimeBaselines(): TimeBaseline[] {
-        return this.history.timeBaselines || [];
-    }
-
-    /**
-     * Ensure data directory exists
-     */
-    private ensureDataDir(): void {
-        if (!fs.existsSync(DATA_DIR)) {
-            fs.mkdirSync(DATA_DIR, { recursive: true });
+    async setTimeBaselines(baselines: TimeBaseline[]): Promise<void> {
+        try {
+            for (const baseline of baselines) {
+                await drizzleDb.insert(timeBaselines).values({
+                    spanKey: baseline.spanKey,
+                    service: baseline.service,
+                    operation: baseline.operation,
+                    dayOfWeek: baseline.dayOfWeek,
+                    hourOfDay: baseline.hourOfDay,
+                    mean: baseline.mean.toString(),
+                    stdDev: baseline.stdDev.toString(),
+                    sampleCount: baseline.sampleCount,
+                    thresholds: baseline.thresholds,
+                    updatedAt: new Date(),
+                }).onConflictDoUpdate({
+                    target: [timeBaselines.spanKey, timeBaselines.dayOfWeek, timeBaselines.hourOfDay],
+                    set: {
+                        mean: baseline.mean.toString(),
+                        stdDev: baseline.stdDev.toString(),
+                        sampleCount: baseline.sampleCount,
+                        thresholds: baseline.thresholds,
+                        updatedAt: new Date(),
+                    }
+                });
+            }
+            logger.info({ count: baselines.length }, 'Updated time baselines in database');
+        } catch (error) {
+            logger.error({ err: error }, 'Failed to set time baselines');
+            throw error;
         }
     }
 
     /**
-     * Load history from file
+     * Get time baselines from database
      */
-    private load(): void {
+    async getTimeBaselines(): Promise<TimeBaseline[]> {
         try {
-            if (fs.existsSync(HISTORY_FILE)) {
-                const data = fs.readFileSync(HISTORY_FILE, 'utf-8');
-                this.history = JSON.parse(data);
-                logger.info({ anomaliesCount: this.history.anomalies.length, baselinesCount: this.history.baselines.length }, 'Loaded history from file');
-            }
-            // Also load time baselines
-            if (fs.existsSync(TIME_BASELINES_FILE)) {
-                const data = fs.readFileSync(TIME_BASELINES_FILE, 'utf-8');
-                this.history.timeBaselines = JSON.parse(data);
-                logger.info({ timeBaselinesCount: this.history.timeBaselines?.length || 0 }, 'Loaded time baselines from file');
-            }
-        } catch (error: unknown) {
-            logger.warn({ err: error }, 'Could not load history from file');
-        }
-    }
-
-    /**
-     * Save history to file
-     */
-    private save(): void {
-        try {
-            const data = JSON.stringify(this.history, null, 2);
-            fs.writeFileSync(HISTORY_FILE, data, 'utf-8');
-            this.dirty = false;
-            logger.info({ anomaliesCount: this.history.anomalies.length }, 'Saved history to file');
-        } catch (error: unknown) {
-            logger.error({ err: error }, 'Could not save history to file');
-        }
-    }
-
-    /**
-     * Save time baselines to separate file (they can be large)
-     */
-    private saveTimeBaselines(): void {
-        try {
-            if (this.history.timeBaselines && this.history.timeBaselines.length > 0) {
-                const data = JSON.stringify(this.history.timeBaselines, null, 2);
-                fs.writeFileSync(TIME_BASELINES_FILE, data, 'utf-8');
-                logger.info({ timeBaselinesCount: this.history.timeBaselines.length }, 'Saved time baselines to file');
-            }
-        } catch (error: unknown) {
-            logger.error({ err: error }, 'Could not save time baselines to file');
+            const rows = await drizzleDb.select().from(timeBaselines);
+            return rows.map(row => ({
+                spanKey: row.spanKey,
+                service: row.service,
+                operation: row.operation,
+                dayOfWeek: row.dayOfWeek,
+                hourOfDay: row.hourOfDay,
+                mean: parseFloat(row.mean),
+                stdDev: parseFloat(row.stdDev),
+                sampleCount: row.sampleCount,
+                thresholds: row.thresholds as AdaptiveThresholds,
+                lastUpdated: row.updatedAt,
+            }));
+        } catch (error) {
+            logger.error({ err: error }, 'Failed to get time baselines');
+            return [];
         }
     }
 }
 
 // Singleton instance
 export const historyStore = new HistoryStore();
-

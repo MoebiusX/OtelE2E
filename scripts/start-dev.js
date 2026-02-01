@@ -2,14 +2,15 @@
 import { spawn, execSync } from 'child_process';
 import path from 'path';
 import { fileURLToPath } from 'url';
+import config from './config.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
-const rootDir = path.join(__dirname, '..');
+const rootDir = config.rootDir;
 
-const isWindows = process.platform === 'win32';
-const npmCmd = isWindows ? 'npm.cmd' : 'npm';
-const npxCmd = isWindows ? 'npx.cmd' : 'npx';
+const isWindows = config.isWindows;
+const npmCmd = config.npmCmd;
+const npxCmd = config.npxCmd;
 
 console.log('🚀 Starting Krystaline Exchange Development Environment...');
 
@@ -51,26 +52,63 @@ async function startDockerServices() {
 async function waitForServices() {
     console.log('⏳ Waiting for services to be ready...');
 
-    // Wait for Kong
-    for (let i = 0; i < 30; i++) {
+    // Wait for Kong Admin API (use internal URL for Docker health check)
+    for (let i = 0; i < config.timeouts.kongAdmin; i++) {
         try {
-            execSync('curl -s http://localhost:8001/status', { stdio: 'ignore' });
-            console.log('   ✅ Kong Gateway ready');
+            execSync(`curl -s ${config.kong.internalAdminUrl}/status`, { stdio: 'ignore' });
+            console.log('   ✅ Kong Admin API ready');
             break;
         } catch (e) {
-            if (i === 29) console.log('   ⚠️  Kong Gateway not responding (may still be starting)');
+            if (i === config.timeouts.kongAdmin - 1) console.log('   ⚠️  Kong Admin API not responding (may still be starting)');
+            await new Promise(r => setTimeout(r, 1000));
+        }
+    }
+
+    // Wait for Kong Proxy - critical for frontend API calls (use internal URL for Docker health check)
+    for (let i = 0; i < config.timeouts.kongProxy; i++) {
+        try {
+            // Just check connectivity - Kong returns 404 for unknown routes but that's fine
+            execSync(`curl -s --max-time 2 ${config.kong.internalGatewayUrl}/ > ${isWindows ? 'NUL' : '/dev/null'} 2>&1`, { stdio: 'ignore' });
+            console.log(`   ✅ Kong Proxy ready (${config.kong.gatewayUrl})`);
+            break;
+        } catch (e) {
+            if (i === config.timeouts.kongProxy - 1) console.log('   ⚠️  Kong Proxy not responding');
             await new Promise(r => setTimeout(r, 1000));
         }
     }
 
     // Wait for RabbitMQ
-    for (let i = 0; i < 30; i++) {
+    for (let i = 0; i < config.timeouts.rabbitmq; i++) {
         try {
-            execSync('curl -s http://localhost:15672', { stdio: 'ignore' });
+            execSync(`curl -s ${config.rabbitmq.managementUrl}`, { stdio: 'ignore' });
             console.log('   ✅ RabbitMQ ready');
             break;
         } catch (e) {
-            if (i === 29) console.log('   ⚠️  RabbitMQ not responding');
+            if (i === config.timeouts.rabbitmq - 1) console.log('   ⚠️  RabbitMQ not responding');
+            await new Promise(r => setTimeout(r, 1000));
+        }
+    }
+
+    // Wait for PostgreSQL (app-database)
+    for (let i = 0; i < config.timeouts.postgres; i++) {
+        try {
+            // Use node to check TCP connectivity
+            const net = await import('net');
+            const isReady = await new Promise((resolve) => {
+                const socket = new net.default.Socket();
+                socket.setTimeout(1000);
+                socket.on('connect', () => { socket.destroy(); resolve(true); });
+                socket.on('error', () => { socket.destroy(); resolve(false); });
+                socket.on('timeout', () => { socket.destroy(); resolve(false); });
+                socket.connect(config.database.port, config.database.host);
+            });
+            if (isReady) {
+                console.log(`   ✅ PostgreSQL ready (${config.database.host}:${config.database.port})`);
+                break;
+            }
+            throw new Error('not ready');
+        } catch (e) {
+            if (i === config.timeouts.postgres - 1) console.log('   ⚠️  PostgreSQL not responding');
             await new Promise(r => setTimeout(r, 1000));
         }
     }
@@ -112,6 +150,25 @@ function startProcess(name, cmd, args, color) {
     return child;
 }
 
+/**
+ * Wait for server to be healthy before starting dependent services
+ */
+async function waitForServer(maxWaitSec) {
+    const timeout = maxWaitSec || config.timeouts.server;
+    console.log('   ⏳ Waiting for Server to be ready...');
+    for (let i = 0; i < timeout; i++) {
+        try {
+            execSync(`curl -s ${config.server.healthUrl}`, { stdio: 'ignore' });
+            console.log(`   ✅ Server ready (${config.server.url})`);
+            return true;
+        } catch (e) {
+            await new Promise(r => setTimeout(r, 1000));
+        }
+    }
+    console.log('   ⚠️  Server health check timed out - proceeding anyway');
+    return false;
+}
+
 async function main() {
     // Check Docker
     const dockerUp = await checkDocker();
@@ -138,16 +195,16 @@ async function main() {
     // Server (payment-api)
     processes.push(startProcess('SERVER', npmCmd, ['run', 'dev:server'], '\x1b[36m'));
 
-    // Wait a bit for server to start before processor
-    await new Promise(r => setTimeout(r, 3000));
+    // Wait for server to be healthy before starting dependent services
+    await waitForServer(60);
 
-    // Payment Processor (kx-matcher) - runs natively
+    // Payment Processor (kx-matcher) - depends on RabbitMQ queues from server
     processes.push(startProcess('MATCHER', npxCmd, ['tsx', 'payment-processor/index.ts'], '\x1b[33m'));
 
-    // Wait a bit more
-    await new Promise(r => setTimeout(r, 2000));
+    // Matcher connects quickly, small delay sufficient
+    await new Promise(r => setTimeout(r, 1000));
 
-    // Vite frontend
+    // Vite frontend - depends on server for API proxy
     processes.push(startProcess('VITE', npxCmd, ['vite', '--host'], '\x1b[35m'));
 
     console.log('\n✨ All components starting! Open http://localhost:5173\n');

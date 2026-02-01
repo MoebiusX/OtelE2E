@@ -42,7 +42,7 @@ function createTradeApp() {
   app.use(express.json());
 
   // GET /price-status
-  app.get('/api/trade/price-status', (req, res) => {
+  app.get('/api/v1/trade/price-status', (req, res) => {
     const status = mockPriceService.getStatus();
     const prices = mockPriceService.getAllPrices();
     res.json({ 
@@ -56,13 +56,13 @@ function createTradeApp() {
   });
 
   // GET /pairs
-  app.get('/api/trade/pairs', (req, res) => {
+  app.get('/api/v1/trade/pairs', (req, res) => {
     const pairs = mockTradeService.getPairs();
     res.json({ success: true, pairs });
   });
 
   // GET /price/:asset
-  app.get('/api/trade/price/:asset', (req, res) => {
+  app.get('/api/v1/trade/price/:asset', (req, res) => {
     const price = mockTradeService.getPrice(req.params.asset);
     if (price === null) {
       return res.status(503).json({ 
@@ -75,7 +75,7 @@ function createTradeApp() {
   });
 
   // GET /rate/:from/:to
-  app.get('/api/trade/rate/:from/:to', (req, res) => {
+  app.get('/api/v1/trade/rate/:from/:to', (req, res) => {
     const rate = mockTradeService.getRate(req.params.from, req.params.to);
     if (rate === null) {
       return res.status(503).json({
@@ -94,7 +94,7 @@ function createTradeApp() {
   });
 
   // POST /convert/quote (authenticated)
-  app.post('/api/trade/convert/quote', mockAuthenticate, (req, res) => {
+  app.post('/api/v1/trade/convert/quote', mockAuthenticate, (req, res) => {
     const { fromAsset, toAsset, amount } = req.body;
     if (!fromAsset || !toAsset || !amount || amount <= 0) {
       return res.status(400).json({ error: 'Invalid parameters' });
@@ -104,7 +104,7 @@ function createTradeApp() {
   });
 
   // POST /convert (authenticated)
-  app.post('/api/trade/convert', mockAuthenticate, async (req, res) => {
+  app.post('/api/v1/trade/convert', mockAuthenticate, async (req, res) => {
     try {
       const { fromAsset, toAsset, amount } = req.body;
       if (!fromAsset || !toAsset || !amount || amount <= 0) {
@@ -128,7 +128,7 @@ function createTradeApp() {
   });
 
   // POST /order (authenticated)
-  app.post('/api/trade/order', mockAuthenticate, async (req, res) => {
+  app.post('/api/v1/trade/order', mockAuthenticate, async (req, res) => {
     try {
       const { pair, side, price, quantity } = req.body;
       if (!pair || !side || !price || !quantity) {
@@ -151,7 +151,7 @@ function createTradeApp() {
   });
 
   // DELETE /order/:id (authenticated)
-  app.delete('/api/trade/order/:id', mockAuthenticate, async (req, res) => {
+  app.delete('/api/v1/trade/order/:id', mockAuthenticate, async (req, res) => {
     try {
       await mockTradeService.cancelOrder((req as any).user.id, req.params.id);
       res.json({ success: true, message: 'Order cancelled' });
@@ -161,7 +161,7 @@ function createTradeApp() {
   });
 
   // GET /orders (authenticated)
-  app.get('/api/trade/orders', mockAuthenticate, async (req, res) => {
+  app.get('/api/v1/trade/orders', mockAuthenticate, async (req, res) => {
     const status = req.query.status as string | undefined;
     const orders = await mockTradeService.getOrders((req as any).user.id, status);
     res.json({ success: true, orders });
@@ -195,7 +195,7 @@ describe('Trade Routes Integration', () => {
         USDT: 1,
       });
 
-      const response = await request(app).get('/api/trade/price-status');
+      const response = await request(app).get('/api/v1/trade/price-status');
 
       expect(response.status).toBe(200);
       expect(response.body.success).toBe(true);
@@ -211,7 +211,7 @@ describe('Trade Routes Integration', () => {
       });
       mockPriceService.getAllPrices.mockReturnValue({});
 
-      const response = await request(app).get('/api/trade/price-status');
+      const response = await request(app).get('/api/v1/trade/price-status');
 
       expect(response.status).toBe(200);
       expect(response.body.status.connected).toBe(false);
@@ -226,7 +226,7 @@ describe('Trade Routes Integration', () => {
         { pair: 'ETH/USDT', baseAsset: 'ETH', quoteAsset: 'USDT', price: 2500, rate: 2500 },
       ]);
 
-      const response = await request(app).get('/api/trade/pairs');
+      const response = await request(app).get('/api/v1/trade/pairs');
 
       expect(response.status).toBe(200);
       expect(response.body.success).toBe(true);
@@ -238,7 +238,7 @@ describe('Trade Routes Integration', () => {
     it('should return price for valid asset', async () => {
       mockTradeService.getPrice.mockReturnValue(45000);
 
-      const response = await request(app).get('/api/trade/price/btc');
+      const response = await request(app).get('/api/v1/trade/price/btc');
 
       expect(response.status).toBe(200);
       expect(response.body.success).toBe(true);
@@ -249,7 +249,7 @@ describe('Trade Routes Integration', () => {
     it('should return 503 when price not available', async () => {
       mockTradeService.getPrice.mockReturnValue(null);
 
-      const response = await request(app).get('/api/trade/price/xyz');
+      const response = await request(app).get('/api/v1/trade/price/xyz');
 
       expect(response.status).toBe(503);
       expect(response.body.success).toBe(false);
@@ -261,7 +261,7 @@ describe('Trade Routes Integration', () => {
     it('should return exchange rate', async () => {
       mockTradeService.getRate.mockReturnValue(0.055);
 
-      const response = await request(app).get('/api/trade/rate/eth/btc');
+      const response = await request(app).get('/api/v1/trade/rate/eth/btc');
 
       expect(response.status).toBe(200);
       expect(response.body.success).toBe(true);
@@ -273,7 +273,7 @@ describe('Trade Routes Integration', () => {
     it('should return 503 when rate not available', async () => {
       mockTradeService.getRate.mockReturnValue(null);
 
-      const response = await request(app).get('/api/trade/rate/abc/xyz');
+      const response = await request(app).get('/api/v1/trade/rate/abc/xyz');
 
       expect(response.status).toBe(503);
       expect(response.body.success).toBe(false);
@@ -283,7 +283,7 @@ describe('Trade Routes Integration', () => {
   describe('POST /api/trade/convert/quote (authenticated)', () => {
     it('should return 401 without authentication', async () => {
       const response = await request(app)
-        .post('/api/trade/convert/quote')
+        .post('/api/v1/trade/convert/quote')
         .send({ fromAsset: 'BTC', toAsset: 'USDT', amount: 1 });
 
       expect(response.status).toBe(401);
@@ -302,7 +302,7 @@ describe('Trade Routes Integration', () => {
       });
 
       const response = await request(app)
-        .post('/api/trade/convert/quote')
+        .post('/api/v1/trade/convert/quote')
         .set('Authorization', 'Bearer valid-token')
         .send({ fromAsset: 'BTC', toAsset: 'USDT', amount: 1 });
 
@@ -314,7 +314,7 @@ describe('Trade Routes Integration', () => {
 
     it('should return 400 for missing parameters', async () => {
       const response = await request(app)
-        .post('/api/trade/convert/quote')
+        .post('/api/v1/trade/convert/quote')
         .set('Authorization', 'Bearer valid-token')
         .send({ fromAsset: 'BTC' }); // missing toAsset and amount
 
@@ -324,7 +324,7 @@ describe('Trade Routes Integration', () => {
 
     it('should return 400 for invalid amount', async () => {
       const response = await request(app)
-        .post('/api/trade/convert/quote')
+        .post('/api/v1/trade/convert/quote')
         .set('Authorization', 'Bearer valid-token')
         .send({ fromAsset: 'BTC', toAsset: 'USDT', amount: -1 });
 
@@ -340,7 +340,7 @@ describe('Trade Routes Integration', () => {
       });
 
       const response = await request(app)
-        .post('/api/trade/convert')
+        .post('/api/v1/trade/convert')
         .set('Authorization', 'Bearer valid-token')
         .send({ fromAsset: 'BTC', toAsset: 'USDT', amount: 1 });
 
@@ -356,7 +356,7 @@ describe('Trade Routes Integration', () => {
       );
 
       const response = await request(app)
-        .post('/api/trade/convert')
+        .post('/api/v1/trade/convert')
         .set('Authorization', 'Bearer valid-token')
         .send({ fromAsset: 'BTC', toAsset: 'USDT', amount: 100 });
 
@@ -377,7 +377,7 @@ describe('Trade Routes Integration', () => {
       });
 
       const response = await request(app)
-        .post('/api/trade/order')
+        .post('/api/v1/trade/order')
         .set('Authorization', 'Bearer valid-token')
         .send({ pair: 'BTC/USDT', side: 'buy', price: 44000, quantity: 0.1 });
 
@@ -388,7 +388,7 @@ describe('Trade Routes Integration', () => {
 
     it('should return 400 for missing fields', async () => {
       const response = await request(app)
-        .post('/api/trade/order')
+        .post('/api/v1/trade/order')
         .set('Authorization', 'Bearer valid-token')
         .send({ pair: 'BTC/USDT' }); // missing side, price, quantity
 
@@ -398,7 +398,7 @@ describe('Trade Routes Integration', () => {
 
     it('should return 400 for invalid side', async () => {
       const response = await request(app)
-        .post('/api/trade/order')
+        .post('/api/v1/trade/order')
         .set('Authorization', 'Bearer valid-token')
         .send({ pair: 'BTC/USDT', side: 'invalid', price: 44000, quantity: 0.1 });
 
@@ -412,7 +412,7 @@ describe('Trade Routes Integration', () => {
       mockTradeService.cancelOrder.mockResolvedValue(undefined);
 
       const response = await request(app)
-        .delete('/api/trade/order/order-123')
+        .delete('/api/v1/trade/order/order-123')
         .set('Authorization', 'Bearer valid-token');
 
       expect(response.status).toBe(200);
@@ -426,7 +426,7 @@ describe('Trade Routes Integration', () => {
       );
 
       const response = await request(app)
-        .delete('/api/trade/order/invalid-order')
+        .delete('/api/v1/trade/order/invalid-order')
         .set('Authorization', 'Bearer valid-token');
 
       expect(response.status).toBe(400);
@@ -441,7 +441,7 @@ describe('Trade Routes Integration', () => {
       ]);
 
       const response = await request(app)
-        .get('/api/trade/orders')
+        .get('/api/v1/trade/orders')
         .set('Authorization', 'Bearer valid-token');
 
       expect(response.status).toBe(200);
@@ -455,7 +455,7 @@ describe('Trade Routes Integration', () => {
       ]);
 
       const response = await request(app)
-        .get('/api/trade/orders?status=open')
+        .get('/api/v1/trade/orders?status=open')
         .set('Authorization', 'Bearer valid-token');
 
       expect(response.status).toBe(200);

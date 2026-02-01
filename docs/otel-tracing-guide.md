@@ -338,6 +338,50 @@ console.log('[CONSUMER] Extracted:', parentContext.getValue(trace.spanContextKey
 | Broken chain | `propagation.inject()` not called | Inject before sending message |
 | Different trace IDs | `propagation.extract()` failed | Check headers format |
 | CORS errors | `traceparent` not allowed | Add to CORS headers |
+| Intermittent orphan traces | Auto-instrumentation context loss | Use explicit `propagation.extract()` |
+
+### Express Async Handler Context Loss (Critical Bug)
+
+> [!CAUTION]
+> OpenTelemetry's HTTP auto-instrumentation may **intermittently fail** to provide active context in async Express handlers. This causes 75%+ of requests to create orphan traces.
+
+**Symptom**: `trace.getActiveSpan()` returns `undefined` in Express route handlers even when `traceparent` header is present. Some requests work, others create disconnected traces.
+
+**Root Cause**: The Node.js OTEL auto-instrumentation relies on async local storage to track context. In certain async patterns (Promises, circuit breakers, middleware chains), context can be lost before your handler code executes.
+
+**Fix**: Explicitly extract and activate context in route handlers:
+
+```typescript
+// server/api/routes.ts - Order endpoint
+app.post("/api/v1/orders", async (req: Request, res: Response) => {
+  // CRITICAL: Explicitly extract trace context from HTTP headers
+  const { propagation, context, trace } = await import('@opentelemetry/api');
+  
+  // Extract trace context from incoming request
+  const extractedContext = propagation.extract(context.active(), req.headers);
+  
+  // Execute ENTIRE request handling within extracted context
+  return context.with(extractedContext, async () => {
+    // Now trace.getActiveSpan() will reliably return the HTTP span
+    const activeSpan = trace.getActiveSpan();
+    console.log('Active trace:', activeSpan?.spanContext().traceId);  // Always works!
+    
+    // Call services within this context block
+    const result = await orderService.submitOrder(data);
+    res.json(result);
+  });
+});
+```
+
+**Key Points**:
+1. Use `propagation.extract(context.active(), req.headers)` to parse `traceparent`
+2. Wrap handler with `context.with(extractedContext, async () => { ... })`
+3. All downstream calls (services, database, RabbitMQ) will inherit this context
+
+**Also applies to**:
+- Circuit breakers wrapping async functions
+- Promise constructors (capture context BEFORE `new Promise()`)
+- Callback-based async operations
 
 ---
 
@@ -371,3 +415,52 @@ tracer.startSpan('name', { kind: SpanKind.CONSUMER }, ctx);
 | [payment-processor/index.ts](file:///c:/Users/bizai/Documents/GitHub/OtelE2E/payment-processor/index.ts) | RabbitMQ context extraction |
 | [tracing.ts](file:///c:/Users/bizai/Documents/GitHub/OtelE2E/client/src/lib/tracing.ts) | Client trace ID generation |
 | [enable-kong-otel.js](file:///c:/Users/bizai/Documents/GitHub/OtelE2E/scripts/enable-kong-otel.js) | Kong plugin configuration |
+
+---
+
+## 9. Kong OTEL Plugin: Stale Config Hazard
+
+> [!CAUTION]
+> Kong Admin API PATCH operations **do not remove old configuration fields**. Updating the OTEL plugin with PATCH can leave stale config that breaks context propagation.
+
+### Symptom
+- Spans appear in the same trace but are **not in proper parent-child hierarchy**
+- `kx-exchange` spans reference a parent span ID that doesn't exist in the trace
+- Kong OTEL config shows unexpected fields like `propagation: { extract: [...] }` or `headers: { traceparent: 'preserve' }`
+
+### Root Cause
+Previous PATCH operations accumulated extra config fields that weren't overwritten by subsequent updates. The conflicting config causes Kong to misbehave with header injection.
+
+### Fix: Delete and Recreate Plugin
+
+```powershell
+# 1. Get current plugin ID
+$plugins = Invoke-RestMethod -Uri "http://localhost:8001/plugins"
+$otel = $plugins.data | Where-Object { $_.name -eq 'opentelemetry' }
+
+# 2. Delete the old plugin
+Invoke-RestMethod -Uri "http://localhost:8001/plugins/$($otel.id)" -Method DELETE
+
+# 3. Recreate with clean config
+node scripts/enable-kong-otel.js
+```
+
+### Verification
+After recreation, verify config is clean:
+
+```powershell
+$plugins = Invoke-RestMethod -Uri "http://localhost:8001/plugins"
+$otel = $plugins.data | Where-Object { $_.name -eq 'opentelemetry' }
+$otel.config | ConvertTo-Json
+```
+
+Expected output should show:
+- `header_type: "w3c"` ✓
+- `headers: null` (no stale values)
+- `propagation.extract: null` (no stale values)
+
+### Proper Trace Hierarchy
+
+When context propagation is working correctly, traces show a clean parent-child hierarchy with all services connected:
+
+![Proper trace hierarchy with api-gateway as parent of kx-exchange](images/proper-trace-hierarchy.png)

@@ -151,3 +151,71 @@ export interface BaselinesResponse {
     baselines: SpanBaseline[];
     spanCount: number;
 }
+
+// ============================================
+// AMOUNT ANOMALY DETECTION (Whale Detection)
+// ============================================
+
+// Operation types for amount tracking
+export type AmountOperationType = 'BUY' | 'SELL' | 'TRANSFER' | 'DEPOSIT' | 'WITHDRAW';
+
+// Baseline statistics for transaction amounts
+export interface AmountBaseline {
+    key: string;              // "BUY:BTC" or "TRANSFER:USD"
+    operationType: AmountOperationType;
+    asset: string;            // 'BTC', 'USD', 'ETH'
+    mean: number;             // Average amount
+    stdDev: number;           // Standard deviation
+    variance: number;         // For Welford's algorithm
+    p50: number;              // Median
+    p95: number;              // 95th percentile
+    p99: number;              // 99th percentile
+    min: number;
+    max: number;
+    sampleCount: number;
+    lastUpdated: Date;
+}
+
+// Amount anomaly (detected whale transaction or system failure)
+export interface AmountAnomaly {
+    id: string;
+    orderId?: string;
+    transferId?: string;
+    traceId?: string;
+    userId: string;
+    operationType: AmountOperationType;
+    asset: string;
+    amount: number;           // Raw amount
+    dollarValue: number;      // Calculated USD value
+    expectedMean: number;     // Baseline mean
+    expectedStdDev: number;   // Baseline stdDev
+    deviation: number;        // Z-score (σ from mean)
+    severity: SeverityLevel;  // SEV 1-5
+    severityName: string;     // "Critical", "Major", etc.
+    timestamp: Date;
+    // Context
+    reason: string;           // Human-readable explanation
+}
+
+// Whale detection thresholds (tuned for 6 orders of magnitude)
+// More relaxed than duration thresholds - looking for massive outliers
+export const WHALE_THRESHOLDS = {
+    sev5: 3.0,   // ~99.7th percentile - Large whale
+    sev4: 4.0,   // ~99.99th percentile - Very large whale
+    sev3: 5.0,   // ~99.9999th percentile - Mega whale
+    sev2: 6.0,   // 6 σ - System anomaly suspected
+    sev1: 7.0,   // 7 σ - Critical: System failure (like Alice's $7T)
+} as const;
+
+// API Response for amount anomalies
+export interface AmountAnomaliesResponse {
+    active: AmountAnomaly[];
+    recentCount: number;
+    enabled: boolean;
+}
+
+export interface AmountBaselinesResponse {
+    baselines: AmountBaseline[];
+    operationCount: number;
+}
+

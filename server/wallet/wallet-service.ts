@@ -93,15 +93,13 @@ export const walletService = {
                 const balance = INITIAL_BALANCES[asset] || 0;
 
                 const result = await client.query(
-                    `INSERT INTO wallets (user_id, asset, balance, available, locked)
-                     VALUES ($1, $2, $3, $3, 0)
+                    `INSERT INTO wallets (user_id, asset, balance, available, locked, address)
+                     VALUES ($1, $2, $3, $3, 0, $4)
                      RETURNING *`,
-                    [userId, asset, balance]
+                    [userId, asset, balance, kxAddress]
                 );
 
-                // Add the kx1 address to the wallet object
-                const wallet = { ...result.rows[0], address: kxAddress };
-                wallets.push(wallet);
+                wallets.push(result.rows[0]);
 
                 // Log bonus transaction if balance > 0
                 if (balance > 0) {
@@ -169,9 +167,8 @@ export const walletService = {
             [dbUserId]
         );
 
-        // Add kx1 address to each wallet
-        const kxAddress = await this.getKXAddress(userId);
-        return result.rows.map(w => ({ ...w, address: kxAddress }));
+        // Address is now stored in DB, no fallback needed
+        return result.rows;
     },
 
     /**
@@ -550,6 +547,7 @@ export const walletService = {
 
     /**
      * Update absolute balance for a wallet
+     * Uses upsert pattern - creates wallet if it doesn't exist
      * Replaces storage.updateWallet()
      */
     async updateBalance(userId: string, asset: string, newBalance: number): Promise<boolean> {
@@ -559,15 +557,18 @@ export const walletService = {
             return false;
         }
 
+        // Use upsert pattern - insert if not exists, update if exists
         const result = await db.query(
-            `UPDATE wallets SET balance = $1, available = $1, updated_at = NOW()
-             WHERE user_id = $2 AND asset = $3
+            `INSERT INTO wallets (user_id, asset, balance, available, locked, updated_at)
+             VALUES ($1, $2, $3, $3, 0, NOW())
+             ON CONFLICT (user_id, asset) DO UPDATE SET
+             balance = $3, available = $3, updated_at = NOW()
              RETURNING id`,
-            [newBalance, resolvedId, asset.toUpperCase()]
+            [resolvedId, asset.toUpperCase(), newBalance]
         );
 
         if (result.rows.length === 0) {
-            logger.warn({ userId, asset }, 'Wallet not found for balance update');
+            logger.warn({ userId, asset }, 'Failed to upsert wallet balance');
             return false;
         }
 

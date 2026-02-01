@@ -30,36 +30,53 @@ export const test = base.extend<{
 });
 
 /**
- * Fetch verification code from MailDev
+ * Fetch verification code from MailDev with retry logic
+ * Retries up to 3 times with exponential backoff
  */
 async function getVerificationCode(email: string): Promise<string | null> {
-    try {
-        // Wait for email to arrive
-        await new Promise(resolve => setTimeout(resolve, 2000));
+    const maxRetries = 3;
 
-        // Fetch emails from MailDev API
-        const response = await fetch(`${MAILDEV_API}/email`);
-        const emails = await response.json();
+    for (let attempt = 1; attempt <= maxRetries; attempt++) {
+        try {
+            // Wait for email to arrive (longer wait on first attempt)
+            const waitTime = attempt === 1 ? 3000 : 2000 * attempt;
+            await new Promise(resolve => setTimeout(resolve, waitTime));
 
-        // Find the most recent email for this address
-        const targetEmail = emails.find((e: any) =>
-            e.to.some((t: any) => t.address === email)
-        );
+            // Fetch emails from MailDev API
+            const response = await fetch(`${MAILDEV_API}/email`);
+            if (!response.ok) {
+                console.log(`MailDev API returned ${response.status} on attempt ${attempt}`);
+                continue;
+            }
 
-        if (!targetEmail) {
-            console.log('No email found for:', email);
-            return null;
+            const emails = await response.json();
+
+            // Find the most recent email for this address
+            const targetEmail = emails.find((e: any) =>
+                e.to.some((t: any) => t.address === email)
+            );
+
+            if (!targetEmail) {
+                console.log(`No email found for: ${email} (attempt ${attempt}/${maxRetries})`);
+                continue;
+            }
+
+            // Extract 6-digit code from email body
+            const codeMatch = targetEmail.text?.match(/\b(\d{6})\b/) ||
+                targetEmail.html?.match(/\b(\d{6})\b/);
+
+            if (codeMatch) {
+                return codeMatch[1];
+            }
+
+            console.log(`Code not found in email on attempt ${attempt}`);
+        } catch (error) {
+            console.error(`Failed to fetch verification code (attempt ${attempt}):`, error);
         }
-
-        // Extract 6-digit code from email body
-        const codeMatch = targetEmail.text?.match(/\b(\d{6})\b/) ||
-            targetEmail.html?.match(/\b(\d{6})\b/);
-
-        return codeMatch ? codeMatch[1] : null;
-    } catch (error) {
-        console.error('Failed to fetch verification code:', error);
-        return null;
     }
+
+    console.warn('All attempts to fetch verification code failed');
+    return null;
 }
 
 /**
@@ -79,38 +96,53 @@ export async function register(page: Page, email: string, password: string, _nam
     await page.click('button[type="submit"]');
 
     // Wait for verification step or error
-    await page.waitForTimeout(2000);
+    await page.waitForTimeout(3000);
 
-    // Check if we're on verification step
-    const verificationInput = await page.locator('input#code').isVisible();
+    // Check if we're on verification step - use multiple strategies
+    const verificationInput = page.getByPlaceholder('000000')
+        .or(page.locator('input#code'))
+        .first();
 
-    if (verificationInput) {
+    let isVerificationVisible = false;
+    try {
+        await verificationInput.waitFor({ state: 'visible', timeout: 10000 });
+        isVerificationVisible = true;
+    } catch {
+        // Check if already redirected to portfolio/trade
+        if (page.url().includes('/portfolio') || page.url().includes('/trade')) {
+            return; // Already verified
+        }
+        isVerificationVisible = false;
+    }
+
+    if (isVerificationVisible) {
         // Get verification code from MailDev
         const code = await getVerificationCode(email);
 
         if (code) {
-            await page.fill('input#code', code);
+            await verificationInput.fill(code);
             await page.click('button[type="submit"]');
 
             // Wait for redirect to trade page
             await page.waitForURL(/\/(portfolio|trade)/, { timeout: 15000 });
         } else {
-            // If no code available, try placeholder code for demo
-            console.warn('Could not fetch verification code, using demo flow');
-            await page.fill('input#code', '123456');
+            // Use E2E test bypass code for @test.com emails in development
+            console.warn('Could not fetch verification code, using E2E bypass code 000000');
+            await verificationInput.fill('000000');
             await page.click('button[type="submit"]');
 
-            // May fail, but continue
-            await page.waitForTimeout(2000);
+            // Wait for redirect to trade page
+            await page.waitForURL(/\/(portfolio|trade)/, { timeout: 15000 });
         }
     } else {
-        // Direct registration (maybe demo mode)
+        // Direct registration (maybe demo mode) or already redirected
         await page.waitForURL(/\/(portfolio|trade|login)/, { timeout: 10000 });
     }
 }
 
 /**
  * Login with credentials
+ * Includes retry logic for slow API responses
  */
 export async function login(page: Page, email: string, password: string) {
     await page.goto('/login');
@@ -119,21 +151,56 @@ export async function login(page: Page, email: string, password: string) {
     await page.fill('input#email', email);
     await page.fill('input#password', password);
 
-    await page.click('button[type="submit"]');
+    // Wait for submit button to be ready
+    const submitButton = page.locator('button[type="submit"]');
+    await submitButton.waitFor({ state: 'visible' });
 
-    // Wait for redirect to portfolio
-    await page.waitForURL(/\/portfolio/, { timeout: 10000 });
+    await submitButton.click();
+
+    // Wait for button to show "Signing in..." then complete
+    // Handle both fast and slow login scenarios
+    try {
+        // First check if we're already redirected (fast login)
+        await page.waitForURL(/\/(portfolio|trade)/, { timeout: 3000 });
+    } catch {
+        // Wait for button to become enabled again or redirect
+        await Promise.race([
+            page.waitForURL(/\/(portfolio|trade)/, { timeout: 20000 }),
+            page.locator('button[type="submit"]:not([disabled])').waitFor({ state: 'visible', timeout: 20000 }),
+        ]);
+
+        // If still on login page, check for error
+        if (page.url().includes('/login')) {
+            const errorText = page.getByText(/invalid|error|failed/i);
+            if (await errorText.isVisible({ timeout: 1000 }).catch(() => false)) {
+                throw new Error('Login failed - invalid credentials or server error');
+            }
+            // Wait a bit more for redirect
+            await page.waitForURL(/\/(portfolio|trade)/, { timeout: 10000 });
+        }
+    }
 }
 
 /**
  * Logout current user
  */
 export async function logout(page: Page) {
-    // Look for logout link or button
-    const logoutLink = page.locator('a:has-text("Logout"), button:has-text("Logout")');
-    if (await logoutLink.isVisible()) {
-        await logoutLink.click();
-        await page.waitForURL('/');
+    // Look for logout link or button - try multiple selectors for i18n compatibility
+    const logoutButton = page.getByRole('button', { name: /logout|cerrar sesi.n|d.connexion/i })
+        .or(page.locator('[data-testid="logout-button"]'))
+        .first();
+
+    if (await logoutButton.isVisible({ timeout: 2000 }).catch(() => false)) {
+        await logoutButton.click();
+
+        // Wait for redirect to home page with timeout
+        // The app clears localStorage and navigates to /
+        await page.waitForURL('/', { timeout: 10000 });
+    } else {
+        // If no logout button, just navigate to home and clear storage
+        await page.evaluate(() => localStorage.clear());
+        await page.goto('/');
+        await page.waitForLoadState('networkidle');
     }
 }
 

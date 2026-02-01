@@ -2,38 +2,43 @@
  * History Store Tests
  * 
  * Tests for the monitor history persistence store.
+ * Now using PostgreSQL via Drizzle ORM.
  */
 
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import type { SpanBaseline, Anomaly, AnalysisResponse } from '../../server/monitor/types';
+import type { SpanBaseline, Anomaly, AnalysisResponse, TimeBaseline } from '../../server/monitor/types';
 
-// Mock fs and path before importing
-vi.mock('fs', () => ({
-    existsSync: vi.fn(() => true),
-    mkdirSync: vi.fn(),
-    readFileSync: vi.fn(() => JSON.stringify({
-        baselines: [],
-        anomalies: [],
-        analyses: [],
-        timeBaselines: [],
-        lastUpdated: new Date().toISOString()
-    })),
-    writeFileSync: vi.fn(),
-}));
+// Use vi.hoisted for mock references that need to be available before imports
+const mocks = vi.hoisted(() => {
+    return {
+        insert: vi.fn(),
+        select: vi.fn(),
+    };
+});
 
-vi.mock('path', () => ({
-    join: vi.fn((...args) => args.join('/')),
-}));
-
+// Mock logger first
 vi.mock('../../server/lib/logger', () => ({
-    createLogger: vi.fn(() => ({
+    createLogger: () => ({
         info: vi.fn(),
         warn: vi.fn(),
         error: vi.fn(),
         debug: vi.fn(),
-    }))
+    })
 }));
 
+// Mock drizzle DB
+vi.mock('../../server/db/drizzle', () => ({
+    drizzleDb: mocks
+}));
+
+// Mock schema
+vi.mock('../../server/db/schema', () => ({
+    spanBaselines: { spanKey: 'span_key' },
+    timeBaselines: { spanKey: 'span_key', dayOfWeek: 'day', hourOfDay: 'hour' },
+    anomalies: { createdAt: 'created_at', service: 'service' },
+}));
+
+// Import after mocks
 import { HistoryStore } from '../../server/monitor/history-store';
 
 describe('HistoryStore', () => {
@@ -41,6 +46,34 @@ describe('HistoryStore', () => {
 
     beforeEach(() => {
         vi.clearAllMocks();
+
+        // Setup mock chain for insert
+        const mockOnConflictDoUpdate = vi.fn().mockResolvedValue([]);
+        const mockOnConflictDoNothing = vi.fn().mockResolvedValue([]);
+        const mockValues = vi.fn().mockReturnValue({
+            onConflictDoUpdate: mockOnConflictDoUpdate,
+            onConflictDoNothing: mockOnConflictDoNothing,
+        });
+        mocks.insert.mockReturnValue({
+            values: mockValues,
+        });
+
+        // Setup mock chain for select
+        const mockLimit = vi.fn().mockResolvedValue([]);
+        const mockOrderBy = vi.fn().mockReturnValue({ limit: mockLimit });
+        const mockWhere = vi.fn().mockReturnValue({
+            orderBy: mockOrderBy,
+            limit: mockLimit,
+        });
+        const mockFrom = vi.fn().mockReturnValue({
+            where: mockWhere,
+            orderBy: mockOrderBy,
+            limit: mockLimit,
+        });
+        mocks.select.mockReturnValue({
+            from: mockFrom,
+        });
+
         store = new HistoryStore();
     });
 
@@ -56,16 +89,14 @@ describe('HistoryStore', () => {
             expect(store).toBeDefined();
         });
 
-        it('should start auto-save interval', () => {
+        it('should start without error', () => {
             store.start();
-            // Should not throw
             expect(store).toBeDefined();
         });
 
-        it('should stop and save on stop()', () => {
+        it('should stop without error', () => {
             store.start();
             store.stop();
-            // Should not throw
             expect(store).toBeDefined();
         });
     });
@@ -74,7 +105,7 @@ describe('HistoryStore', () => {
     // Baseline Operations
     // ============================================
     describe('Baseline Operations', () => {
-        it('should update baselines', () => {
+        it('should update baselines via database', async () => {
             const baselines: SpanBaseline[] = [
                 {
                     service: 'kx-wallet',
@@ -93,16 +124,14 @@ describe('HistoryStore', () => {
                 }
             ];
 
-            store.updateBaselines(baselines);
-            
-            const retrieved = store.getBaselines();
-            expect(retrieved).toHaveLength(1);
-            expect(retrieved[0].service).toBe('kx-wallet');
+            await store.updateBaselines(baselines);
+            expect(mocks.insert).toHaveBeenCalled();
         });
 
-        it('should get baselines', () => {
-            const baselines = store.getBaselines();
+        it('should get baselines from database', async () => {
+            const baselines = await store.getBaselines();
             expect(Array.isArray(baselines)).toBe(true);
+            expect(mocks.select).toHaveBeenCalled();
         });
     });
 
@@ -126,87 +155,41 @@ describe('HistoryStore', () => {
             attributes: {}
         });
 
-        it('should add anomaly', () => {
+        it('should add anomaly to database', async () => {
             const anomaly = createAnomaly('a1', 'kx-wallet');
-            store.addAnomaly(anomaly);
-
-            const history = store.getAnomalyHistory();
-            expect(history.some(a => a.id === 'a1')).toBe(true);
+            await store.addAnomaly(anomaly);
+            expect(mocks.insert).toHaveBeenCalled();
         });
 
-        it('should not add duplicate anomaly', () => {
-            const anomaly = createAnomaly('dup-1', 'kx-wallet');
-            store.addAnomaly(anomaly);
-            store.addAnomaly(anomaly);
-
-            const history = store.getAnomalyHistory();
-            const duplicates = history.filter(a => a.id === 'dup-1');
-            expect(duplicates.length).toBe(1);
+        it('should get anomaly history from database', async () => {
+            const history = await store.getAnomalyHistory();
+            expect(Array.isArray(history)).toBe(true);
+            expect(mocks.select).toHaveBeenCalled();
         });
 
-        it('should filter anomalies by hours', () => {
-            const recentAnomaly = createAnomaly('recent', 'kx-wallet');
-            store.addAnomaly(recentAnomaly);
-
-            const history = store.getAnomalyHistory({ hours: 1 });
-            expect(history.some(a => a.id === 'recent')).toBe(true);
-        });
-
-        it('should filter anomalies by service', () => {
-            store.addAnomaly(createAnomaly('wallet-1', 'kx-wallet'));
-            store.addAnomaly(createAnomaly('exchange-1', 'kx-exchange'));
-
-            const walletHistory = store.getAnomalyHistory({ service: 'kx-wallet' });
-            expect(walletHistory.every(a => a.service === 'kx-wallet')).toBe(true);
-        });
-
-        it('should limit anomaly results', () => {
-            for (let i = 0; i < 10; i++) {
-                store.addAnomaly(createAnomaly(`limit-${i}`, 'kx-wallet'));
-            }
-
-            const limited = store.getAnomalyHistory({ limit: 5 });
-            expect(limited.length).toBeLessThanOrEqual(5);
-        });
-
-        it('should sort anomalies by timestamp descending', () => {
-            const older = createAnomaly('older', 'kx-wallet');
-            older.timestamp = new Date(Date.now() - 60000);
-            
-            const newer = createAnomaly('newer', 'kx-wallet');
-            newer.timestamp = new Date();
-
-            store.addAnomaly(older);
-            store.addAnomaly(newer);
-
-            const history = store.getAnomalyHistory();
-            if (history.length >= 2) {
-                const newerIdx = history.findIndex(a => a.id === 'newer');
-                const olderIdx = history.findIndex(a => a.id === 'older');
-                expect(newerIdx).toBeLessThan(olderIdx);
-            }
+        it('should support filter options', async () => {
+            await store.getAnomalyHistory({ hours: 1 });
+            await store.getAnomalyHistory({ service: 'kx-wallet' });
+            await store.getAnomalyHistory({ limit: 5 });
+            expect(mocks.select).toHaveBeenCalledTimes(3);
         });
     });
 
     // ============================================
-    // Analysis Operations
+    // Analysis Operations (in-memory cache)
     // ============================================
     describe('Analysis Operations', () => {
-        it('should add analysis', () => {
+        it('should add analysis to cache', () => {
             const analysis: AnalysisResponse = {
                 traceId: 'trace-1',
-                anomalyId: 'anomaly-1',
                 summary: 'Test analysis',
-                rootCause: 'Database connection timeout',
-                recommendations: ['Check connection pool', 'Review query performance'],
-                confidence: 0.85,
-                model: 'llama3.2:1b',
-                processingTimeMs: 1500,
-                timestamp: new Date()
+                possibleCauses: ['Database timeout'],
+                recommendations: ['Check connection pool'],
+                confidence: 'high',
+                analyzedAt: new Date()
             };
 
             store.addAnalysis(analysis);
-
             const cached = store.getAnalysis('trace-1');
             expect(cached?.summary).toBe('Test analysis');
         });
@@ -221,37 +204,17 @@ describe('HistoryStore', () => {
     // Hourly Trend
     // ============================================
     describe('Hourly Trend', () => {
-        it('should return hourly trend data', () => {
-            const trend = store.getHourlyTrend(24);
-
+        it('should return hourly trend data', async () => {
+            const trend = await store.getHourlyTrend(24);
             expect(Array.isArray(trend)).toBe(true);
         });
 
-        it('should include count and critical fields', () => {
-            // Add some anomalies first
-            store.addAnomaly({
-                id: 'trend-1',
-                traceId: 'trace-1',
-                spanId: 'span-1',
-                service: 'kx-wallet',
-                operation: 'test',
-                duration: 500,
-                expectedMean: 100,
-                expectedStdDev: 30,
-                deviation: 5,
-                severity: 1,
-                severityName: 'Critical',
-                timestamp: new Date(),
-                attributes: {}
-            });
-
-            const trend = store.getHourlyTrend(1);
-
-            if (trend.length > 0) {
-                expect(trend[0]).toHaveProperty('hour');
-                expect(trend[0]).toHaveProperty('count');
-                expect(trend[0]).toHaveProperty('critical');
-            }
+        it('should include hour, count, and critical fields', async () => {
+            const trend = await store.getHourlyTrend(1);
+            expect(trend.length).toBeGreaterThan(0);
+            expect(trend[0]).toHaveProperty('hour');
+            expect(trend[0]).toHaveProperty('count');
+            expect(trend[0]).toHaveProperty('critical');
         });
     });
 
@@ -259,8 +222,8 @@ describe('HistoryStore', () => {
     // Time Baselines
     // ============================================
     describe('Time Baselines', () => {
-        it('should update time baselines', () => {
-            const timeBaselines = [
+        it('should update time baselines via database', async () => {
+            const timeBaselines: TimeBaseline[] = [
                 {
                     spanKey: 'kx-wallet:transfer',
                     service: 'kx-wallet',
@@ -281,32 +244,14 @@ describe('HistoryStore', () => {
                 }
             ];
 
-            store.setTimeBaselines(timeBaselines);
-
-            const retrieved = store.getTimeBaselines();
-            expect(retrieved).toHaveLength(1);
+            await store.setTimeBaselines(timeBaselines);
+            expect(mocks.insert).toHaveBeenCalled();
         });
 
-        it('should get time baselines', () => {
-            // First set some baselines
-            const timeBaselines = [
-                {
-                    spanKey: 'test:op',
-                    service: 'test',
-                    operation: 'op',
-                    dayOfWeek: 1,
-                    hourOfDay: 10,
-                    mean: 100,
-                    stdDev: 20,
-                    sampleCount: 500,
-                    thresholds: { sev5: 1.3, sev4: 1.65, sev3: 2.0, sev2: 2.6, sev1: 3.3 },
-                    lastUpdated: new Date()
-                }
-            ];
-            store.setTimeBaselines(timeBaselines);
-            
-            const baselines = store.getTimeBaselines();
+        it('should get time baselines from database', async () => {
+            const baselines = await store.getTimeBaselines();
             expect(Array.isArray(baselines)).toBe(true);
+            expect(mocks.select).toHaveBeenCalled();
         });
     });
 });

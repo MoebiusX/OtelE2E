@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { useLocation } from "wouter";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useTranslation } from "react-i18next";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -49,6 +50,7 @@ interface Session {
 
 export default function Profile() {
     const [, navigate] = useLocation();
+    const { t } = useTranslation('auth');
     const [user, setUser] = useState<UserProfile | null>(null);
     const [showPasswordForm, setShowPasswordForm] = useState(false);
     const [currentPassword, setCurrentPassword] = useState("");
@@ -71,20 +73,20 @@ export default function Profile() {
 
     // Fetch user profile
     const { data: profile, isLoading: profileLoading, refetch: refetchProfile } = useQuery<UserProfile>({
-        queryKey: ["/api/auth/profile"],
+        queryKey: ["/api/v1/auth/profile"],
         enabled: !!user,
     });
 
     // Fetch sessions
     const { data: sessions, isLoading: sessionsLoading, refetch: refetchSessions } = useQuery<Session[]>({
-        queryKey: ["/api/auth/sessions"],
+        queryKey: ["/api/v1/auth/sessions"],
         enabled: !!user,
     });
 
     // Change password mutation
     const changePasswordMutation = useMutation({
         mutationFn: async (data: { currentPassword: string; newPassword: string }) => {
-            return apiRequest("POST", "/api/auth/change-password", data);
+            return apiRequest("POST", "/api/v1/auth/change-password", data);
         },
         onSuccess: () => {
             setPasswordSuccess("Password changed successfully!");
@@ -103,7 +105,7 @@ export default function Profile() {
     // Resend verification mutation
     const resendVerificationMutation = useMutation({
         mutationFn: async () => {
-            return apiRequest("POST", "/api/auth/resend-verification");
+            return apiRequest("POST", "/api/v1/auth/resend-verification");
         },
         onSuccess: () => {
             alert("Verification email sent! Check your inbox.");
@@ -126,7 +128,7 @@ export default function Profile() {
     // Revoke all other sessions
     const revokeAllSessionsMutation = useMutation({
         mutationFn: async () => {
-            return apiRequest("POST", "/api/auth/sessions/revoke-all");
+            return apiRequest("POST", "/api/v1/auth/sessions/revoke-all");
         },
         onSuccess: () => {
             refetchSessions();
@@ -141,14 +143,15 @@ export default function Profile() {
 
     // 2FA Status Query
     const { data: twoFactorStatus, refetch: refetch2FAStatus } = useQuery<{ enabled: boolean }>({
-        queryKey: ["/api/auth/2fa/status"],
+        queryKey: ["/api/v1/auth/2fa/status"],
         enabled: !!user,
     });
 
     // 2FA Setup Mutation
     const setup2FAMutation = useMutation({
         mutationFn: async () => {
-            return apiRequest("POST", "/api/auth/2fa/setup");
+            const response = await apiRequest("POST", "/api/v1/auth/2fa/setup");
+            return response.json();  // Parse JSON from Response object
         },
         onSuccess: () => {
             setShow2FASetup(true);
@@ -162,7 +165,8 @@ export default function Profile() {
     // 2FA Verify Mutation  
     const verify2FAMutation = useMutation({
         mutationFn: async (code: string) => {
-            return apiRequest("POST", "/api/auth/2fa/verify", { code });
+            const response = await apiRequest("POST", "/api/v1/auth/2fa/verify", { code });
+            return response.json();  // Parse JSON from Response object
         },
         onSuccess: (data: any) => {
             if (data.backupCodes) {
@@ -181,7 +185,7 @@ export default function Profile() {
     // 2FA Disable Mutation
     const disable2FAMutation = useMutation({
         mutationFn: async (password: string) => {
-            return apiRequest("POST", "/api/auth/2fa/disable", { password });
+            return apiRequest("POST", "/api/v1/auth/2fa/disable", { password });
         },
         onSuccess: () => {
             refetch2FAStatus();
@@ -272,8 +276,8 @@ export default function Profile() {
                         <User className="w-10 h-10 text-cyan-400" />
                     </div>
                     <div>
-                        <h1 className="text-3xl font-bold text-cyan-100">Profile</h1>
-                        <p className="text-cyan-100/60">Manage your account and security settings</p>
+                        <h1 className="text-3xl font-bold text-cyan-100">{t('profile.title')}</h1>
+                        <p className="text-cyan-100/60">{t('profile.twoFactorDescription')}</p>
                     </div>
                 </div>
 
@@ -283,7 +287,7 @@ export default function Profile() {
                         <CardHeader>
                             <CardTitle className="text-cyan-100 flex items-center gap-2">
                                 <Mail className="w-5 h-5 text-cyan-400" />
-                                Account Information
+                                {t('profile.accountInfo')}
                             </CardTitle>
                             <CardDescription className="text-cyan-100/50">
                                 Your personal account details

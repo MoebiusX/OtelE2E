@@ -127,18 +127,18 @@ function TraceItem({ trace, onTraceViewed }: { trace: TraceData; onTraceViewed?:
 
 export function TraceViewer() {
   const { data: traces, isLoading } = useQuery<TraceData[]>({
-    queryKey: ['/api/traces'],
+    queryKey: ['/api/v1/traces'],
     refetchInterval: 3000
   });
 
   const clearMutation = useMutation({
     mutationFn: async () => {
-      return await apiRequest('DELETE', '/api/clear');
+      return await apiRequest('DELETE', '/api/v1/clear');
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['/api/traces'] });
-      queryClient.invalidateQueries({ queryKey: ['/api/orders'] });
-      queryClient.invalidateQueries({ queryKey: ['/api/wallet'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/v1/traces'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/v1/orders'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/v1/wallet'] });
     }
   });
 
@@ -213,7 +213,7 @@ export function TraceViewer() {
           </div>
           <div className="flex items-center gap-2">
             <a
-              href="http://localhost:16686"
+              href={`${import.meta.env.VITE_JAEGER_URL || 'http://localhost:16686'}`}
               target="_blank"
               rel="noopener noreferrer"
               className="flex items-center gap-1 px-3 py-1.5 bg-indigo-600/20 hover:bg-indigo-600/30 border border-indigo-500/30 rounded-lg text-sm text-indigo-300 transition-colors"
@@ -245,7 +245,7 @@ export function TraceViewer() {
             <div className="mt-4 p-4 bg-gradient-to-r from-indigo-900/30 to-purple-900/30 rounded-lg border border-indigo-500/20">
               <p className="text-sm text-indigo-200/80 mb-2">Want the full picture?</p>
               <a
-                href="http://localhost:16686"
+                href={`${import.meta.env.VITE_JAEGER_URL || 'http://localhost:16686'}`}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="flex items-center justify-center gap-2 w-full py-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg font-medium transition-colors"
