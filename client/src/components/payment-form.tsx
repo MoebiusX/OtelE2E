@@ -43,7 +43,7 @@ export function PaymentForm() {
       if (disableBrowserTrace) {
         // Use XMLHttpRequest to bypass OTEL fetch instrumentation
         // This simulates a client without OTEL - Kong will create the trace
-        const kongUrl = import.meta.env.VITE_KONG_URL || 'http://localhost:8000';
+        const kongUrl = import.meta.env.VITE_KONG_URL || '';
         return new Promise((resolve, reject) => {
           const xhr = new XMLHttpRequest();
           xhr.open('POST', `${kongUrl}/api/v1/payments`);

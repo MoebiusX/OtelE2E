@@ -166,6 +166,14 @@ router.post('/login', async (req, res) => {
 
         // Normal login response with tokens
         recordLogin('success');
+
+        // DEBUG: Log what we're returning
+        logger.info({
+            userId: result.user.id,
+            email: result.user.email,
+            userType: typeof result.user.id
+        }, 'LOGIN RESPONSE - User ID being returned');
+
         res.json({
             success: true,
             user: {

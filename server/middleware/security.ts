@@ -19,11 +19,11 @@ const logger = createLogger('security');
 
 /**
  * General API rate limiter
- * 100 requests per minute per IP
+ * 300 requests per minute per IP
  */
 export const generalRateLimiter = rateLimit({
   windowMs: 60 * 1000, // 1 minute
-  max: 100, // 100 requests per minute
+  max: 300, // 300 requests per minute
   message: {
     error: 'Too many requests',
     message: 'Please try again in a minute',
@@ -32,12 +32,12 @@ export const generalRateLimiter = rateLimit({
   standardHeaders: true, // Return rate limit info in headers
   legacyHeaders: false, // Disable X-RateLimit-* headers
   handler: (req: Request, res: Response) => {
-    logger.warn({ 
-      ip: req.ip, 
+    logger.warn({
+      ip: req.ip,
       path: req.path,
-      method: req.method 
+      method: req.method
     }, 'Rate limit exceeded');
-    
+
     res.status(429).json({
       error: 'Too many requests',
       message: 'Please try again in a minute',
@@ -48,11 +48,11 @@ export const generalRateLimiter = rateLimit({
 
 /**
  * Strict rate limiter for authentication endpoints
- * 20 requests per minute per IP (prevents brute force)
+ * 60 requests per minute per IP (prevents brute force)
  */
 export const authRateLimiter = rateLimit({
   windowMs: 60 * 1000, // 1 minute
-  max: 20, // 20 requests per minute
+  max: 60, // 60 requests per minute
   message: {
     error: 'Too many authentication attempts',
     message: 'Please try again in a minute',
@@ -61,12 +61,12 @@ export const authRateLimiter = rateLimit({
   standardHeaders: true,
   legacyHeaders: false,
   handler: (req: Request, res: Response) => {
-    logger.warn({ 
-      ip: req.ip, 
+    logger.warn({
+      ip: req.ip,
       path: req.path,
       email: req.body?.email ? `${req.body.email.substring(0, 3)}***` : undefined
     }, 'Auth rate limit exceeded');
-    
+
     res.status(429).json({
       error: 'Too many authentication attempts',
       message: 'Please try again in a minute',
@@ -77,11 +77,11 @@ export const authRateLimiter = rateLimit({
 
 /**
  * Very strict rate limiter for sensitive operations
- * 5 requests per minute (password reset, verification resend)
+ * 15 requests per minute (password reset, verification resend)
  */
 export const sensitiveRateLimiter = rateLimit({
   windowMs: 60 * 1000, // 1 minute
-  max: 5, // 5 requests per minute
+  max: 15, // 15 requests per minute
   message: {
     error: 'Too many attempts',
     message: 'Please wait before trying again',
@@ -90,11 +90,11 @@ export const sensitiveRateLimiter = rateLimit({
   standardHeaders: true,
   legacyHeaders: false,
   handler: (req: Request, res: Response) => {
-    logger.warn({ 
-      ip: req.ip, 
-      path: req.path 
+    logger.warn({
+      ip: req.ip,
+      path: req.path
     }, 'Sensitive operation rate limit exceeded');
-    
+
     res.status(429).json({
       error: 'Too many attempts',
       message: 'Please wait before trying again',
@@ -151,21 +151,21 @@ export const securityHeaders = helmet({
 export function corsMiddleware(req: Request, res: Response, next: NextFunction) {
   const allowedOrigins = config.env === 'production'
     ? [
-        // Production: only allow specific domains
-        'https://krystaline.io',
-        'https://www.krystaline.io',
-        'https://app.krystaline.io',
-      ]
+      // Production: only allow specific domains
+      'https://krystaline.io',
+      'https://www.krystaline.io',
+      'https://app.krystaline.io',
+    ]
     : [
-        // Development: allow localhost variants
-        'http://localhost:5173',
-        'http://localhost:5000',
-        'http://127.0.0.1:5173',
-        'http://127.0.0.1:5000',
-      ];
+      // Development: allow localhost variants
+      'http://localhost:5173',
+      'http://localhost:5000',
+      'http://127.0.0.1:5173',
+      'http://127.0.0.1:5000',
+    ];
 
   const origin = req.headers.origin;
-  
+
   // Check if origin is allowed
   if (origin && allowedOrigins.includes(origin)) {
     res.header('Access-Control-Allow-Origin', origin);
@@ -207,7 +207,7 @@ export function requestTimeout(timeoutMs: number = 30000) {
         ip: req.ip,
         timeoutMs,
       }, 'Request timeout');
-      
+
       if (!res.headersSent) {
         res.status(408).json({
           error: 'Request Timeout',

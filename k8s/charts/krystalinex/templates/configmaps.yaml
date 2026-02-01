@@ -1,0 +1,79 @@
+{{- if .Values.prometheus.enabled }}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "krystalinex.fullname" . }}-prometheus-config
+  labels:
+    {{- include "krystalinex.labels" . | nindent 4 }}
+data:
+  prometheus.yml: |
+    global:
+      scrape_interval: 15s
+      evaluation_interval: 15s
+
+    scrape_configs:
+      # Prometheus self-monitoring
+      - job_name: 'prometheus'
+        static_configs:
+          - targets: ['localhost:9090']
+
+      # KrystalineX Server metrics
+      - job_name: 'krystalinex-server'
+        static_configs:
+          - targets: ['{{ include "krystalinex.fullname" . }}-server:5000']
+        metrics_path: /metrics
+
+      # RabbitMQ metrics
+      - job_name: 'rabbitmq'
+        static_configs:
+          - targets: ['{{ .Release.Name }}-rabbitmq:15692']
+
+      # Kong metrics (if available)
+      - job_name: 'kong'
+        static_configs:
+          - targets: ['{{ include "krystalinex.fullname" . }}-kong:8001']
+        metrics_path: /metrics
+{{- end }}
+---
+{{- if .Values.otelCollector.enabled }}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: otel-collector-config
+  labels:
+    {{- include "krystalinex.labels" . | nindent 4 }}
+data:
+  config.yaml: |
+    receivers:
+      otlp:
+        protocols:
+          grpc:
+            endpoint: 0.0.0.0:4317
+          http:
+            endpoint: 0.0.0.0:4318
+            cors:
+              allowed_origins:
+                - "http://*"
+                - "https://*"
+              allowed_headers:
+                - "*"
+              max_age: 7200
+
+    processors:
+      batch:
+        timeout: 1s
+        send_batch_size: 1024
+
+    exporters:
+      otlp:
+        endpoint: "{{ include "krystalinex.fullname" . }}-jaeger:4317"
+        tls:
+          insecure: true
+
+    service:
+      pipelines:
+        traces:
+          receivers: [otlp]
+          processors: [batch]
+          exporters: [otlp]
+{{- end }}

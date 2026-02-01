@@ -135,17 +135,20 @@ export class PostgresStorage implements IStorage {
       for (const [name, seed] of Object.entries(SEED_WALLETS)) {
         const userId = await this.createSeedUser(client, seed.ownerId, name);
 
-        // Create wallet for user
+        // Create wallet for user - use randomUUID for wallet IDs (database expects UUID)
+        const btcWalletId = crypto.randomUUID();
+        const usdWalletId = crypto.randomUUID();
+
         await client.query(
           `INSERT INTO wallets (id, user_id, asset, balance, available, locked)
            VALUES ($1, $2, 'BTC', $3, $3, 0),
                   ($4, $2, 'USD', $5, $5, 0)
            ON CONFLICT DO NOTHING`,
           [
-            seed.walletId + '_btc',
+            btcWalletId,
             userId,
             name === 'primary' ? 15000000000 : 50000000,  // 1.5 or 0.5 BTC in satoshis
-            seed.walletId + '_usd',
+            usdWalletId,
             name === 'primary' ? 5000000 : 1000000,     // $50k or $10k in cents
           ]
         );
@@ -162,12 +165,14 @@ export class PostgresStorage implements IStorage {
   }
 
   private async createSeedUser(client: PoolClient, email: string, name: string): Promise<string> {
+    // bcrypt hash of 'Demo1234' - standard demo password for seed users
+    const passwordHash = '$2b$10$NPbWAJ.0eAlOcdmnQ.bQQe86n19kD98MKAXFuRNV7UejtQuYeqyPO';
     const { rows } = await client.query(
       `INSERT INTO users (email, password_hash, status)
-       VALUES ($1, 'seed_password_hash', 'verified')
-       ON CONFLICT (email) DO UPDATE SET email = $1
+       VALUES ($1, $2, 'verified')
+       ON CONFLICT (email) DO UPDATE SET password_hash = $2
        RETURNING id`,
-      [email]
+      [email, passwordHash]
     );
     return rows[0].id;
   }

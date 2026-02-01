@@ -41,6 +41,11 @@ export default function Login() {
                 setTempToken(data.tempToken);
                 setError("");
             } else {
+                // DEBUG: Log what we're storing
+                console.log('[Login] Login response data.user:', data.user);
+                console.log('[Login] User ID:', data.user?.id);
+                console.log('[Login] User ID type:', typeof data.user?.id);
+
                 // Normal login - store tokens and redirect
                 localStorage.setItem("accessToken", data.tokens.accessToken);
                 localStorage.setItem("refreshToken", data.tokens.refreshToken);

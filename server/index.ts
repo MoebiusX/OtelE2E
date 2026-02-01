@@ -16,7 +16,8 @@ import {
 
 import express, { type Request, Response, NextFunction } from "express";
 import { registerRoutes } from "./api/routes";
-import { setupVite, serveStatic, log } from "./vite";
+// Note: ./vite is only imported dynamically in development mode
+// to avoid requiring vite package in production
 import { kongClient } from "./services/kong-client";
 import { rabbitMQClient } from "./services/rabbitmq-client";
 import { monitorRoutes, startMonitor } from "./monitor";
@@ -147,8 +148,12 @@ app.use(corsMiddleware);
   // Setup Vite in development or serve static in production
   // This MUST come before notFoundHandler to serve SPA routes
   if (app.get("env") === "development") {
+    // Dynamic import - only loads vite package in development
+    const { setupVite } = await import("./vite");
     await setupVite(app, server);
   } else {
+    // Production: serve static files from pre-built dist (no vite dependency)
+    const { serveStatic } = await import("./static");
     serveStatic(app);
   }
 

@@ -29,6 +29,46 @@ export function registerRoutes(app: Express) {
 
   // Health check for trading services
   app.get('/api/v1/health/trading', tradingHealthCheck);
+
+  // ============================================
+  // ADMIN ENDPOINTS
+  // ============================================
+
+  // Reconnect price feed (Binance WebSocket)
+  app.post('/api/v1/admin/price-feed/reconnect', async (req: Request, res: Response) => {
+    try {
+      const { binanceFeed } = await import('../services/binance-feed');
+      binanceFeed.reconnect();
+      logger.info('Admin triggered price feed reconnect');
+      res.json({
+        success: true,
+        message: 'Price feed reconnect initiated',
+        timestamp: new Date().toISOString()
+      });
+    } catch (error) {
+      logger.error({ err: error }, 'Failed to reconnect price feed');
+      res.status(500).json({ error: 'Failed to reconnect price feed' });
+    }
+  });
+
+  // Get price feed status
+  app.get('/api/v1/admin/price-feed/status', async (req: Request, res: Response) => {
+    try {
+      const { binanceFeed } = await import('../services/binance-feed');
+      const { priceService } = await import('../services/price-service');
+      const feedStatus = binanceFeed.getStatus();
+      const priceStatus = priceService.getStatus();
+
+      res.json({
+        binanceFeed: feedStatus,
+        priceService: priceStatus,
+        timestamp: new Date().toISOString()
+      });
+    } catch (error) {
+      res.status(500).json({ error: 'Failed to get price feed status' });
+    }
+  });
+
   // ============================================
 
   // Get all verified users (for transfers)

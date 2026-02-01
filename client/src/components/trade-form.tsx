@@ -84,6 +84,8 @@ export function TradeForm({ currentUser: propUser, walletAddress: propAddress }:
             const userData = localStorage.getItem('user');
             if (userData) {
                 const parsed = JSON.parse(userData);
+                console.log('[TradeForm] User from localStorage:', parsed);
+                console.log('[TradeForm] Extracted ID:', parsed.id);
                 // Only accept UUID format - no email fallback
                 return parsed.id || null;
             }
@@ -105,7 +107,7 @@ export function TradeForm({ currentUser: propUser, walletAddress: propAddress }:
 
 
     // Fetch wallet balance for current user
-    const kongUrl = import.meta.env.VITE_KONG_URL || 'http://localhost:8000';
+    const kongUrl = import.meta.env.VITE_KONG_URL || '';
     const { data: wallet } = useQuery<WalletData>({
         queryKey: ["/api/v1/wallet", { userId: currentUser }],
         queryFn: async () => {
@@ -150,6 +152,11 @@ export function TradeForm({ currentUser: propUser, walletAddress: propAddress }:
                     parentSpan.setAttribute('order.side', data.side);
                     parentSpan.setAttribute('order.quantity', data.quantity);
                     parentSpan.setAttribute('order.pair', data.pair);
+
+                    // DEBUG: Log what we're about to send
+                    console.log('[TradeForm] Submitting order with currentUser:', currentUser);
+                    console.log('[TradeForm] currentUser type:', typeof currentUser);
+                    console.log('[TradeForm] Order payload:', { ...data, userId: currentUser });
 
                     // Route through Kong Gateway for proper API gateway tracing
                     const response = await fetch(`${kongUrl}/api/v1/orders`, {

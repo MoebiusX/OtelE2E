@@ -1,7 +1,7 @@
 import { QueryClient, QueryFunction } from "@tanstack/react-query";
 
-// Kong Gateway URL - configured via environment variable
-const KONG_URL = import.meta.env.VITE_KONG_URL || 'http://localhost:8000';
+// Kong Gateway URL - defaults to empty string (use nginx proxy) for containerized deployments
+const KONG_URL = import.meta.env.VITE_KONG_URL || '';
 
 /**
  * Get authorization headers from stored access token

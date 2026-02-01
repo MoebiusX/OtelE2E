@@ -13,10 +13,10 @@ const { Pool } = pg;
 
 const pool = new Pool({
     host: 'localhost',
-    port: 5433,
+    port: 15432,
     database: 'crypto_exchange',
     user: 'exchange',
-    password: 'exchange123',
+    password: 'CHANGE_ME',
 });
 
 const DEMO_USERS = [

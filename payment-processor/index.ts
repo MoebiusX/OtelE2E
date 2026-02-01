@@ -16,10 +16,14 @@ import { OTLPTraceExporter } from '@opentelemetry/exporter-trace-otlp-http';
 import { trace, context, SpanStatusCode, SpanKind, propagation } from '@opentelemetry/api';
 
 // Initialize OpenTelemetry
+// Note: OTEL_EXPORTER_OTLP_ENDPOINT is base URL, we need to append /v1/traces for HTTP exporter
+const otelEndpoint = process.env.OTEL_EXPORTER_OTLP_ENDPOINT || 'http://localhost:4318';
+const tracesUrl = otelEndpoint.endsWith('/v1/traces') ? otelEndpoint : `${otelEndpoint}/v1/traces`;
+
 const sdk = new NodeSDK({
     serviceName: 'kx-matcher',
     traceExporter: new OTLPTraceExporter({
-        url: process.env.OTEL_EXPORTER_OTLP_ENDPOINT || 'http://localhost:4318/v1/traces'
+        url: tracesUrl
     }),
     instrumentations: [getNodeAutoInstrumentations()]
 });
@@ -164,8 +168,9 @@ async function main() {
                         processorId: PROCESSOR_ID
                     };
 
-                    // Send response with ORIGINAL POST context (not order-matcher context)
-                    // This makes exchange-api response consumer a sibling of publish span
+                    // Send response as CHILD of order.match span (current context)
+                    // This maintains proper trace hierarchy: order.match -> order.response
+                    const currentContext = context.active();
                     const responseSpan = tracer.startSpan('order.response', {
                         kind: SpanKind.PRODUCER,
                         attributes: {
@@ -176,7 +181,7 @@ async function main() {
                             'order.status': response.status,
                             'order.fillPrice': fillPrice
                         }
-                    });
+                    }, currentContext);
 
                     // Send response with original POST context headers
                     const responseHeaders: Record<string, string> = {};
@@ -207,8 +212,9 @@ async function main() {
                     console.log(`[MATCHER] Order ${orderId} filled → response sent`);
 
                 } catch (error: unknown) {
-                    console.error(`[MATCHER] Error:`, error.message);
-                    span.setStatus({ code: SpanStatusCode.ERROR, message: error.message });
+                    const errorMessage = error instanceof Error ? error.message : String(error);
+                    console.error(`[MATCHER] Error:`, errorMessage);
+                    span.setStatus({ code: SpanStatusCode.ERROR, message: errorMessage });
                     channel.nack(msg, false, false);
                 } finally {
                     span.end();
@@ -226,7 +232,8 @@ async function main() {
         });
 
     } catch (error: unknown) {
-        console.error('[MATCHER] Failed to start:', error.message);
+        const errorMessage = error instanceof Error ? error.message : String(error);
+        console.error('[MATCHER] Failed to start:', errorMessage);
         process.exit(1);
     }
 }

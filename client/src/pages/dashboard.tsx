@@ -90,8 +90,13 @@ export default function Dashboard() {
     if (userData) {
       try {
         const parsed = JSON.parse(userData);
-        // Use email as userId since wallets are keyed by email
-        setCurrentUser(parsed.email || parsed.id || 'seed.user.primary@krystaline.io');
+        // FIXED: Use UUID as userId (not email!)
+        setCurrentUser(parsed.id || null);
+
+        if (!parsed.id) {
+          console.error('[Dashboard] No valid UUID found in user data:', parsed);
+          navigate('/login');
+        }
       } catch {
         navigate('/login');
       }
@@ -148,7 +153,7 @@ export default function Dashboard() {
   const { data: portfolio, isLoading: portfolioLoading } = useQuery<PortfolioSummary>({
     queryKey: ["/api/v1/wallet", { userId: currentUser }],
     queryFn: async () => {
-      const kongUrl = import.meta.env.VITE_KONG_URL || 'http://localhost:8000';
+      const kongUrl = import.meta.env.VITE_KONG_URL || '';
       const res = await fetch(`${kongUrl}/api/v1/wallet?userId=${currentUser}`);
       return res.json();
     },

@@ -98,9 +98,10 @@ class TraceCollector implements SpanExporter {
 
 const traceCollector = new TraceCollector();
 
-// Configure Jaeger OTLP exporter (simpler than Tempo for now)
+// Configure Jaeger OTLP exporter - use env var for K8s, fallback to localhost for dev
+const jaegerEndpoint = process.env.OTEL_EXPORTER_OTLP_ENDPOINT || 'http://localhost:4318';
 const jaegerExporter = new OTLPTraceExporter({
-  url: 'http://localhost:4318/v1/traces',
+  url: `${jaegerEndpoint}/v1/traces`,
   headers: {},
 });
 
