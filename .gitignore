@@ -8,10 +8,11 @@ package-lock.json
 
 # Environment files (may contain secrets)
 .env
-.env.*
 .env.local
 .env.*.local
-*.env
+# Allow example files (they should never contain real secrets)
+!.env.example
+!.env.*.example
 
 # Logs
 logs.txt
