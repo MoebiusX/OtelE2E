@@ -2,9 +2,9 @@ services:
   kong-database:
     image: postgres:13
     environment:
-      POSTGRES_USER: kong
-      POSTGRES_PASSWORD: kongpass
-      POSTGRES_DB: kong
+      POSTGRES_USER: ${KONG_PG_USER:-kong}
+      POSTGRES_PASSWORD: ${KONG_PG_PASSWORD:?KONG_PG_PASSWORD is required}
+      POSTGRES_DB: ${KONG_PG_DATABASE:-kong}
     ports:
       - "5432:5432"
     volumes:
@@ -30,9 +30,9 @@ services:
     environment:
       KONG_DATABASE: postgres
       KONG_PG_HOST: kong-database
-      KONG_PG_USER: kong
-      KONG_PG_PASSWORD: kongpass
-      KONG_PG_DATABASE: kong
+      KONG_PG_USER: ${KONG_PG_USER:-kong}
+      KONG_PG_PASSWORD: ${KONG_PG_PASSWORD:?KONG_PG_PASSWORD is required}
+      KONG_PG_DATABASE: ${KONG_PG_DATABASE:-kong}
     networks:
       - kong-net
     restart: on-failure
@@ -48,9 +48,9 @@ services:
     environment:
       KONG_DATABASE: postgres
       KONG_PG_HOST: kong-database
-      KONG_PG_USER: kong
-      KONG_PG_PASSWORD: kongpass
-      KONG_PG_DATABASE: kong
+      KONG_PG_USER: ${KONG_PG_USER:-kong}
+      KONG_PG_PASSWORD: ${KONG_PG_PASSWORD:?KONG_PG_PASSWORD is required}
+      KONG_PG_DATABASE: ${KONG_PG_DATABASE:-kong}
       KONG_PROXY_ACCESS_LOG: /dev/stdout
       KONG_ADMIN_ACCESS_LOG: /dev/stdout
       KONG_PROXY_ERROR_LOG: /dev/stderr
@@ -82,8 +82,8 @@ services:
   rabbitmq:
     image: rabbitmq:3.12-management
     environment:
-      RABBITMQ_DEFAULT_USER: admin
-      RABBITMQ_DEFAULT_PASS: admin123
+      RABBITMQ_DEFAULT_USER: ${RABBITMQ_USER:-admin}
+      RABBITMQ_DEFAULT_PASS: ${RABBITMQ_PASSWORD:?RABBITMQ_PASSWORD is required}
       RABBITMQ_DEFAULT_VHOST: /
     ports:
       - "5672:5672"   # AMQP port
@@ -185,9 +185,9 @@ services:
   app-database:
     image: postgres:15
     environment:
-      POSTGRES_USER: exchange
-      POSTGRES_PASSWORD: exchange123
-      POSTGRES_DB: crypto_exchange
+      POSTGRES_USER: ${DB_USER:-exchange}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:?DB_PASSWORD is required}
+      POSTGRES_DB: ${DB_NAME:-crypto_exchange}
     ports:
       - "5433:5432"  # Different port to avoid conflict with kong-database
     volumes:
@@ -221,7 +221,7 @@ services:
   postgres-exporter:
     image: prometheuscommunity/postgres-exporter:latest
     environment:
-      DATA_SOURCE_NAME: "postgresql://exchange:exchange123@app-database:5432/crypto_exchange?sslmode=disable"
+      DATA_SOURCE_NAME: "postgresql://${DB_USER:-exchange}:${DB_PASSWORD}@app-database:5432/${DB_NAME:-crypto_exchange}?sslmode=disable"
     ports:
       - "9187:9187"
     networks:
@@ -235,7 +235,7 @@ services:
   kong-postgres-exporter:
     image: prometheuscommunity/postgres-exporter:latest
     environment:
-      DATA_SOURCE_NAME: "postgresql://kong:kongpass@kong-database:5432/kong?sslmode=disable"
+      DATA_SOURCE_NAME: "postgresql://${KONG_PG_USER:-kong}:${KONG_PG_PASSWORD}@kong-database:5432/${KONG_PG_DATABASE:-kong}?sslmode=disable"
     ports:
       - "9188:9187"
     networks:
