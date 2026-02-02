@@ -137,11 +137,35 @@ class TransparencyService {
       const hasDegraded = serviceStatuses.includes('degraded');
       const overallStatus = hasOutage ? 'down' : hasDegraded ? 'degraded' : 'operational';
 
-      // Performance metrics - use defaults for now, can query Jaeger API later
+      // Performance metrics - get REAL data from span baselines or show 0 if no data
+      const baselines = await historyStore.getBaselines();
+      let p50 = 0, p95 = 0, p99 = 0;
+
+      if (baselines.length > 0) {
+        // Calculate weighted averages based on sample counts
+        let totalSamples = 0;
+        let weightedP50 = 0, weightedP95 = 0, weightedP99 = 0;
+
+        for (const b of baselines) {
+          if (b.sampleCount > 0) {
+            totalSamples += b.sampleCount;
+            weightedP50 += (b.p50 || 0) * b.sampleCount;
+            weightedP95 += (b.p95 || 0) * b.sampleCount;
+            weightedP99 += (b.p99 || 0) * b.sampleCount;
+          }
+        }
+
+        if (totalSamples > 0) {
+          p50 = Math.round(weightedP50 / totalSamples);
+          p95 = Math.round(weightedP95 / totalSamples);
+          p99 = Math.round(weightedP99 / totalSamples);
+        }
+      }
+
       const performance = {
-        p50ResponseMs: 15,  // Sub-millisecond for most requests
-        p95ResponseMs: 50,  // 95th percentile
-        p99ResponseMs: 100, // 99th percentile
+        p50ResponseMs: p50,
+        p95ResponseMs: p95,
+        p99ResponseMs: p99,
       };
 
       const status: SystemStatus = {
@@ -171,10 +195,11 @@ class TransparencyService {
   }
 
   /**
-   * Get recent public trades (anonymized)
+   * Get recent public trades (anonymized) - only includes trades with verified traces
    */
   async getPublicTrades(limit: number = 20): Promise<PublicTrade[]> {
     try {
+      // Fetch more trades than needed since we'll filter out ones without traces
       const result = await db.query(
         `SELECT 
           id,
@@ -190,13 +215,19 @@ class TransparencyService {
           created_at,
           updated_at
         FROM orders 
+        WHERE trace_id IS NOT NULL
         ORDER BY created_at DESC 
         LIMIT $1`,
-        [limit]
+        [limit * 2] // Fetch extra to account for filtered ones
       );
 
       // Validate and map database rows to PublicTrade objects
-      const publicTrades: PublicTrade[] = result.rows.map(row => {
+      const publicTrades: PublicTrade[] = [];
+
+      for (const row of result.rows) {
+        // Skip trades without trace_id
+        if (!row.trace_id) continue;
+
         // Validate database row structure
         const validatedRow = dbOrderRowSchema.parse({
           id: row.id,
@@ -213,6 +244,25 @@ class TransparencyService {
           updated_at: row.updated_at,
         });
 
+        // Try to get execution time from Jaeger
+        let executionTimeMs = 0;
+        try {
+          // Ensure trace_id is defined before querying
+          if (!validatedRow.trace_id) {
+            continue;
+          }
+          const traceData = await this.getTradeTrace(validatedRow.trace_id);
+          if (traceData && traceData.duration) {
+            executionTimeMs = traceData.duration;
+          } else {
+            // Skip trades without valid trace data in Jaeger
+            continue;
+          }
+        } catch (err) {
+          // Skip trades where trace lookup fails
+          continue;
+        }
+
         // Handle created_at as either Date or string
         const createdAt = validatedRow.created_at instanceof Date
           ? validatedRow.created_at
@@ -220,28 +270,32 @@ class TransparencyService {
 
         const trade: PublicTrade = {
           tradeId: validatedRow.id,
-          traceId: validatedRow.trace_id || undefined, // Use trace_id from database
+          traceId: validatedRow.trace_id || undefined,
           timestamp: createdAt.toISOString(),
           type: validatedRow.side === 'buy' ? 'BUY' : 'SELL',
           asset: 'BTC/USDT',
           amount: parseFloat(validatedRow.quantity),
           price: parseFloat(validatedRow.price || '0'),
-          executionTimeMs: 0, // Query from Jaeger if needed
+          executionTimeMs,
           status: validatedRow.status === 'filled' ? 'completed' : 'pending',
           aiVerified: true, // All trades go through anomaly detection
         };
 
         // Validate output matches PublicTrade schema
-        return publicTradeSchema.parse(trade);
-      });
+        publicTrades.push(publicTradeSchema.parse(trade));
 
-      logger.info({ count: publicTrades.length }, 'Retrieved public trades');
+        // Stop once we have enough verified trades
+        if (publicTrades.length >= limit) break;
+      }
+
+      logger.info({ count: publicTrades.length }, 'Retrieved public trades with verified traces');
       return publicTrades;
     } catch (error: unknown) {
       logger.error({ err: error }, 'Failed to get public trades');
       throw error;
     }
   }
+
 
   /**
    * Get transparency metrics for trust dashboard

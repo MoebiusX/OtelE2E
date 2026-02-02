@@ -227,26 +227,47 @@ Response:
 
 ## 7. Storage
 
-### Time Baselines: `data/time-baselines.json`
+### PostgreSQL Tables (Persistent)
+
+Baselines are stored in PostgreSQL for durability across restarts:
+
+- **`span_baselines`**: Global span statistics (mean, stdDev, p50/p95/p99, sampleCount)
+- **`time_baselines`**: Time-aware baselines (168 buckets: 7 days × 24 hours)
+
+### Additive Merge Strategy
+
+When recalculating baselines, new data is **merged additively** with existing baselines:
+
+```typescript
+// Weighted average based on sample counts
+const totalCount = existingCount + newCount;
+const mergedMean = (existingMean * existingCount + newMean * newCount) / totalCount;
+
+// Pooled variance formula for stdDev
+const pooledVar = existingVar * existingWeight + newVar * newWeight + 
+                  meanDiffSq * existingWeight * newWeight;
+```
+
+This ensures baselines grow over time rather than being reset on each recalculation.
+
+### Example Time Baseline
 
 ```json
-[
-  {
-    "spanKey": "exchange-api:GET",
-    "dayOfWeek": 1,
-    "hourOfDay": 14,
-    "mean": 45.2,
-    "stdDev": 12.3,
-    "sampleCount": 1250,
-    "thresholds": {
-      "sev5": 1.28,
-      "sev4": 1.65,
-      "sev3": 1.96,
-      "sev2": 2.58,
-      "sev1": 3.29
-    }
+{
+  "spanKey": "exchange-api:GET",
+  "dayOfWeek": 1,
+  "hourOfDay": 14,
+  "mean": 45.2,
+  "stdDev": 12.3,
+  "sampleCount": 1250,
+  "thresholds": {
+    "sev5": 1.28,
+    "sev4": 1.65,
+    "sev3": 1.96,
+    "sev2": 2.58,
+    "sev1": 3.29
   }
-]
+}
 ```
 
 ---

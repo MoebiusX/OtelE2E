@@ -372,6 +372,20 @@ router.get('/amount-baselines', (req, res) => {
     res.json(response);
 });
 
+/**
+ * POST /api/monitor/amount-baselines/reset
+ * Reset all amount baselines (whale detector averages)
+ */
+router.post('/amount-baselines/reset', (req, res) => {
+    logger.info('Resetting amount baselines (whale detector)');
+    const result = amountProfiler.reset();
+    res.json({
+        success: true,
+        message: `Cleared ${result.clearedCount} amount baselines`,
+        ...result
+    });
+});
+
 // ============================================
 // Business KPI Admin Dashboard Routes
 // ============================================
