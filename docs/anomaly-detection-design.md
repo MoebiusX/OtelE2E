@@ -32,7 +32,6 @@ flowchart TD
     P --> L
 ```
 
-![Baseline Calculation](images/baseline-calculation.png)
 
 > Note: SVG is available at `docs/images/baseline-calculation.svg` if you prefer vector images.
 

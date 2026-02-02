@@ -7,10 +7,11 @@
 
 import config from './config.js';
 
-const PAYMENT_API = `${config.server.url}/api/v1/payments`;
+const PAYMENT_API = `${config.server.internalUrl}/api/v1/payments`;
 const KONG_API = `${config.kong.gatewayUrl}/api/v1/payments`;
 const JAEGER_API = `${config.observability.jaegerUrl}/api`;
-const REGISTER_API = `${config.server.url}/api/v1/auth/register`;
+const REGISTER_API = `${config.server.internalUrl}/api/v1/auth/register`;
+
 
 async function delay(ms) {
     return new Promise(resolve => setTimeout(resolve, ms));
@@ -72,22 +73,47 @@ async function submitPayment(url, payload, headers = {}) {
 }
 
 /**
- * Register a test user and return their UUID
+ * Register AND verify a test user (so they get wallets created), return their UUID
  */
 async function registerTestUser(email, password = 'E2ETest123!') {
     try {
-        const response = await fetch(REGISTER_API, {
+        // Step 1: Register
+        const registerResponse = await fetch(REGISTER_API, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ email, password })
         });
-        const data = await response.json();
-        return data.user?.id || null;
+        const registerData = await registerResponse.json();
+
+        if (!registerData.user?.id) {
+            console.error('Registration failed:', registerData);
+            return null;
+        }
+
+        // Step 2: Verify email using E2E bypass code (000000 for @test.com domains)
+        // NOTE: The auth service has an E2E bypass that accepts '000000' for test emails in dev mode
+        // This creates the user's wallets with demo funds
+        const verifyUrl = REGISTER_API.replace('/register', '/verify');
+        const verifyResponse = await fetch(verifyUrl, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ email, code: '000000' })
+        });
+
+        if (!verifyResponse.ok) {
+            const verifyData = await verifyResponse.json();
+            console.error('Verification failed:', verifyData);
+            // Return user ID anyway - they exist but may not have wallets
+            return registerData.user.id;
+        }
+
+        return registerData.user.id;
     } catch (error) {
         console.error('Failed to register user:', error.message);
         return null;
     }
 }
+
 
 async function queryJaegerTraces(service, lookback = '1m') {
     const url = `${JAEGER_API}/traces?service=${service}&lookback=${lookback}&limit=10`;

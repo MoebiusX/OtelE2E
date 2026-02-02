@@ -329,12 +329,12 @@ export function TransparencyDashboard() {
 
                   {/* Service Status */}
                   <div className="mt-6 pt-6 border-t border-cyan-500/10">
-                    <div className="text-sm text-cyan-100/40 mb-3">Service Health</div>
+                    <div className="text-base text-cyan-100/50 mb-3 font-medium">Service Health</div>
                     <div className="flex gap-2 flex-wrap">
                       {status.services && Object.entries(status.services).map(([service, state]) => (
                         <span
                           key={service}
-                          className={`px-3 py-1.5 rounded-full text-xs font-medium capitalize ${state === 'operational'
+                          className={`px-3 py-1.5 rounded-full text-sm font-medium capitalize ${state === 'operational'
                             ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30'
                             : state === 'degraded'
                               ? 'bg-amber-500/20 text-amber-400 border border-amber-500/30'
@@ -349,8 +349,8 @@ export function TransparencyDashboard() {
 
                   {/* Trace Preview with Ant Swarm Animation */}
                   <div className="mt-6 pt-6 border-t border-cyan-500/10">
-                    <div className="flex items-center justify-between text-sm mb-3">
-                      <span className="text-cyan-100/40">Latest Trace Flow</span>
+                    <div className="flex items-center justify-between text-base mb-3">
+                      <span className="text-cyan-100/50 font-medium">Latest Trace Flow</span>
                       <div className="flex items-center gap-2">
                         <span className={`text-xs font-medium ${status.metrics.tradesLast24h > 1000 ? 'text-emerald-400' :
                           status.metrics.tradesLast24h > 100 ? 'text-amber-400' : 'text-cyan-400'
@@ -392,7 +392,7 @@ export function TransparencyDashboard() {
                     </div>
 
                     {/* Node labels */}
-                    <div className="flex justify-between text-xs text-cyan-100/40 mt-2 px-1">
+                    <div className="flex justify-between text-sm text-cyan-100/50 mt-2 px-1">
                       <span className="text-cyan-400">Gateway</span>
                       <span className="text-emerald-400">Exchange</span>
                       <span className="text-blue-400">Matcher</span>
@@ -475,8 +475,14 @@ export function TransparencyDashboard() {
                   <div key={service} className="flex items-center justify-between p-4 rounded-lg bg-slate-800/50 border border-slate-700/50 hover:border-cyan-500/30 transition-all duration-300 hover:shadow-lg hover:shadow-cyan-500/5">
                     <span className="font-medium capitalize text-cyan-100">{service}</span>
                     <Badge
-                      variant={state === 'operational' ? 'default' : 'destructive'}
-                      className={state === 'operational' ? 'bg-emerald-500/20 text-emerald-400 border-emerald-500/30 hover:bg-emerald-500/30' : ''}
+                      variant="default"
+                      className={
+                        state === 'operational'
+                          ? 'bg-emerald-500/20 text-emerald-400 border-emerald-500/30 hover:bg-emerald-500/30'
+                          : state === 'degraded'
+                            ? 'bg-amber-500/20 text-amber-400 border-amber-500/30 hover:bg-amber-500/30'
+                            : 'bg-red-500/20 text-red-400 border-red-500/30 hover:bg-red-500/30'
+                      }
                     >
                       {state}
                     </Badge>
@@ -486,265 +492,310 @@ export function TransparencyDashboard() {
             </CardContent>
           </Card>
 
-          {/* Why Observability Matters - Competitive Advantage */}
-          <div className="bg-gradient-to-br from-indigo-900/30 to-purple-900/30 border border-indigo-500/20 rounded-2xl p-6 sm:p-8 backdrop-blur-xl animate-in fade-in slide-in-from-bottom-4 duration-700 delay-350">
-            <div className="text-center max-w-4xl mx-auto space-y-6">
-              <div className="inline-flex items-center gap-2 bg-indigo-500/10 border border-indigo-500/20 rounded-full px-4 py-2">
-                <Shield className="h-4 w-4 text-indigo-400" />
-                <span className="text-sm font-medium text-indigo-300">Why This Matters</span>
+          {/* Why Observability Matters - Matching Live System Status Style */}
+          <div className="relative animate-in fade-in slide-in-from-bottom-4 duration-700 delay-350">
+            {/* Glowing Background Effect */}
+            <div className="absolute -inset-4 bg-gradient-to-r from-cyan-500/10 via-blue-500/10 to-indigo-500/10 rounded-3xl blur-2xl" />
+
+            <div className="relative bg-slate-900/80 backdrop-blur-2xl border border-cyan-500/20 rounded-3xl p-8 lg:p-12 shadow-2xl">
+              <div className="text-center max-w-4xl mx-auto space-y-8">
+                <div className="space-y-3">
+                  <span className="text-xs font-medium text-cyan-100/50 uppercase tracking-wider">The Difference</span>
+                  <h3 className="text-2xl sm:text-3xl font-bold text-cyan-100">
+                    Traditional Exchanges Are Opaque
+                  </h3>
+                  <p className="text-lg text-cyan-100/60 max-w-2xl mx-auto">
+                    Most platforms show you a confirmation. We show you exactly how your order was processed.
+                  </p>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6 lg:gap-8 pt-4">
+                  {/* Other Exchanges */}
+                  <div className="bg-slate-800/50 rounded-xl p-6 border border-slate-600/30 hover:border-slate-500/50 transition-colors">
+                    <div className="w-12 h-12 mx-auto mb-4 rounded-lg bg-slate-700/50 flex items-center justify-center">
+                      <Shield className="w-6 h-6 text-slate-400" />
+                    </div>
+                    <h4 className="text-lg font-medium text-slate-300 mb-4">Other Exchanges</h4>
+                    <ul className="text-base text-cyan-100/50 space-y-3 text-left">
+                      <li className="flex items-center gap-2"><span className="text-slate-500">—</span> No trace visibility</li>
+                      <li className="flex items-center gap-2"><span className="text-slate-500">—</span> Hidden execution</li>
+                      <li className="flex items-center gap-2"><span className="text-slate-500">—</span> Unexplained delays</li>
+                      <li className="flex items-center gap-2"><span className="text-slate-500">—</span> Trust us approach</li>
+                    </ul>
+                  </div>
+
+                  {/* Krystaline - Featured */}
+                  <div className="relative">
+                    {/* Glow effect behind the card */}
+                    <div className="absolute -inset-1 bg-gradient-to-r from-cyan-500/30 via-emerald-500/20 to-cyan-500/30 rounded-2xl blur-lg animate-pulse" />
+                    <div className="relative bg-gradient-to-br from-slate-800/90 to-slate-900/90 rounded-xl p-6 border-2 border-cyan-400/50 shadow-lg shadow-cyan-500/20">
+                      <div className="w-12 h-12 mx-auto mb-4 rounded-xl bg-gradient-to-br from-cyan-500/30 to-emerald-500/20 flex items-center justify-center border border-cyan-400/30">
+                        <Eye className="w-6 h-6 text-cyan-400" />
+                      </div>
+                      <h4 className="text-xl font-bold bg-gradient-to-r from-cyan-400 to-emerald-400 bg-clip-text text-transparent mb-4">Krystaline</h4>
+                      <ul className="text-base text-cyan-100 space-y-3 text-left">
+                        <li className="flex items-center gap-2"><span className="text-emerald-400 font-bold">✓</span> Full trace visibility</li>
+                        <li className="flex items-center gap-2"><span className="text-emerald-400 font-bold">✓</span> Every step auditable</li>
+                        <li className="flex items-center gap-2"><span className="text-emerald-400 font-bold">✓</span> Real-time monitoring</li>
+                        <li className="flex items-center gap-2"><span className="text-emerald-400 font-bold">✓</span> Verify, don't trust</li>
+                      </ul>
+                      <div className="text-center mt-4 pt-4 border-t border-cyan-500/20">
+                        <span className="text-xs font-medium text-cyan-400 uppercase tracking-wider">Industry First</span>
+                      </div>
+                    </div>
+                  </div>
+
+
+
+
+                  {/* Business Impact */}
+                  <div className="bg-slate-800/50 rounded-xl p-6 border border-emerald-500/20 hover:border-emerald-400/40 transition-colors">
+                    <div className="w-12 h-12 mx-auto mb-4 rounded-lg bg-emerald-500/20 flex items-center justify-center">
+                      <TrendingUp className="w-6 h-6 text-emerald-400" />
+                    </div>
+                    <h4 className="text-lg font-medium text-emerald-400 mb-4">Business Impact</h4>
+                    <ul className="text-base text-cyan-100/60 space-y-3 text-left">
+                      <li className="flex items-center gap-2"><span className="text-emerald-400">+</span> 99.9% uptime SLA</li>
+                      <li className="flex items-center gap-2"><span className="text-emerald-400">+</span> Instant issue detection</li>
+                      <li className="flex items-center gap-2"><span className="text-emerald-400">+</span> Regulatory ready</li>
+                      <li className="flex items-center gap-2"><span className="text-emerald-400">+</span> Increased user trust</li>
+                    </ul>
+                  </div>
+                </div>
+
+                <p className="text-lg text-cyan-100/60 leading-relaxed pt-4 max-w-2xl mx-auto">
+                  With <span className="font-medium text-cyan-400">Proof of Observability™</span>, every transaction is traceable end-to-end.
+                </p>
               </div>
-              <h3 className="text-2xl sm:text-3xl font-bold text-cyan-100">
-                Traditional Exchanges Are <span className="text-slate-800">Opaque</span>
-              </h3>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 sm:gap-6 pt-4">
-                <div className="bg-slate-800/50 rounded-xl p-4 sm:p-6 border border-slate-700/50">
-                  <div className="text-5xl mb-3">⚫</div>
-                  <h4 className="text-lg font-semibold text-red-400 mb-2">Other Exchanges</h4>
-                  <ul className="text-sm text-cyan-100/70 space-y-2 text-left">
-                    <li>• No trace visibility</li>
-                    <li>• Hidden execution paths</li>
-                    <li>• Unexplained delays</li>
-                    <li>• Zero transparency</li>
-                  </ul>
-                </div>
-                <div className="bg-gradient-to-br from-cyan-900/30 to-blue-900/30 rounded-xl p-4 sm:p-6 border-2 border-cyan-400/50 shadow-lg shadow-cyan-500/25 transform scale-105">
-                  <div className="text-5xl mb-3">💎</div>
-                  <h4 className="text-lg font-semibold text-cyan-400 mb-2">Krystaline</h4>
-                  <ul className="text-sm text-cyan-100 space-y-2 text-left font-medium">
-                    <li>• Full trace visibility</li>
-                    <li>• Every step auditable</li>
-                    <li>• Real-time monitoring</li>
-                    <li>• Complete transparency</li>
-                  </ul>
-                </div>
-                <div className="bg-slate-800/50 rounded-xl p-4 sm:p-6 border border-slate-700/50">
-                  <div className="text-4xl mb-3">📊</div>
-                  <h4 className="text-lg font-semibold text-emerald-400 mb-2">Business Impact</h4>
-                  <ul className="text-sm text-cyan-100/70 space-y-2 text-left">
-                    <li>• 99.9% uptime</li>
-                    <li>• Instant issue detection</li>
-                    <li>• Regulatory compliance</li>
-                    <li>• User trust +47%</li>
-                  </ul>
-                </div>
-              </div>
-              <p className="text-lg text-cyan-100/80 leading-relaxed pt-4">
-                With <span className="font-semibold text-cyan-400">Proof of Observability™</span>, every transaction is traceable end-to-end.
-                Users can verify execution paths, developers can diagnose issues in seconds, and regulators can audit with confidence.
-              </p>
             </div>
           </div>
 
-          {/* Recent Trades */}
-          <Card className="bg-gradient-to-br from-slate-900/90 to-slate-800/90 border-blue-500/20 backdrop-blur-xl animate-in fade-in slide-in-from-bottom-4 duration-700 delay-450">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2 text-cyan-100">
-                <Activity className="h-5 w-5 text-blue-400 animate-pulse" />
-                Live Trade Feed
-                <Badge className="ml-2 bg-blue-500/10 text-blue-400 border-blue-500/30 text-xs">
-                  Every trade traced
-                </Badge>
-              </CardTitle>
-              <CardDescription className="text-cyan-100/60">
-                Recent transactions with full distributed trace visibility • Click any trade to explore its execution path
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-3">
+          {/* Live Trade Feed - Matching Live System Status Style */}
+          <div className="relative animate-in fade-in slide-in-from-bottom-4 duration-700 delay-450">
+            {/* Glowing Background Effect */}
+            <div className="absolute -inset-4 bg-gradient-to-r from-cyan-500/10 via-blue-500/10 to-indigo-500/10 rounded-3xl blur-2xl" />
+
+
+            <div className="relative bg-slate-900/80 backdrop-blur-2xl border border-cyan-500/20 rounded-3xl overflow-hidden shadow-2xl">
+              {/* Header */}
+              <div className="flex items-center justify-between px-6 py-4 border-b border-cyan-500/10">
+                <div className="flex items-center gap-3">
+                  <div className="p-2 bg-cyan-500/20 rounded-lg">
+                    <Activity className="h-5 w-5 text-cyan-400" />
+                  </div>
+                  <span className="font-semibold text-cyan-100">Live Trade Feed</span>
+                  <span className="text-xs text-cyan-100/50">Click to view trace</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <div className="h-2 w-2 rounded-full bg-emerald-400 animate-pulse" />
+                  <span className="text-xs text-emerald-400 font-medium">LIVE</span>
+                </div>
+              </div>
+
+              {/* Table Header */}
+              <div className="grid grid-cols-12 gap-4 px-6 py-3 text-xs font-medium text-cyan-100/50 uppercase tracking-wider border-b border-cyan-500/10 bg-slate-800/30">
+                <div className="col-span-1">Side</div>
+                <div className="col-span-3">Amount</div>
+                <div className="col-span-3">Price</div>
+                <div className="col-span-3">Trace ID</div>
+                <div className="col-span-2 text-right">Latency</div>
+              </div>
+
+              {/* Trades list */}
+              <div className="divide-y divide-cyan-500/10">
                 {trades.map((trade, index) => (
                   <div
                     key={trade.tradeId}
-                    className="flex items-center justify-between p-4 rounded-lg bg-slate-800/50 border border-slate-700/50 hover:border-blue-500/30 transition-all duration-300 hover:shadow-lg hover:shadow-blue-500/5 animate-in fade-in slide-in-from-left duration-500 cursor-pointer group"
-                    style={{ animationDelay: `${index * 50}ms` }}
+                    className="grid grid-cols-12 gap-4 px-6 py-4 hover:bg-slate-800/40 transition-colors cursor-pointer group"
                     onClick={() => trade.traceId && window.open(getJaegerTraceUrl(trade.traceId), '_blank')}
                   >
-                    <div className="flex items-center gap-4">
-                      <Badge
-                        variant={trade.type === 'BUY' ? 'default' : 'secondary'}
-                        className={trade.type === 'BUY' ? 'bg-emerald-500/20 text-emerald-400 border-emerald-500/30' : 'bg-rose-500/20 text-rose-400 border-rose-500/30'}
-                      >
+                    {/* Side */}
+                    <div className="col-span-1 flex items-center">
+                      <span className={`text-xs font-semibold px-2 py-1 rounded ${trade.type === 'BUY'
+                        ? 'bg-emerald-500/20 text-emerald-400'
+                        : 'bg-rose-500/20 text-rose-400'
+                        }`}>
                         {trade.type}
-                      </Badge>
-                      <div>
-                        <div className="font-mono text-sm text-cyan-100 font-medium">
-                          {trade.amount.toFixed(4)} {trade.asset.split('/')[0]}
-                        </div>
-                        <div className="text-sm text-cyan-100/60">
-                          @ ${trade.price.toLocaleString()} • Trace: {trade.traceId ? trade.traceId.slice(0, 8) : trade.tradeId.slice(0, 8)}...
-                        </div>
-                      </div>
+                      </span>
                     </div>
-                    <div className="text-right">
-                      <div className="text-sm font-semibold text-amber-400">{trade.executionTimeMs}ms</div>
-                      <div className="text-sm text-cyan-100/60 flex items-center gap-1 justify-end">
-                        {trade.aiVerified && <Shield className="h-3 w-3 text-emerald-400" />}
-                        <span className={`transition-colors ${trade.traceId ? 'group-hover:text-cyan-400' : 'text-cyan-100/40'}`}>
-                          {trade.traceId ? 'View Trace →' : 'No trace'}
-                        </span>
-                      </div>
+
+                    {/* Amount */}
+                    <div className="col-span-3 flex items-center">
+                      <span className="font-mono text-sm text-cyan-100">
+                        {trade.amount.toFixed(4)} <span className="text-cyan-100/50">{trade.asset.split('/')[0]}</span>
+                      </span>
+                    </div>
+
+                    {/* Price */}
+                    <div className="col-span-3 flex items-center">
+                      <span className="font-mono text-sm text-cyan-100/80">
+                        ${trade.price.toLocaleString()}
+                      </span>
+                    </div>
+
+                    {/* Trace ID */}
+                    <div className="col-span-3 flex items-center">
+                      <span className="font-mono text-xs text-cyan-100/50 group-hover:text-cyan-400 transition-colors">
+                        {trade.traceId ? trade.traceId.slice(0, 12) : trade.tradeId.slice(0, 12)}...
+                      </span>
+                      {trade.traceId && (
+                        <span className="ml-2 text-cyan-400 opacity-0 group-hover:opacity-100 transition-opacity">→</span>
+                      )}
+                    </div>
+
+                    {/* Latency */}
+                    <div className="col-span-2 flex items-center justify-end gap-2">
+                      <span className="font-mono text-sm text-amber-400">{trade.executionTimeMs}ms</span>
+                      {trade.aiVerified && (
+                        <Shield className="h-3.5 w-3.5 text-emerald-400" />
+                      )}
                     </div>
                   </div>
                 ))}
               </div>
+
               {trades.length === 0 && (
-                <div className="text-center py-12">
-                  <div className="relative inline-block mb-4">
-                    <Activity className="h-14 w-14 text-blue-400/40" />
-                    <div className="absolute inset-0 animate-ping">
-                      <Activity className="h-14 w-14 text-blue-400/20" />
-                    </div>
-                  </div>
-                  <h4 className="text-lg font-medium text-cyan-100 mb-2">Waiting for Live Trades</h4>
-                  <p className="text-cyan-100/50 text-sm max-w-md mx-auto mb-4">
-                    Real trade data will stream here as users execute transactions. Each trade shows execution time, AI verification status, and links to full OpenTelemetry traces.
+                <div className="text-center py-12 px-6">
+                  <Activity className="h-8 w-8 text-cyan-400/50 mx-auto mb-3" />
+                  <h4 className="text-lg font-medium text-cyan-100 mb-2">Waiting for trades</h4>
+                  <p className="text-sm text-cyan-100/50">
+                    Live trade data will appear here as transactions execute.
                   </p>
-                  <div className="flex items-center justify-center gap-4 text-xs text-cyan-100/40">
-                    <span className="flex items-center gap-1">
-                      <Shield className="w-3 h-3" /> AI Verified
-                    </span>
-                    <span className="flex items-center gap-1">
-                      <Zap className="w-3 h-3" /> Sub-second
-                    </span>
-                    <span className="flex items-center gap-1">
-                      <Eye className="w-3 h-3" /> Fully Traced
-                    </span>
-                  </div>
                 </div>
               )}
-            </CardContent>
-          </Card>
-
-          {/* Performance Metrics - Show the Speed Advantage */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6 animate-in fade-in slide-in-from-bottom-4 duration-700 delay-500">
-            <Card className="bg-gradient-to-br from-slate-900/90 to-slate-800/90 border-amber-500/20 backdrop-blur-xl">
-              <CardHeader>
-                <CardTitle className="text-base flex items-center gap-2 text-cyan-100">
-                  <Zap className="h-5 w-5 text-amber-400" />
-                  Performance Transparency
-                </CardTitle>
-                <CardDescription className="text-cyan-100/60">Real metrics, not marketing promises</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-4">
-                  <div className="flex items-center justify-between">
-                    <span className="text-sm text-cyan-100/70">P50 Response Time</span>
-                    <span className="font-bold text-lg text-cyan-100">{status.performance.p50ResponseMs}ms</span>
-                  </div>
-                  <div className="w-full bg-slate-800 rounded-full h-2">
-                    <div className="bg-gradient-to-r from-emerald-500 to-cyan-500 h-2 rounded-full" style={{ width: `${Math.min((status.performance.p50ResponseMs / 100) * 100, 100)}%` }}></div>
-                  </div>
-
-                  <div className="flex items-center justify-between">
-                    <span className="text-sm text-cyan-100/70">P95 Response Time</span>
-                    <span className="font-bold text-lg text-cyan-100">{status.performance.p95ResponseMs}ms</span>
-                  </div>
-                  <div className="w-full bg-slate-800 rounded-full h-2">
-                    <div className="bg-gradient-to-r from-blue-500 to-cyan-500 h-2 rounded-full" style={{ width: `${Math.min((status.performance.p95ResponseMs / 200) * 100, 100)}%` }}></div>
-                  </div>
-
-                  <div className="flex items-center justify-between">
-                    <span className="text-sm text-cyan-100/70">P99 Response Time</span>
-                    <span className="font-bold text-lg text-amber-400">{status.performance.p99ResponseMs}ms</span>
-                  </div>
-                  <div className="w-full bg-slate-800 rounded-full h-2">
-                    <div className="bg-gradient-to-r from-amber-500 to-yellow-500 h-2 rounded-full" style={{ width: `${Math.min((status.performance.p99ResponseMs / 300) * 100, 100)}%` }}></div>
-                  </div>
-
-                  <div className="pt-3 border-t border-slate-700/50">
-                    <p className="text-xs text-cyan-100/60 leading-relaxed">
-                      All metrics collected via OpenTelemetry spans. No guesswork, no hidden data.
-                    </p>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-
-            <Card className="bg-gradient-to-br from-slate-900/90 to-slate-800/90 border-purple-500/20 backdrop-blur-xl">
-              <CardHeader>
-                <CardTitle className="text-base flex items-center gap-2 text-cyan-100">
-                  <Shield className="h-5 w-5 text-purple-400" />
-                  Observability Score
-                </CardTitle>
-                <CardDescription className="text-cyan-100/60">Industry-leading trace coverage</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-4">
-                  <div className="text-center py-6">
-                    <div className="text-6xl font-bold bg-gradient-to-r from-purple-400 via-pink-400 to-purple-400 bg-clip-text text-transparent mb-2">
-                      100%
-                    </div>
-                    <div className="text-sm text-cyan-100/70">Transaction Coverage</div>
-                  </div>
-
-                  <div className="grid grid-cols-2 gap-4 pt-4 border-t border-slate-700/50">
-                    <div className="text-center">
-                      <div className="text-2xl font-bold text-emerald-400 mb-1">
-                        {status.metrics.tradesTotal}
-                      </div>
-                      <div className="text-xs text-cyan-100/60">Traces Collected</div>
-                    </div>
-                    <div className="text-center">
-                      <div className="text-2xl font-bold text-cyan-400 mb-1">
-                        {status.metrics.anomaliesResolved || 0}
-                      </div>
-                      <div className="text-xs text-cyan-100/60">Issues Auto-Fixed</div>
-                    </div>
-                  </div>
-
-                  <div className="pt-3 border-t border-slate-700/50">
-                    <p className="text-xs text-cyan-100/60 leading-relaxed">
-                      Every microservice instrumented. Every database call traced. Every API request monitored.
-                    </p>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
+            </div>
           </div>
+
+
+
+          {/* Performance Metrics - Matching Live System Status Style */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 animate-in fade-in slide-in-from-bottom-4 duration-700 delay-500">
+            {/* Performance Card */}
+            <div className="relative">
+              <div className="absolute -inset-2 bg-gradient-to-r from-amber-500/10 via-orange-500/5 to-amber-500/10 rounded-3xl blur-xl" />
+              <div className="relative bg-slate-900/80 backdrop-blur-2xl border border-cyan-500/20 rounded-3xl p-6 shadow-2xl h-full">
+                <div className="flex items-center gap-3 mb-6">
+                  <div className="p-2 bg-amber-500/20 rounded-lg">
+                    <Zap className="h-5 w-5 text-amber-400" />
+                  </div>
+                  <div>
+                    <h3 className="text-lg font-semibold text-cyan-100">Performance Transparency</h3>
+                    <p className="text-sm text-cyan-100/50">Real metrics from OpenTelemetry</p>
+                  </div>
+                </div>
+
+                <div className="space-y-5">
+                  {/* P50 */}
+                  <div>
+                    <div className="flex items-center justify-between mb-2">
+                      <span className="text-base text-cyan-100/70">P50 Response</span>
+                      <span className="font-mono text-base font-semibold text-emerald-400">{status.performance.p50ResponseMs}ms</span>
+                    </div>
+                    <div className="h-2.5 bg-slate-800/50 rounded-full overflow-hidden">
+                      <div className="h-full bg-gradient-to-r from-emerald-500 to-cyan-500 rounded-full" style={{ width: `${Math.min((status.performance.p50ResponseMs / 100) * 100, 100)}%` }} />
+                    </div>
+                  </div>
+
+                  {/* P95 */}
+                  <div>
+                    <div className="flex items-center justify-between mb-2">
+                      <span className="text-base text-cyan-100/70">P95 Response</span>
+                      <span className="font-mono text-base font-semibold text-blue-400">{status.performance.p95ResponseMs}ms</span>
+                    </div>
+                    <div className="h-2.5 bg-slate-800/50 rounded-full overflow-hidden">
+                      <div className="h-full bg-gradient-to-r from-blue-500 to-cyan-500 rounded-full" style={{ width: `${Math.min((status.performance.p95ResponseMs / 200) * 100, 100)}%` }} />
+                    </div>
+                  </div>
+
+                  {/* P99 */}
+                  <div>
+                    <div className="flex items-center justify-between mb-2">
+                      <span className="text-base text-cyan-100/70">P99 Response</span>
+                      <span className="font-mono text-base font-semibold text-amber-400">{status.performance.p99ResponseMs}ms</span>
+                    </div>
+                    <div className="h-2.5 bg-slate-800/50 rounded-full overflow-hidden">
+                      <div className="h-full bg-gradient-to-r from-amber-500 to-yellow-500 rounded-full" style={{ width: `${Math.min((status.performance.p99ResponseMs / 300) * 100, 100)}%` }} />
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Observability Score Card */}
+            <div className="relative">
+              <div className="absolute -inset-2 bg-gradient-to-r from-cyan-500/10 via-blue-500/5 to-cyan-500/10 rounded-3xl blur-xl" />
+              <div className="relative bg-slate-900/80 backdrop-blur-2xl border border-cyan-500/20 rounded-3xl p-6 shadow-2xl h-full">
+                <div className="flex items-center gap-3 mb-6">
+                  <div className="p-2 bg-cyan-500/20 rounded-lg">
+                    <Eye className="h-5 w-5 text-cyan-400" />
+                  </div>
+                  <div>
+                    <h3 className="text-lg font-semibold text-cyan-100">Observability Score</h3>
+                    <p className="text-sm text-cyan-100/50">Full trace coverage</p>
+                  </div>
+                </div>
+
+                <div className="text-center py-4">
+                  <div className="text-6xl font-bold bg-gradient-to-r from-emerald-400 via-cyan-400 to-blue-400 bg-clip-text text-transparent">100%</div>
+                  <div className="text-base text-cyan-100/60 mt-2">Transaction Coverage</div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-4 pt-4 mt-4 border-t border-cyan-500/10">
+                  <div className="bg-slate-800/50 rounded-xl p-4 border border-blue-500/20 hover:border-blue-400/40 transition-colors text-center">
+                    <div className="text-3xl font-bold text-blue-400">{status.metrics.tradesTotal}</div>
+                    <div className="text-sm text-cyan-100/50 mt-1">Traces Collected</div>
+                  </div>
+                  <div className="bg-slate-800/50 rounded-xl p-4 border border-emerald-500/20 hover:border-emerald-400/40 transition-colors text-center">
+                    <div className="text-3xl font-bold text-emerald-400">{status.metrics.anomaliesResolved || 0}</div>
+                    <div className="text-sm text-cyan-100/50 mt-1">Issues Auto-Fixed</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+
+
 
           {/* Trust Indicators */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 sm:gap-6 animate-in fade-in slide-in-from-bottom-4 duration-700 delay-600">
-            <Card className="bg-gradient-to-br from-slate-900/90 to-slate-800/90 border-emerald-500/20 backdrop-blur-xl hover:border-emerald-400/40 transition-all duration-300 hover:shadow-lg hover:shadow-emerald-500/10">
-              <CardHeader>
-                <CardTitle className="text-base flex items-center gap-2">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 animate-in fade-in slide-in-from-bottom-4 duration-700 delay-600">
+            <div className="bg-slate-900/80 backdrop-blur-2xl border border-cyan-500/20 rounded-3xl p-6 hover:border-emerald-400/40 transition-all duration-300 shadow-2xl">
+              <div className="flex items-center gap-3 mb-4">
+                <div className="p-2 bg-emerald-500/20 rounded-lg">
                   <Shield className="h-5 w-5 text-emerald-400" />
-                  <span className="text-cyan-100">Enterprise Security</span>
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <p className="text-sm text-cyan-100/70 leading-relaxed">
-                  OpenTelemetry distributed tracing on every transaction with end-to-end encryption
-                </p>
-              </CardContent>
-            </Card>
+                </div>
+                <span className="font-semibold text-cyan-100">Enterprise Security</span>
+              </div>
+              <p className="text-sm text-cyan-100/60 leading-relaxed">
+                OpenTelemetry distributed tracing on every transaction with end-to-end encryption
+              </p>
+            </div>
 
-            <Card className="bg-gradient-to-br from-slate-900/90 to-slate-800/90 border-purple-500/20 backdrop-blur-xl hover:border-purple-400/40 transition-all duration-300 hover:shadow-lg hover:shadow-purple-500/10">
-              <CardHeader>
-                <CardTitle className="text-base flex items-center gap-2">
-                  <Zap className="h-5 w-5 text-purple-400" />
-                  <span className="text-cyan-100">AI-Powered Monitoring</span>
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <p className="text-sm text-cyan-100/70 leading-relaxed">
-                  Real-time anomaly detection with machine learning models analyzing every trace
-                </p>
-              </CardContent>
-            </Card>
+            <div className="bg-slate-900/80 backdrop-blur-2xl border border-cyan-500/20 rounded-3xl p-6 hover:border-amber-400/40 transition-all duration-300 shadow-2xl">
+              <div className="flex items-center gap-3 mb-4">
+                <div className="p-2 bg-amber-500/20 rounded-lg">
+                  <Zap className="h-5 w-5 text-amber-400" />
+                </div>
+                <span className="font-semibold text-cyan-100">AI-Powered Monitoring</span>
+              </div>
+              <p className="text-sm text-cyan-100/60 leading-relaxed">
+                Real-time anomaly detection with machine learning models analyzing every trace
+              </p>
+            </div>
 
-            <Card className="bg-gradient-to-br from-slate-900/90 to-slate-800/90 border-blue-500/20 backdrop-blur-xl hover:border-blue-400/40 transition-all duration-300 hover:shadow-lg hover:shadow-blue-500/10">
-              <CardHeader>
-                <CardTitle className="text-base flex items-center gap-2">
+            <div className="bg-slate-900/80 backdrop-blur-2xl border border-cyan-500/20 rounded-3xl p-6 hover:border-blue-400/40 transition-all duration-300 shadow-2xl">
+              <div className="flex items-center gap-3 mb-4">
+                <div className="p-2 bg-blue-500/20 rounded-lg">
                   <Eye className="h-5 w-5 text-blue-400" />
-                  <span className="text-cyan-100">Full Transparency</span>
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <p className="text-sm text-cyan-100/70 leading-relaxed">
-                  Public visibility into system health, performance metrics, and trade execution times
-                </p>
-              </CardContent>
-            </Card>
+                </div>
+                <span className="font-semibold text-cyan-100">Full Transparency</span>
+              </div>
+              <p className="text-sm text-cyan-100/60 leading-relaxed">
+                Public visibility into system health, performance metrics, and trade execution times
+              </p>
+            </div>
           </div>
+
 
           {/* Footer */}
           <div className="text-center text-sm text-cyan-100/60 pt-8 space-y-3 animate-in fade-in duration-1000 delay-1000">

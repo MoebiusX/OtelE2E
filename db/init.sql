@@ -15,6 +15,10 @@ CREATE TABLE users (
     password_hash VARCHAR(255) NOT NULL,
     status VARCHAR(20) DEFAULT 'pending' CHECK (status IN ('pending', 'verified', 'kyc_pending', 'kyc_verified', 'suspended')),
     kyc_level INTEGER DEFAULT 0 CHECK (kyc_level >= 0 AND kyc_level <= 3),
+    -- Two-Factor Authentication
+    two_factor_secret VARCHAR(64),
+    two_factor_enabled BOOLEAN DEFAULT FALSE NOT NULL,
+    two_factor_backup_codes JSONB,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
     last_login_at TIMESTAMP WITH TIME ZONE
@@ -53,6 +57,7 @@ CREATE TABLE wallets (
     balance DECIMAL(24, 8) DEFAULT 0 CHECK (balance >= 0),
     available DECIMAL(24, 8) DEFAULT 0 CHECK (available >= 0),
     locked DECIMAL(24, 8) DEFAULT 0 CHECK (locked >= 0),
+    address VARCHAR(64),  -- Krystaline Exchange wallet address (kx1...)
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
     UNIQUE(user_id, asset)
@@ -86,7 +91,7 @@ CREATE TABLE orders (
     price DECIMAL(24, 8),  -- NULL for market orders
     quantity DECIMAL(24, 8) NOT NULL,
     filled DECIMAL(24, 8) DEFAULT 0,
-    status VARCHAR(20) DEFAULT 'open' CHECK (status IN ('open', 'partial', 'filled', 'cancelled')),
+    status VARCHAR(20) DEFAULT 'open' CHECK (status IN ('pending', 'accepted', 'open', 'partial', 'filled', 'cancelled')),
     trace_id VARCHAR(64),  -- OpenTelemetry trace ID for observability
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
@@ -122,6 +127,63 @@ CREATE TABLE kyc_submissions (
 );
 
 -- ==================================
+-- Monitoring & Observability
+-- ==================================
+
+-- Span Baselines - Overall statistics per span type
+CREATE TABLE span_baselines (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    span_key VARCHAR(255) UNIQUE NOT NULL,
+    service VARCHAR(100) NOT NULL,
+    operation VARCHAR(255) NOT NULL,
+    mean DECIMAL(18, 4) NOT NULL,
+    std_dev DECIMAL(18, 4) NOT NULL,
+    variance DECIMAL(24, 8) NOT NULL,
+    p50 DECIMAL(18, 4),
+    p95 DECIMAL(18, 4),
+    p99 DECIMAL(18, 4),
+    min DECIMAL(18, 4),
+    max DECIMAL(18, 4),
+    sample_count INTEGER DEFAULT 0 NOT NULL,
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- Time Baselines - Time-bucketed statistics (168 buckets per span: 24h x 7 days)
+CREATE TABLE time_baselines (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    span_key VARCHAR(255) NOT NULL,
+    service VARCHAR(100) NOT NULL,
+    operation VARCHAR(255) NOT NULL,
+    day_of_week INTEGER NOT NULL CHECK (day_of_week >= 0 AND day_of_week <= 6),
+    hour_of_day INTEGER NOT NULL CHECK (hour_of_day >= 0 AND hour_of_day <= 23),
+    mean DECIMAL(18, 4) NOT NULL,
+    std_dev DECIMAL(18, 4) NOT NULL,
+    sample_count INTEGER DEFAULT 0 NOT NULL,
+    thresholds JSONB,
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    UNIQUE(span_key, day_of_week, hour_of_day)
+);
+
+-- Anomalies - Historical anomaly records
+CREATE TABLE anomalies (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    trace_id VARCHAR(64) NOT NULL,
+    span_id VARCHAR(64) NOT NULL,
+    service VARCHAR(100) NOT NULL,
+    operation VARCHAR(255) NOT NULL,
+    duration DECIMAL(18, 4) NOT NULL,
+    expected_mean DECIMAL(18, 4) NOT NULL,
+    expected_std_dev DECIMAL(18, 4) NOT NULL,
+    deviation DECIMAL(10, 4) NOT NULL,
+    severity INTEGER NOT NULL CHECK (severity >= 1 AND severity <= 5),
+    severity_name VARCHAR(20) NOT NULL,
+    attributes JSONB,
+    day_of_week INTEGER,
+    hour_of_day INTEGER,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- ==================================
 -- Indexes
 -- ==================================
 
@@ -134,6 +196,12 @@ CREATE INDEX idx_transactions_wallet ON transactions(wallet_id);
 CREATE INDEX idx_orders_user ON orders(user_id);
 CREATE INDEX idx_orders_pair_status ON orders(pair, status);
 CREATE INDEX idx_trades_pair ON trades(pair);
+CREATE INDEX idx_span_baselines_service ON span_baselines(service);
+CREATE INDEX idx_time_baselines_span ON time_baselines(span_key);
+CREATE INDEX idx_anomalies_service ON anomalies(service);
+CREATE INDEX idx_anomalies_severity ON anomalies(severity);
+CREATE INDEX idx_anomalies_created ON anomalies(created_at);
+CREATE INDEX idx_anomalies_trace ON anomalies(trace_id);
 
 -- ==================================
 -- Functions
