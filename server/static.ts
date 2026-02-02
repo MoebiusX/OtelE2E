@@ -6,6 +6,9 @@
 import express, { type Express } from "express";
 import fs from "fs";
 import path from "path";
+import { createLogger } from "./lib/logger";
+
+const logger = createLogger('static');
 
 export function serveStatic(app: Express) {
     // import.meta.dirname may be undefined in some runtimes, fallback to cwd
@@ -14,11 +17,11 @@ export function serveStatic(app: Express) {
 
     if (!fs.existsSync(distPath)) {
         // In K8s deployments with separate frontend pod, static files are served by nginx
-        console.log('[STATIC] Public directory not found - skipping static file serving (frontend served separately)');
+        logger.info('Public directory not found - skipping static file serving (frontend served separately)');
         return;
     }
 
-    console.log(`[STATIC] Serving static files from ${distPath}`);
+    logger.info({ path: distPath }, 'Serving static files');
     app.use(express.static(distPath));
 
     // fall through to index.html if the file doesn't exist (SPA routing)

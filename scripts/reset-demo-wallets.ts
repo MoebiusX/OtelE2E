@@ -10,11 +10,11 @@ import pg from 'pg';
 const { Pool } = pg;
 
 const pool = new Pool({
-    host: 'localhost',
-    port: 5433,
-    database: 'crypto_exchange',
-    user: 'exchange',
-    password: 'exchange123',
+    host: process.env.DB_HOST || 'localhost',
+    port: parseInt(process.env.DB_PORT || '5433'),
+    database: process.env.DB_NAME || 'crypto_exchange',
+    user: process.env.DB_USER || 'exchange',
+    password: process.env.DB_PASSWORD,
 });
 
 const DEMO_USERS = [

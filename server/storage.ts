@@ -1,6 +1,7 @@
 import { type Order, type Trace, type InsertTrace, type Span, type InsertSpan, type User, type UserWallet, type Transfer, type KXWallet, type WalletBalance, type UserWalletMapping } from "@shared/schema";
 import { nanoid } from 'nanoid';
 import { createHash } from 'crypto';
+import { createLogger } from './lib/logger';
 
 // ============================================
 // KRYSTALINE EXCHANGE - WALLET ADDRESS GENERATION
@@ -179,9 +180,8 @@ export class MemoryStorage implements IStorage {
       this.wallets.set(name, { ...seedWallet, userId: name });
     }
 
-    console.log('[storage] Initialized seed wallets:');
-    console.log(`  Primary: ${SEED_WALLETS.primary.address}`);
-    console.log(`  Secondary: ${SEED_WALLETS.secondary.address}`);
+    const storageLogger = createLogger('storage');
+    storageLogger.info({ primary: SEED_WALLETS.primary.address, secondary: SEED_WALLETS.secondary.address }, 'Initialized seed wallets');
   }
 
   // ============================================
@@ -247,7 +247,7 @@ export class MemoryStorage implements IStorage {
       this.userWalletMappings.set(ownerId, mapping);
     }
 
-    console.log(`[storage] Created wallet ${address} for ${ownerId}`);
+    createLogger('storage').debug({ address, ownerId }, 'Created wallet');
     return wallet;
   }
 
@@ -545,11 +545,11 @@ export async function createStorage(): Promise<IStorage> {
   if (storageType === 'postgres') {
     // Dynamic import to avoid loading pg when not needed
     const { getPostgresStorage } = await import('./db/postgres-storage');
-    console.log('[storage] Using PostgreSQL storage');
+    createLogger('storage').info('Using PostgreSQL storage');
     return getPostgresStorage();
   }
 
-  console.log('[storage] Using in-memory storage');
+  createLogger('storage').info('Using in-memory storage');
   return new MemoryStorage();
 }
 
@@ -561,7 +561,7 @@ let _storage: IStorage = new MemoryStorage(); // Fallback until initialized
  */
 export async function initializeStorage(): Promise<void> {
   _storage = await createStorage();
-  console.log('[storage] Storage initialized');
+  createLogger('storage').info('Storage initialized');
 }
 
 /**
