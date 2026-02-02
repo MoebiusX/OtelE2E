@@ -87,26 +87,26 @@ app.use(corsMiddleware);
   try {
     await rabbitMQClient.connect();
     await rabbitMQClient.startConsumer();
-    console.log('[INIT] RabbitMQ connected and consumer started');
+    logger.info('RabbitMQ connected and consumer started');
   } catch (error) {
-    console.warn('[INIT] RabbitMQ initialization failed - continuing without message queue');
+    logger.warn({ error }, 'RabbitMQ initialization failed - continuing without message queue');
   }
 
   // Start real-time price feed (Binance public WebSocket - no API key needed)
   try {
     binanceFeed.start();
-    console.log('[INIT] Binance price feed started - real-time prices enabled');
+    logger.info('Binance price feed started - real-time prices enabled');
   } catch (error) {
-    console.warn('[INIT] Binance price feed failed to start - trading will show prices unavailable');
+    logger.warn({ error }, 'Binance price feed failed to start - trading will show prices unavailable');
   }
 
   // Check Kong Gateway health
   const kongHealthy = await kongClient.checkHealth();
   if (kongHealthy) {
-    console.log('[INIT] Kong Gateway available');
+    logger.info('Kong Gateway available');
     await kongClient.configureService();
   } else {
-    console.warn('[INIT] Kong Gateway not available - continuing without proxy');
+    logger.warn('Kong Gateway not available - continuing without proxy');
   }
 
   // Clear all sessions on server restart (invalidate cached tokens)

@@ -31,6 +31,13 @@ server:
     requests:
       cpu: 100m
       memory: 256Mi
+  # Horizontal Pod Autoscaler configuration
+  autoscaling:
+    enabled: false
+    minReplicas: 1
+    maxReplicas: 5
+    targetCPUUtilizationPercentage: 70
+    targetMemoryUtilizationPercentage: 80
   env:
     NODE_ENV: production
     PORT: "5000"
@@ -67,6 +74,13 @@ paymentProcessor:
     requests:
       cpu: 50m
       memory: 128Mi
+  # Horizontal Pod Autoscaler configuration
+  autoscaling:
+    enabled: false
+    minReplicas: 1
+    maxReplicas: 3
+    targetCPUUtilizationPercentage: 70
+    targetMemoryUtilizationPercentage: 80
   env:
     NODE_ENV: production
     PORT: "3001"
