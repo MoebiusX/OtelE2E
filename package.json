@@ -2,7 +2,7 @@
   "name": "krystaline-exchange",
   "version": "1.0.0",
   "type": "module",
-  "license": "MIT",
+  "license": "Apache-2.0",
   "scripts": {
     "dev": "node scripts/start-dev.js",
     "dev:compose": "docker-compose up --build kx-exchange payment-processor vite",

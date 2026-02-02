@@ -1,6 +1,10 @@
 # Krystaline Exchange - AI-Powered Observability Platform
 
-An **institutional-grade cryptocurrency exchange** that uses **Statistical Anomaly Detection + LLMs to extract maximum value from observability signals**. Combines OpenTelemetry distributed tracing, adaptive anomaly detection, and AI-powered analysis to automatically identify, diagnose, and explain performance issues.
+Institutional-grade crypto exchange platform with OTEL tracing, anomaly detection, and AI-driven diagnostics.
+
+An **institutional-grade cryptocurrency exchange platform** that uses **Statistical Anomaly Detection + LLMs to extract maximum value from observability signals**. Combines OpenTelemetry distributed tracing, adaptive anomaly detection, and AI-powered analysis to automatically identify, diagnose, and explain performance issues.
+
+**License:** Apache-2.0
 
 ## Quick Start
 
