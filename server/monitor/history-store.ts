@@ -44,28 +44,68 @@ export class HistoryStore {
     }
 
     /**
-     * Update baselines (upsert to database)
+     * Update baselines (ADDITIVE merge with existing data using weighted averages)
      */
     async updateBaselines(baselines: SpanBaseline[]): Promise<void> {
         try {
+            // First, get existing baselines to merge with
+            const existingRows = await drizzleDb.select().from(spanBaselines);
+            const existingMap = new Map(existingRows.map(row => [row.spanKey, row]));
+
             for (const baseline of baselines) {
-                await drizzleDb.insert(spanBaselines).values({
-                    spanKey: baseline.spanKey,
-                    service: baseline.service,
-                    operation: baseline.operation,
-                    mean: baseline.mean.toString(),
-                    stdDev: baseline.stdDev.toString(),
-                    variance: baseline.variance.toString(),
-                    p50: baseline.p50?.toString(),
-                    p95: baseline.p95?.toString(),
-                    p99: baseline.p99?.toString(),
-                    min: baseline.min?.toString(),
-                    max: baseline.max?.toString(),
-                    sampleCount: baseline.sampleCount,
-                    updatedAt: new Date(),
-                }).onConflictDoUpdate({
-                    target: spanBaselines.spanKey,
-                    set: {
+                const existing = existingMap.get(baseline.spanKey);
+
+                if (existing) {
+                    // ADDITIVE: Merge new data with existing using weighted average
+                    const existingCount = existing.sampleCount;
+                    const newCount = baseline.sampleCount;
+                    const totalCount = existingCount + newCount;
+                    const existingWeight = existingCount / totalCount;
+                    const newWeight = newCount / totalCount;
+
+                    // Weighted average for mean
+                    const existingMean = parseFloat(existing.mean);
+                    const mergedMean = existingMean * existingWeight + baseline.mean * newWeight;
+
+                    // Combine stdDev using pooled variance formula
+                    const existingStdDev = parseFloat(existing.stdDev);
+                    const existingVar = existingStdDev * existingStdDev;
+                    const newVar = baseline.stdDev * baseline.stdDev;
+                    // Pooled variance: weighted average of variances + correction for mean difference
+                    const meanDiffSq = Math.pow(existingMean - baseline.mean, 2);
+                    const pooledVar = existingVar * existingWeight + newVar * newWeight +
+                        meanDiffSq * existingWeight * newWeight;
+                    const mergedStdDev = Math.sqrt(pooledVar);
+
+                    // For percentiles, take the max of existing or new (conservative approach)
+                    const mergedP50 = Math.max(parseFloat(existing.p50 || '0'), baseline.p50 || 0);
+                    const mergedP95 = Math.max(parseFloat(existing.p95 || '0'), baseline.p95 || 0);
+                    const mergedP99 = Math.max(parseFloat(existing.p99 || '0'), baseline.p99 || 0);
+                    const mergedMin = Math.min(parseFloat(existing.min || '0') || Infinity, baseline.min || Infinity);
+                    const mergedMax = Math.max(parseFloat(existing.max || '0'), baseline.max || 0);
+
+                    await drizzleDb.update(spanBaselines)
+                        .set({
+                            mean: mergedMean.toFixed(2),
+                            stdDev: mergedStdDev.toFixed(2),
+                            variance: pooledVar.toFixed(2),
+                            p50: mergedP50.toFixed(2),
+                            p95: mergedP95.toFixed(2),
+                            p99: mergedP99.toFixed(2),
+                            min: mergedMin === Infinity ? '0' : mergedMin.toFixed(2),
+                            max: mergedMax.toFixed(2),
+                            sampleCount: totalCount,
+                            updatedAt: new Date(),
+                        })
+                        .where(eq(spanBaselines.spanKey, baseline.spanKey));
+
+                    logger.debug({ spanKey: baseline.spanKey, existingCount, newCount, totalCount }, 'Merged baseline (additive)');
+                } else {
+                    // New baseline - insert directly
+                    await drizzleDb.insert(spanBaselines).values({
+                        spanKey: baseline.spanKey,
+                        service: baseline.service,
+                        operation: baseline.operation,
                         mean: baseline.mean.toString(),
                         stdDev: baseline.stdDev.toString(),
                         variance: baseline.variance.toString(),
@@ -76,10 +116,12 @@ export class HistoryStore {
                         max: baseline.max?.toString(),
                         sampleCount: baseline.sampleCount,
                         updatedAt: new Date(),
-                    }
-                });
+                    }).onConflictDoNothing();
+
+                    logger.debug({ spanKey: baseline.spanKey, sampleCount: baseline.sampleCount }, 'Inserted new baseline');
+                }
             }
-            logger.info({ count: baselines.length }, 'Updated span baselines in database');
+            logger.info({ count: baselines.length }, 'Updated span baselines in database (additive merge)');
         } catch (error) {
             logger.error({ err: error }, 'Failed to update baselines');
             throw error;
@@ -252,34 +294,75 @@ export class HistoryStore {
     }
 
     /**
-     * Set time baselines (upsert to database)
+     * Set time baselines (ADDITIVE merge with existing data using weighted averages)
      */
     async setTimeBaselines(baselines: TimeBaseline[]): Promise<void> {
         try {
+            // First, get existing time baselines to merge with
+            const existingRows = await drizzleDb.select().from(timeBaselines);
+            const existingMap = new Map(existingRows.map(row =>
+                [`${row.spanKey}:${row.dayOfWeek}:${row.hourOfDay}`, row]
+            ));
+
             for (const baseline of baselines) {
-                await drizzleDb.insert(timeBaselines).values({
-                    spanKey: baseline.spanKey,
-                    service: baseline.service,
-                    operation: baseline.operation,
-                    dayOfWeek: baseline.dayOfWeek,
-                    hourOfDay: baseline.hourOfDay,
-                    mean: baseline.mean.toString(),
-                    stdDev: baseline.stdDev.toString(),
-                    sampleCount: baseline.sampleCount,
-                    thresholds: baseline.thresholds,
-                    updatedAt: new Date(),
-                }).onConflictDoUpdate({
-                    target: [timeBaselines.spanKey, timeBaselines.dayOfWeek, timeBaselines.hourOfDay],
-                    set: {
+                const key = `${baseline.spanKey}:${baseline.dayOfWeek}:${baseline.hourOfDay}`;
+                const existing = existingMap.get(key);
+
+                if (existing) {
+                    // ADDITIVE: Merge new data with existing using weighted average
+                    const existingCount = existing.sampleCount;
+                    const newCount = baseline.sampleCount;
+                    const totalCount = existingCount + newCount;
+                    const existingWeight = existingCount / totalCount;
+                    const newWeight = newCount / totalCount;
+
+                    // Weighted average for mean
+                    const existingMean = parseFloat(existing.mean);
+                    const mergedMean = existingMean * existingWeight + baseline.mean * newWeight;
+
+                    // Combine stdDev using pooled variance formula
+                    const existingStdDev = parseFloat(existing.stdDev);
+                    const existingVar = existingStdDev * existingStdDev;
+                    const newVar = baseline.stdDev * baseline.stdDev;
+                    const meanDiffSq = Math.pow(existingMean - baseline.mean, 2);
+                    const pooledVar = existingVar * existingWeight + newVar * newWeight +
+                        meanDiffSq * existingWeight * newWeight;
+                    const mergedStdDev = Math.sqrt(pooledVar);
+
+                    await drizzleDb.update(timeBaselines)
+                        .set({
+                            mean: mergedMean.toFixed(2),
+                            stdDev: mergedStdDev.toFixed(2),
+                            sampleCount: totalCount,
+                            thresholds: baseline.thresholds, // Use latest thresholds
+                            updatedAt: new Date(),
+                        })
+                        .where(and(
+                            eq(timeBaselines.spanKey, baseline.spanKey),
+                            eq(timeBaselines.dayOfWeek, baseline.dayOfWeek),
+                            eq(timeBaselines.hourOfDay, baseline.hourOfDay)
+                        ));
+
+                    logger.debug({ key, existingCount, newCount, totalCount }, 'Merged time baseline (additive)');
+                } else {
+                    // New baseline - insert directly
+                    await drizzleDb.insert(timeBaselines).values({
+                        spanKey: baseline.spanKey,
+                        service: baseline.service,
+                        operation: baseline.operation,
+                        dayOfWeek: baseline.dayOfWeek,
+                        hourOfDay: baseline.hourOfDay,
                         mean: baseline.mean.toString(),
                         stdDev: baseline.stdDev.toString(),
                         sampleCount: baseline.sampleCount,
                         thresholds: baseline.thresholds,
                         updatedAt: new Date(),
-                    }
-                });
+                    }).onConflictDoNothing();
+
+                    logger.debug({ spanKey: baseline.spanKey, sampleCount: baseline.sampleCount }, 'Inserted new time baseline');
+                }
             }
-            logger.info({ count: baselines.length }, 'Updated time baselines in database');
+            logger.info({ count: baselines.length }, 'Updated time baselines in database (additive merge)');
         } catch (error) {
             logger.error({ err: error }, 'Failed to set time baselines');
             throw error;

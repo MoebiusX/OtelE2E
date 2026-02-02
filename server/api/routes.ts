@@ -356,11 +356,12 @@ export function registerRoutes(app: Express) {
       return res.status(400).json({ error: "userId is required" });
     }
 
+    const price = getPrice();
     const orderRequest = {
       userId,
       pair: "BTC/USD" as const,
       side: "BUY" as const,
-      quantity: (req.body.amount || 100) / getPrice(),
+      quantity: (req.body.amount || 100) / price,
       orderType: "MARKET" as const
     };
 
@@ -368,13 +369,14 @@ export function registerRoutes(app: Express) {
       const result = await orderService.submitOrder(orderRequest);
       const wallet = await orderService.getWallet(userId);
 
-      res.json({
+      res.status(201).json({
         success: true,
         payment: {
           id: result.orderId,
           amount: req.body.amount || 100,
           currency: "USD",
-          status: result.execution?.status || "PENDING"
+          status: result.execution?.status || "PENDING",
+          wallet
         },
         traceId: result.traceId,
         processorResponse: result.execution ? {
@@ -384,6 +386,27 @@ export function registerRoutes(app: Express) {
         } : undefined
       });
     } catch (error: unknown) {
+      if (error instanceof InsufficientFundsError) {
+        return res.status(422).json({
+          error: error.message,
+          code: 'INSUFFICIENT_FUNDS',
+          details: error.details
+        });
+      }
+
+      if (error instanceof OrderError) {
+        if (error.message.includes('unavailable')) {
+          return res.status(503).json({
+            error: error.message,
+            code: 'SERVICE_UNAVAILABLE'
+          });
+        }
+        return res.status(422).json({
+          error: error.message,
+          code: 'ORDER_ERROR'
+        });
+      }
+
       res.status(500).json({ error: "Failed to process payment" });
     }
   });

@@ -67,6 +67,16 @@ export class AmountProfiler {
     }
 
     /**
+     * Reset all baselines (clears whale detector averages)
+     */
+    reset(): { clearedCount: number } {
+        const count = this.baselines.size;
+        this.baselines.clear();
+        logger.info({ clearedCount: count }, 'Amount baselines reset');
+        return { clearedCount: count };
+    }
+
+    /**
      * Collect recent transactions and update baselines
      */
     private async collectAndUpdate(): Promise<void> {

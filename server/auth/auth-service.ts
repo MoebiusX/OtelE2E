@@ -138,10 +138,11 @@ export const authService = {
             [user.id, data.code]
         );
 
-        // E2E Test bypass: accept code 000000 for @test.com emails in development
+        // E2E Test bypass: accept code 000000 for test emails in development
+        const isTestEmail = data.email.endsWith('@test.com') || data.email.endsWith('@test.krystaline.io');
         const isE2ETestBypass =
             process.env.NODE_ENV !== 'production' &&
-            data.email.endsWith('@test.com') &&
+            isTestEmail &&
             data.code === '000000';
 
         if (codeResult.rows.length === 0 && !isE2ETestBypass) {

@@ -3,6 +3,7 @@ import { spawn, execSync } from 'child_process';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import config from './config.js';
+import { validateConfig } from './validate-config.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -11,6 +12,12 @@ const rootDir = config.rootDir;
 const isWindows = config.isWindows;
 const npmCmd = config.npmCmd;
 const npxCmd = config.npxCmd;
+
+// Pre-flight configuration validation
+if (!validateConfig()) {
+    console.error('❌ Configuration validation failed. Please fix the errors above and try again.');
+    process.exit(1);
+}
 
 console.log('🚀 Starting Krystaline Exchange Development Environment...');
 
