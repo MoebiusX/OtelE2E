@@ -23,7 +23,12 @@
     "render:diagrams": "node scripts/render-diagrams.js",
     "docs:html": "node scripts/build-docs.js",
     "docs:pdf": "node scripts/generate-pdf.js",
-    "docs:build": "npm run render:diagrams && npm run docs:html && npm run docs:pdf"
+    "docs:build": "npm run render:diagrams && npm run docs:html && npm run docs:pdf",
+    "security:audit": "npm audit --audit-level=high",
+    "security:audit:fix": "npm audit fix",
+    "security:check": "npm run security:audit && npm run security:secrets",
+    "security:secrets": "node scripts/check-secrets.js",
+    "precommit": "npm run check && npm run security:secrets"
   },
   "dependencies": {
     "@hookform/resolvers": "^3.10.0",
@@ -162,5 +167,10 @@
   },
   "optionalDependencies": {
     "bufferutil": "^4.0.8"
+  },
+  "overrides": {
+    "fast-xml-parser": "^5.3.4",
+    "elliptic": "^6.6.1",
+    "lodash-es": "^4.17.21"
   }
 }

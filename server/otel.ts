@@ -6,6 +6,9 @@ import { ExportResult, ExportResultCode } from '@opentelemetry/core';
 import { ReadableSpan } from '@opentelemetry/sdk-trace-base';
 import { OTLPTraceExporter } from '@opentelemetry/exporter-trace-otlp-http';
 
+// Only enable verbose OTEL logging in development with DEBUG flag
+const OTEL_DEBUG = process.env.NODE_ENV !== 'production' && process.env.OTEL_DEBUG === 'true';
+
 // Store traces for local visualization
 export const traces: any[] = [];
 
@@ -43,12 +46,14 @@ class TraceCollector implements SpanExporter {
         return;
       }
 
-      // Debug logging to see what spans are being captured
+      // Debug logging only when OTEL_DEBUG is enabled
       const operation = span.attributes?.['messaging.operation'] || httpMethod || spanName;
-      console.log(`[OTEL] Capturing span: ${spanName} | Operation: ${operation} | TraceID: ${span.spanContext().traceId} | Service: ${span.attributes?.['service.name']}`);
+      if (OTEL_DEBUG) {
+        console.log(`[OTEL] Capturing span: ${spanName} | Operation: ${operation} | TraceID: ${span.spanContext().traceId} | Service: ${span.attributes?.['service.name']}`);
+      }
 
       // Show attributes for debugging span capture
-      if (span.attributes?.['messaging.system'] || spanName.includes('amqp') || spanName.includes('rabbitmq')) {
+      if (OTEL_DEBUG && (span.attributes?.['messaging.system'] || spanName.includes('amqp') || spanName.includes('rabbitmq'))) {
         console.log(`[OTEL] RabbitMQ span captured:`, {
           name: span.name,
           messaging: {
@@ -78,8 +83,9 @@ class TraceCollector implements SpanExporter {
       const existingSpan = traces.find(t => t.traceId === traceData.traceId && t.spanId === traceData.spanId);
       if (!existingSpan) {
         traces.push(traceData);
-        console.log(`[OTEL] Stored span in traces array. Total traces: ${traces.length}`);
-        console.log(`[OTEL] All traces now:`, traces.map(t => ({ name: t.name, traceId: t.traceId.slice(0, 8) })));
+        if (OTEL_DEBUG) {
+          console.log(`[OTEL] Stored span in traces array. Total traces: ${traces.length}`);
+        }
       }
 
       // Keep only last 100 traces

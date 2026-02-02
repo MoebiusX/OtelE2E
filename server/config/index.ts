@@ -11,13 +11,19 @@ import { z } from 'zod';
 // CONFIGURATION SCHEMA
 // ============================================
 
+// Check if we're in test environment BEFORE schema validation
+const isTestEnv = process.env.NODE_ENV === 'test';
+
 const configSchema = z.object({
   env: z.enum(['development', 'production', 'test']).default('development'),
 
   server: z.object({
     port: z.number().int().positive().default(5000),
     host: z.string().default('0.0.0.0'),
-    jwtSecret: z.string().default('dev-secret-change-in-production'),
+    // In test environment, allow shorter secrets for convenience
+    jwtSecret: isTestEnv 
+      ? z.string().min(1, 'JWT_SECRET is required')
+      : z.string().min(16, 'JWT_SECRET must be at least 16 characters'),
   }),
 
   database: z.object({
@@ -25,14 +31,20 @@ const configSchema = z.object({
     port: z.number().int().positive().default(5433),
     name: z.string().default('crypto_exchange'),
     user: z.string().default('exchange'),
-    password: z.string().default('exchange123'),
+    // In test environment, allow empty password (tests use mocks)
+    password: isTestEnv
+      ? z.string().default('test-password')
+      : z.string().min(1, 'DB_PASSWORD is required'),
     maxConnections: z.number().int().positive().default(20),
     idleTimeoutMs: z.number().int().positive().default(30000),
     connectionTimeoutMs: z.number().int().positive().default(2000),
   }),
 
   rabbitmq: z.object({
-    url: z.string().default('amqp://admin:admin123@localhost:5672'),
+    // In test environment, allow default URL
+    url: isTestEnv
+      ? z.string().default('amqp://test:test@localhost:5672')
+      : z.string().url('RABBITMQ_URL must be a valid URL'),
     ordersQueue: z.string().default('orders'),
     responseQueue: z.string().default('order_response'),
     // Legacy queue names for backward compatibility
@@ -76,17 +88,71 @@ const configSchema = z.object({
 });
 
 // ============================================
+// PRODUCTION SECURITY VALIDATION
+// ============================================
+
+/**
+ * Validates that production secrets meet security requirements.
+ * Fails fast if insecure configurations are detected.
+ */
+function validateProductionSecrets(config: z.infer<typeof configSchema>): void {
+  const errors: string[] = [];
+
+  // Check JWT secret strength
+  if (config.server.jwtSecret.length < 32) {
+    errors.push('JWT_SECRET must be at least 32 characters in production');
+  }
+  
+  // Check for obvious dev/test secrets
+  const insecurePatterns = ['dev', 'test', 'local', 'example', 'change', 'password', '123'];
+  const jwtLower = config.server.jwtSecret.toLowerCase();
+  if (insecurePatterns.some(pattern => jwtLower.includes(pattern))) {
+    errors.push('JWT_SECRET contains insecure patterns (dev, test, local, etc.)');
+  }
+
+  // Check database password strength
+  if (config.database.password.length < 12) {
+    errors.push('DB_PASSWORD must be at least 12 characters in production');
+  }
+
+  // Check RabbitMQ URL doesn't contain default credentials
+  if (config.rabbitmq.url.includes('admin123') || config.rabbitmq.url.includes('guest:guest')) {
+    errors.push('RABBITMQ_URL contains default/insecure credentials');
+  }
+
+  if (errors.length > 0) {
+    console.error('[CONFIG] ❌ Production security validation failed:');
+    errors.forEach(err => console.error(`  - ${err}`));
+    console.error('[CONFIG] Please use strong, unique secrets in production.');
+    process.exit(1);
+  }
+
+  console.log('[CONFIG] ✅ Production security validation passed');
+}
+
+// ============================================
 // CONFIGURATION LOADER
 // ============================================
 
 function loadConfig() {
+  // Provide test defaults when in test environment
+  const testDefaults = isTestEnv ? {
+    jwtSecret: 'test-jwt-secret-for-testing',
+    dbPassword: 'test-db-password',
+    rabbitmqUrl: 'amqp://test:test@localhost:5672',
+  } : {
+    jwtSecret: '',
+    dbPassword: '',
+    rabbitmqUrl: '',
+  };
+
   const rawConfig = {
     env: process.env.NODE_ENV || 'development',
 
     server: {
       port: process.env.PORT ? parseInt(process.env.PORT, 10) : 5000,
       host: process.env.HOST || '0.0.0.0',
-      jwtSecret: process.env.JWT_SECRET || 'dev-secret-change-in-production',
+      jwtSecret: process.env.JWT_SECRET || testDefaults.jwtSecret,
     },
 
     database: {
@@ -94,7 +160,7 @@ function loadConfig() {
       port: process.env.DB_PORT ? parseInt(process.env.DB_PORT, 10) : 5433,
       name: process.env.DB_NAME || 'crypto_exchange',
       user: process.env.DB_USER || 'exchange',
-      password: process.env.DB_PASSWORD || 'exchange123',
+      password: process.env.DB_PASSWORD || testDefaults.dbPassword,
       maxConnections: process.env.DB_MAX_CONNECTIONS
         ? parseInt(process.env.DB_MAX_CONNECTIONS, 10)
         : 20,
@@ -107,7 +173,7 @@ function loadConfig() {
     },
 
     rabbitmq: {
-      url: process.env.RABBITMQ_URL || 'amqp://admin:admin123@localhost:5672',
+      url: process.env.RABBITMQ_URL || testDefaults.rabbitmqUrl,
       ordersQueue: process.env.RABBITMQ_ORDERS_QUEUE || 'orders',
       responseQueue: process.env.RABBITMQ_RESPONSE_QUEUE || 'order_response',
       legacyQueue: process.env.RABBITMQ_LEGACY_QUEUE || 'payments',
@@ -151,6 +217,11 @@ function loadConfig() {
 
   try {
     const validatedConfig = configSchema.parse(rawConfig);
+
+    // Additional production security checks
+    if (validatedConfig.env === 'production') {
+      validateProductionSecrets(validatedConfig);
+    }
 
     // Log successful configuration load (using console since logger isn't ready yet)
     console.log('[CONFIG] Configuration loaded and validated successfully');
