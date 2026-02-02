@@ -170,6 +170,7 @@ services:
       - "9090:9090"
     volumes:
       - ./prometheus.yml:/etc/prometheus/prometheus.yml
+      - ./config/alerting-rules.yml:/etc/prometheus/alerting-rules.yml
       - prometheus_data:/prometheus
     command:
       - '--config.file=/etc/prometheus/prometheus.yml'
@@ -180,6 +181,66 @@ services:
     extra_hosts:
       - "host.docker.internal:host-gateway"
     restart: unless-stopped
+    depends_on:
+      - alertmanager
+
+  # Alertmanager - Alert routing and notification
+  alertmanager:
+    image: prom/alertmanager:latest
+    ports:
+      - "9093:9093"
+    volumes:
+      - ./config/alertmanager.yml:/etc/alertmanager/alertmanager.yml
+      - alertmanager_data:/alertmanager
+    command:
+      - '--config.file=/etc/alertmanager/alertmanager.yml'
+      - '--storage.path=/alertmanager'
+    networks:
+      - kong-net
+    restart: unless-stopped
+
+  # GoAlert Database - Incident management
+  goalert-db:
+    image: postgres:17-alpine
+    container_name: goalert-db
+    restart: always
+    environment:
+      POSTGRES_USER: goalert
+      POSTGRES_PASSWORD: ${GOALERT_DB_PASSWORD:-goalert_password_change_me}
+      POSTGRES_DB: goalert
+    volumes:
+      - goalert_db_data:/var/lib/postgresql/data
+    networks:
+      - kong-net
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U goalert -d goalert"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # GoAlert - Incident management and on-call scheduling
+  goalert:
+    image: goalert/goalert:latest
+    container_name: goalert
+    restart: always
+    depends_on:
+      goalert-db:
+        condition: service_healthy
+    ports:
+      - "8081:8081"
+    environment:
+      GOALERT_DB_URL: "postgres://goalert:${GOALERT_DB_PASSWORD:-goalert_password_change_me}@goalert-db:5432/goalert?sslmode=disable"
+      GOALERT_PUBLIC_URL: "${GOALERT_PUBLIC_URL:-http://localhost:8081}"
+      GOALERT_DATA_ENCRYPTION_KEY: "${GOALERT_ENCRYPTION_KEY:-replace-this-with-a-random-32-char-string}"
+      GOALERT_LOG_LEVEL: info
+    networks:
+      - kong-net
+    healthcheck:
+      test: ["CMD", "wget", "-q", "--spider", "http://localhost:8081/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
 
   # App Database (PostgreSQL) - User management, wallets, orders
   app-database:
@@ -271,6 +332,8 @@ volumes:
   rabbitmq_data:
   ollama_data:
   prometheus_data:
+  alertmanager_data:
+  goalert_db_data:
   app_data:
 
 networks:
