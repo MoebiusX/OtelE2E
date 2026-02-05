@@ -187,6 +187,7 @@ async function testCase1_EmptyHeaders() {
     }
     console.log(`   User ID (UUID): ${userId}`);
 
+    const operationStart = Date.now();
     const payment = await submitPayment(KONG_API, {
         userId,  // Use UUID instead of email
         amount: 1001,
@@ -194,14 +195,16 @@ async function testCase1_EmptyHeaders() {
         recipient: 'e2e-test1@example.com',
         description: `E2E Test - Empty Headers - ${testId}`
     });
+    const operationTime = Date.now() - operationStart;
 
     if (!payment.payment?.id) {
         return { success: false, reason: 'Payment was not created' };
     }
 
     const paymentTime = Date.now();
+    console.log(`   ✓ Payment completed in ${operationTime}ms`);
     console.log(`   Payment ID: ${payment.payment?.id}`);
-    console.log('   ⏳ Waiting for traces to propagate to Jaeger...');
+    console.log('   ⏳ Waiting for traces to appear in Jaeger...');
 
     // Initial delay to allow OTEL Collector batching
     await delay(2000);
@@ -280,10 +283,9 @@ async function testCase1_EmptyHeaders() {
                     ));
 
                     console.log(); // New line after attempts
-                    console.log(`   ✓ Found correct trace with ${spans.length} spans (took ${Date.now() - paymentTime}ms)`);
+                    console.log(`   ✓ Trace visible after ${Date.now() - paymentTime}ms (${spans.length} spans)`);
                     console.log(`   Services: ${Array.from(services).join(', ')}`);
                     console.log(`   Trace ID: ${trace.traceID}`);
-                    console.log(`   Payment ID ${payment.payment?.id} processed`);
 
                     return { traceId: trace.traceID, spanCount: spans.length };
                 }
@@ -339,6 +341,7 @@ async function testCase2_ClientHeaders() {
     }
     console.log(`   User ID (UUID): ${userId}`);
 
+    const operationStart = Date.now();
     const payment = await submitPayment(KONG_API, {
         userId,  // Use UUID instead of email
         amount: 2002,
@@ -348,10 +351,12 @@ async function testCase2_ClientHeaders() {
     }, {
         'traceparent': `00-${clientTraceId}-${clientSpanId}-01`
     });
+    const operationTime = Date.now() - operationStart;
 
     const paymentTime = Date.now();
+    console.log(`   ✓ Payment completed in ${operationTime}ms`);
     console.log(`   Payment ID: ${payment.payment?.id}`);
-    console.log('   ⏳ Waiting for traces to propagate to Jaeger...');
+    console.log('   ⏳ Waiting for traces to appear in Jaeger...');
 
     // Initial delay to allow OTEL Collector batching
     await delay(2000);
@@ -379,10 +384,9 @@ async function testCase2_ClientHeaders() {
             ));
 
             console.log(); // New line after attempts
-            console.log(`   ✓ Found correct trace with ${spans.length} spans (took ${Date.now() - paymentTime}ms)`);
+            console.log(`   ✓ Trace visible after ${Date.now() - paymentTime}ms (${spans.length} spans)`);
             console.log(`   Services: ${Array.from(services).join(', ')}`);
             console.log(`   Client trace ID ${clientTraceId} preserved ✓`);
-            console.log(`   Payment ID ${payment.payment?.id} processed`);
 
             return { traceId: clientTraceId, spanCount: spans.length };
         }, {

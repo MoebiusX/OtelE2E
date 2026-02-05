@@ -114,5 +114,3 @@ To give on-call staff fast, reproducible steps for diagnosing tracing, anomaly, 
 - Use `POST /api/monitor/recalculate` to validate thresholds after bulk changes or deployments.
 
 ---
-
-If you'd like, I can open a PR that adds a link to this on-call guide in `README.md` and also add a short PDF version for distribution to the on-call rotation. Which would you prefer next?

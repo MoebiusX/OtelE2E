@@ -186,16 +186,54 @@ router.get('/trace/:traceId', async (req, res) => {
 
 /**
  * POST /api/monitor/recalculate
- * Trigger manual baseline recalculation (30-day lookback)
+ * Trigger manual baseline recalculation
+ * Body: { full?: boolean } - if true, clears watermarks and does full recalculation
  */
 router.post('/recalculate', async (req, res) => {
     const { baselineCalculator } = await import('./baseline-calculator');
+    const { full } = req.body || {};
 
-    logger.info('Manual baseline recalculation triggered');
+    logger.info({ full: !!full }, 'Manual baseline recalculation triggered');
 
-    const result = await baselineCalculator.recalculate();
+    const result = await baselineCalculator.recalculate({ full: !!full });
 
     res.json(result);
+});
+
+/**
+ * DELETE /api/monitor/reset
+ * Clear all baselines for fresh validation
+ */
+router.delete('/reset', async (req, res) => {
+    const { drizzleDb } = await import('../db/drizzle');
+    const { sql } = await import('drizzle-orm');
+
+    logger.warn('Resetting all baseline data');
+
+    // Clear all baseline tables
+    await drizzleDb.execute(sql`TRUNCATE TABLE span_baselines, time_baselines, recalculation_state RESTART IDENTITY CASCADE`);
+
+    res.json({
+        success: true,
+        message: 'All baselines cleared. Ready for fresh validation.'
+    });
+});
+
+/**
+ * GET /api/monitor/baselines/enriched
+ * Baselines with status indicators for UI display
+ */
+router.get('/baselines/enriched', async (req, res) => {
+    const { baselineCalculator } = await import('./baseline-calculator');
+
+    const baselines = await historyStore.getBaselines();
+    const enriched = await baselineCalculator.enrichWithStatus(baselines);
+
+    res.json({
+        baselines: enriched.sort((a, b) => b.sampleCount - a.sampleCount),
+        spanCount: enriched.length,
+        timestamp: new Date()
+    });
 });
 
 /**

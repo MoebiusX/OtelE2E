@@ -1,4 +1,4 @@
-# OtelE2E Repository Summary
+# Krystaline Exchange Repository Summary
 
 ## Purpose
 

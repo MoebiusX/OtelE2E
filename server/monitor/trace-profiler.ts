@@ -90,7 +90,9 @@ export class TraceProfiler {
                 for (const trace of traces) {
                     for (const span of trace.spans) {
                         const process = trace.processes[span.processID];
-                        if (process) {
+                        // Only include spans from monitored business services
+                        // This filters out infrastructure spans like jaeger-all-in-one
+                        if (process && MONITORED_SERVICES.includes(process.serviceName)) {
                             allSpans.push({
                                 span,
                                 service: process.serviceName

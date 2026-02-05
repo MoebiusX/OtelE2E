@@ -1,6 +1,32 @@
 # OpenTelemetry Tracing Implementation Guide
 
-A practical guide to distributed tracing in OtelE2E with **detailed context propagation** for span hierarchy.
+A practical guide to distributed tracing in KrystalineX with **detailed context propagation** for span hierarchy.
+
+> **⚠️ IMPORTANT**: Read the Service Naming Convention section when renaming services to avoid breaking trace correlation in Jaeger.
+
+## Service Naming Convention
+
+KrystalineX uses a consistent `kx-*` naming convention for all services:
+
+| Service | OTEL Service Name | Tracer Name | Description |
+|---------|-------------------|-------------|-------------|
+| Web Client | `kx-wallet` | `kx-wallet` | Browser-based React frontend |
+| API Gateway | `api-gateway` | (Kong plugin) | Kong gateway for routing |
+| Exchange Server | `kx-exchange` | `kx-exchange` | Main Express.js API server |
+| Order Matcher | `kx-matcher` | `kx-matcher` | RabbitMQ consumer for order execution |
+
+### Tracer Instances
+When creating tracers, **always use the same name as the service**:
+
+```typescript
+// ✅ Correct - matches service name
+const tracer = trace.getTracer('kx-exchange');
+
+// ❌ Wrong - different from service name
+const tracer = trace.getTracer('rabbitmq-client');
+```
+
+---
 
 ## Architecture Overview
 
@@ -15,8 +41,8 @@ flowchart LR
     end
     
     subgraph Services
-        CW[crypto-wallet]
-        OM[order-matcher]
+        CW[kx-exchange]
+        OM[kx-matcher]
     end
     
     subgraph Messaging
@@ -39,7 +65,7 @@ flowchart LR
     OC --> J
 ```
 
-![Trace Hierarchy](images/trace-hierarchy.png)
+
 
 > Note: SVG is available at `docs/images/trace-hierarchy.svg` if you prefer vector images.
 ---
