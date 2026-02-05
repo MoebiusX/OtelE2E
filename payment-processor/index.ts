@@ -14,6 +14,8 @@ import { NodeSDK } from '@opentelemetry/sdk-node';
 import { getNodeAutoInstrumentations } from '@opentelemetry/auto-instrumentations-node';
 import { OTLPTraceExporter } from '@opentelemetry/exporter-trace-otlp-http';
 import { trace, context, SpanStatusCode, SpanKind, propagation } from '@opentelemetry/api';
+import express from 'express';
+import { collectDefaultMetrics, Registry, Counter, Histogram, Gauge } from 'prom-client';
 
 // Initialize OpenTelemetry
 // Note: OTEL_EXPORTER_OTLP_ENDPOINT is base URL, we need to append /v1/traces for HTTP exporter
@@ -29,6 +31,61 @@ const sdk = new NodeSDK({
 });
 
 sdk.start();
+
+// ============================================
+// PROMETHEUS METRICS
+// ============================================
+
+const register = new Registry();
+collectDefaultMetrics({ register });
+
+// Order processing metrics
+const ordersProcessedTotal = new Counter({
+    name: 'kx_matcher_orders_processed_total',
+    help: 'Total number of orders processed',
+    labelNames: ['status', 'side'],
+    registers: [register]
+});
+
+const orderProcessingDuration = new Histogram({
+    name: 'kx_matcher_order_processing_duration_seconds',
+    help: 'Order processing duration in seconds',
+    labelNames: ['side'],
+    buckets: [0.01, 0.05, 0.1, 0.25, 0.5, 1],
+    registers: [register]
+});
+
+const slippageHistogram = new Histogram({
+    name: 'kx_matcher_slippage_percent',
+    help: 'Price slippage percentage',
+    labelNames: ['side'],
+    buckets: [0.01, 0.05, 0.1, 0.25, 0.5, 1],
+    registers: [register]
+});
+
+const queueDepth = new Gauge({
+    name: 'kx_matcher_queue_messages',
+    help: 'Current messages in queue',
+    labelNames: ['queue'],
+    registers: [register]
+});
+
+// Start metrics HTTP server
+const metricsApp = express();
+const METRICS_PORT = parseInt(process.env.METRICS_PORT || '3001', 10);
+
+metricsApp.get('/metrics', async (_req, res) => {
+    res.set('Content-Type', register.contentType);
+    res.end(await register.metrics());
+});
+
+metricsApp.get('/health', (_req, res) => {
+    res.json({ status: 'healthy', service: 'kx-matcher' });
+});
+
+metricsApp.listen(METRICS_PORT, '0.0.0.0', () => {
+    console.log(`[MATCHER] Metrics server running on http://0.0.0.0:${METRICS_PORT}/metrics`);
+});
 
 // Message interfaces
 interface OrderMessage {
@@ -65,6 +122,7 @@ const RESPONSE_QUEUE = 'payment_response';  // Keep legacy queue name
 const PROCESSOR_ID = `matcher-${Date.now()}`;
 
 const tracer = trace.getTracer('kx-matcher', '1.0.0');
+
 
 // Price simulation with volatility
 function simulateExecution(price: number, side: string): { fillPrice: number; slippage: number } {
@@ -127,6 +185,8 @@ async function main() {
             const originalContext = { traceparent: originalPostTraceparent, tracestate: originalPostTracestate };
 
             await context.with(trace.setSpan(parentContext, span), async () => {
+                const startTime = Date.now();
+                let orderSide = 'BUY';
                 try {
                     const order: OrderMessage = JSON.parse(msg.content.toString());
 
@@ -134,6 +194,7 @@ async function main() {
                     const orderId = order.orderId || `ORD-${order.paymentId}`;
                     const pair = order.pair || 'BTC/USD';
                     const side = order.side || 'BUY';
+                    orderSide = side;
                     const quantity = order.quantity || (order.amount ? order.amount / 42500 : 0.001);
                     const currentPrice = order.currentPrice || 42500;
 
@@ -153,6 +214,9 @@ async function main() {
                     // Calculate execution
                     const { fillPrice, slippage } = simulateExecution(currentPrice, side);
                     const totalValue = fillPrice * quantity;
+
+                    // Record slippage metric
+                    slippageHistogram.observe({ side }, slippage);
 
                     console.log(`[MATCHER] Executed: ${side} ${quantity.toFixed(8)} BTC @ $${fillPrice} (slip: ${slippage}%)`);
 
@@ -211,11 +275,19 @@ async function main() {
                     span.setStatus({ code: SpanStatusCode.OK });
                     console.log(`[MATCHER] Order ${orderId} filled → response sent`);
 
+                    // Record success metrics
+                    const durationSec = (Date.now() - startTime) / 1000;
+                    ordersProcessedTotal.inc({ status: 'filled', side: orderSide });
+                    orderProcessingDuration.observe({ side: orderSide }, durationSec);
+
                 } catch (error: unknown) {
                     const errorMessage = error instanceof Error ? error.message : String(error);
                     console.error(`[MATCHER] Error:`, errorMessage);
                     span.setStatus({ code: SpanStatusCode.ERROR, message: errorMessage });
                     channel.nack(msg, false, false);
+
+                    // Record error metric
+                    ordersProcessedTotal.inc({ status: 'rejected', side: orderSide });
                 } finally {
                     span.end();
                 }

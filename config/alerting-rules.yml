@@ -370,7 +370,7 @@ groups:
       # Availability SLA
       - alert: AvailabilitySLABreach
         expr: |
-          (1 - (sum(rate(http_requests_total{status=~"5.."}[1h])) / sum(rate(http_requests_total[1h])))) < 0.999
+          (1 - (sum(rate(http_requests_total{status=~"5.."}[1h])) / sum(rate(http_requests_total[1h])))) < 0.999999
         for: 5m
         labels:
           severity: critical

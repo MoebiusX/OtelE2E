@@ -5,10 +5,10 @@ global:
   # Default settings
   resolve_timeout: 5m
   
-  # SMTP settings for email fallback (optional)
-  # smtp_smarthost: 'maildev:1025'
-  # smtp_from: 'alertmanager@krystalinex.local'
-  # smtp_require_tls: false
+  # SMTP settings for email notifications via MailDev
+  smtp_smarthost: 'maildev:1025'
+  smtp_from: 'alertmanager@krystalinex.local'
+  smtp_require_tls: false
 
 # Alert routing tree
 route:
@@ -95,11 +95,12 @@ receivers:
           authorization:
             type: Bearer
             credentials_file: /etc/alertmanager/goalert-token
-    # Optional: Also send to Slack for visibility
-    # slack_configs:
-    #   - api_url: 'https://hooks.slack.com/services/YOUR/SLACK/WEBHOOK'
-    #     channel: '#alerts-critical'
-    #     send_resolved: true
+    # Email notifications via MailDev
+    email_configs:
+      - to: 'carlos@krystaline.io'
+        send_resolved: true
+        headers:
+          Subject: '🚨 CRITICAL: {{ .GroupLabels.alertname }} - KrystalineX'
 
   # Security alerts
   - name: 'goalert-security'

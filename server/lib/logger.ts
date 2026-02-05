@@ -2,10 +2,12 @@
  * Structured Logging Service
  * 
  * Provides structured JSON logging with OpenTelemetry trace context integration.
- * Uses Pino for high-performance logging.
+ * Uses Pino for high-performance logging with dual transport:
+ * - Console/Pretty output for development
+ * - Loki HTTP push for unified observability
  */
 
-import pino, { Logger } from 'pino';
+import pino, { Logger, TransportTargetOptions } from 'pino';
 import { trace, Span } from '@opentelemetry/api';
 import { config } from '../config';
 
@@ -13,32 +15,92 @@ import { config } from '../config';
 // LOGGER CONFIGURATION
 // ============================================
 
+/**
+ * Build the Pino transport configuration based on environment.
+ * In development with pretty=true: use pino-pretty for console.
+ * In production or when Loki is available: use pino-loki for log aggregation.
+ */
+function buildTransportConfig(): pino.TransportMultiOptions | pino.TransportSingleOptions | undefined {
+  const targets: TransportTargetOptions[] = [];
+
+  // Always add console/pretty output in development
+  if (config.logging.pretty) {
+    targets.push({
+      target: 'pino-pretty',
+      level: config.logging.level,
+      options: {
+        colorize: true,
+        translateTime: 'HH:MM:ss.l',
+        ignore: 'pid,hostname',
+        singleLine: false,
+        messageFormat: '[{component}] {msg}',
+      },
+    });
+  } else {
+    // In production, output JSON to stdout
+    targets.push({
+      target: 'pino/file',
+      level: config.logging.level,
+      options: { destination: 1 }, // stdout
+    });
+  }
+
+  // Add Loki transport if URL is configured
+  // Note: We always add Loki in non-test environments to support unified observability
+  if (config.observability.lokiUrl && config.env !== 'test') {
+    targets.push({
+      target: 'pino-loki',
+      level: config.logging.level,
+      options: {
+        batching: true,
+        interval: 5, // Flush every 5 seconds
+        host: config.observability.lokiUrl,
+        labels: {
+          app: 'kx-exchange',
+          environment: config.env,
+        },
+        // Silence errors to avoid log spam - Loki connection issues shouldn't break logging
+        silenceErrors: true,
+      },
+    });
+  }
+
+  // If we have multiple targets, use multi transport
+  if (targets.length > 1) {
+    return { targets };
+  } else if (targets.length === 1) {
+    return targets[0];
+  }
+
+  // Fallback: no transport config (raw JSON to stdout)
+  return undefined;
+}
+
+// Build transport config - needed to check if we can use formatters
+const transportConfig = buildTransportConfig();
+
+// Note: Pino doesn't allow custom formatters with multi-target transports
+// When using transports, formatting must happen in the transport itself
 const pinoConfig: pino.LoggerOptions = {
   level: config.logging.level,
-  
-  // Format log level labels
-  formatters: {
-    level: (label) => ({ level: label.toUpperCase() }),
-    bindings: (bindings) => ({
-      pid: bindings.pid,
-      hostname: bindings.hostname,
-    }),
-  },
 
   // Add timestamp
   timestamp: pino.stdTimeFunctions.isoTime,
 
-  // Pretty print in development (if enabled)
-  transport: config.logging.pretty ? {
-    target: 'pino-pretty',
-    options: {
-      colorize: true,
-      translateTime: 'HH:MM:ss.l',
-      ignore: 'pid,hostname',
-      singleLine: false,
-      messageFormat: '[{component}] {msg}',
+  // Build transport configuration
+  transport: transportConfig,
+
+  // Formatters can only be used without transport or with single transport
+  // When using multi-target transports (development + loki), we skip custom formatters
+  ...(transportConfig && 'targets' in transportConfig ? {} : {
+    formatters: {
+      level: (label) => ({ level: label.toUpperCase() }),
+      bindings: (bindings) => ({
+        pid: bindings.pid,
+        hostname: bindings.hostname,
+      }),
     },
-  } : undefined,
+  }),
 };
 
 // Base logger instance
@@ -54,14 +116,14 @@ const baseLogger = pino(pinoConfig);
 function getTraceContext(): { traceId?: string; spanId?: string } {
   const span: Span | undefined = trace.getActiveSpan();
   const spanContext = span?.spanContext();
-  
+
   if (spanContext && spanContext.traceId && spanContext.spanId) {
     return {
       traceId: spanContext.traceId,
       spanId: spanContext.spanId,
     };
   }
-  
+
   return {};
 }
 
@@ -112,7 +174,7 @@ export function createLogger(
   const wrapLogMethod = (method: keyof Logger) => {
     return (...args: any[]) => {
       const traceContext = getTraceContext();
-      
+
       // If first arg is an object, merge trace context
       if (typeof args[0] === 'object' && args[0] !== null && !Array.isArray(args[0])) {
         args[0] = { ...args[0], ...traceContext };
@@ -120,7 +182,7 @@ export function createLogger(
         // If first arg is a string, prepend trace context object
         args.unshift(traceContext);
       }
-      
+
       return (componentLogger[method] as any)(...args);
     };
   };

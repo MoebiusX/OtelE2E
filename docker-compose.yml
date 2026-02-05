@@ -125,6 +125,36 @@ services:
       retries: 5
       start_period: 10s
 
+  # Loki - Log aggregation for Unified Observability
+  loki:
+    image: grafana/loki:latest
+    ports:
+      - "3100:3100"
+    volumes:
+      - loki_data:/loki
+      - ./config/loki-config.yaml:/etc/loki/local-config.yaml
+    command: -config.file=/etc/loki/local-config.yaml
+    networks:
+      - kong-net
+    restart: unless-stopped
+    # Note: Loki image is minimal without wget/curl. Health monitored via startup logs.
+
+  # Promtail - Log shipper for container logs to Loki
+  promtail:
+    image: grafana/promtail:latest
+    volumes:
+      - ./config/promtail-config.yaml:/etc/promtail/config.yaml
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - /var/lib/docker/containers:/var/lib/docker/containers:ro
+    command: -config.file=/etc/promtail/config.yaml
+    depends_on:
+      loki:
+        condition: service_started
+    networks:
+      - kong-net
+    restart: unless-stopped
+
+
   # Jaeger UI for trace visualization (standalone for now)
   jaeger:
     image: jaegertracing/all-in-one:latest
@@ -198,6 +228,36 @@ services:
     networks:
       - kong-net
     restart: unless-stopped
+
+  # Grafana - Unified Observability Dashboard
+  grafana:
+    image: grafana/grafana:latest
+    ports:
+      - "3000:3000"
+    environment:
+      - GF_SECURITY_ADMIN_USER=admin
+      - GF_SECURITY_ADMIN_PASSWORD=${GRAFANA_ADMIN_PASSWORD:-admin}
+      - GF_USERS_ALLOW_SIGN_UP=false
+      - GF_FEATURE_TOGGLES_ENABLE=traceqlEditor tempoSearch tempoBackendSearch
+    volumes:
+      - grafana_data:/var/lib/grafana
+      - ./config/grafana/provisioning:/etc/grafana/provisioning
+    depends_on:
+      prometheus:
+        condition: service_started
+      loki:
+        condition: service_started
+      jaeger:
+        condition: service_healthy
+    networks:
+      - kong-net
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "-q", "http://localhost:3000/api/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
 
   # GoAlert Database - Incident management
   goalert-db:
@@ -335,6 +395,8 @@ volumes:
   alertmanager_data:
   goalert_db_data:
   app_data:
+  loki_data:
+  grafana_data:
 
 networks:
   kong-net:
