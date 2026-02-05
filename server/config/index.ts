@@ -21,7 +21,7 @@ const configSchema = z.object({
     port: z.number().int().positive().default(5000),
     host: z.string().default('0.0.0.0'),
     // In test environment, allow shorter secrets for convenience
-    jwtSecret: isTestEnv 
+    jwtSecret: isTestEnv
       ? z.string().min(1, 'JWT_SECRET is required')
       : z.string().min(16, 'JWT_SECRET must be at least 16 characters'),
   }),
@@ -61,6 +61,7 @@ const configSchema = z.object({
     jaegerUrl: z.string().default('http://localhost:16686'),
     prometheusUrl: z.string().default('http://localhost:9090'),
     otelCollectorUrl: z.string().optional(),
+    lokiUrl: z.string().default('http://localhost:3100'),
   }),
 
   ai: z.object({
@@ -102,7 +103,7 @@ function validateProductionSecrets(config: z.infer<typeof configSchema>): void {
   if (config.server.jwtSecret.length < 32) {
     errors.push('JWT_SECRET must be at least 32 characters in production');
   }
-  
+
   // Check for obvious dev/test secrets
   const insecurePatterns = ['dev', 'test', 'local', 'example', 'change', 'password', '123'];
   const jwtLower = config.server.jwtSecret.toLowerCase();
@@ -189,6 +190,7 @@ function loadConfig() {
       jaegerUrl: process.env.JAEGER_URL || 'http://localhost:16686',
       prometheusUrl: process.env.PROMETHEUS_URL || 'http://localhost:9090',
       otelCollectorUrl: process.env.OTEL_COLLECTOR_URL,
+      lokiUrl: process.env.LOKI_URL || 'http://localhost:3100',
     },
 
     ai: process.env.OLLAMA_URL ? {

@@ -10,6 +10,7 @@ import { wsServer } from './ws-server';
 import { metricsCorrelator } from './metrics-correlator';
 import { createLogger } from '../lib/logger';
 import { getErrorMessage } from '../lib/errors';
+import { Counter, Histogram, Gauge, register } from 'prom-client';
 
 const logger = createLogger('stream-analyzer');
 
@@ -19,6 +20,52 @@ const MODEL = process.env.OLLAMA_MODEL || 'llama3.2:1b';
 // Batch configuration
 const BATCH_SIZE = 10;           // Max anomalies per batch
 const BATCH_TIMEOUT_MS = 30000;  // 30 seconds - wait before processing batch
+
+// ============================================
+// PROMETHEUS METRICS - LLM USAGE
+// ============================================
+
+// Total LLM analysis requests
+const llmAnalysisTotal = new Counter({
+    name: 'kx_llm_analysis_total',
+    help: 'Total LLM anomaly analyses performed',
+    labelNames: ['status', 'use_case'],
+    registers: [register]
+});
+
+// Anomalies sent to LLM by severity (helps decide threshold)
+const llmEventsBySeverity = new Counter({
+    name: 'kx_llm_events_by_severity_total',
+    help: 'Anomaly events sent to LLM by severity level',
+    labelNames: ['severity'],
+    registers: [register]
+});
+
+// LLM processing duration
+const llmDuration = new Histogram({
+    name: 'kx_llm_analysis_duration_seconds',
+    help: 'Time to complete LLM analysis',
+    buckets: [1, 2, 5, 10, 20, 30, 60],
+    registers: [register]
+});
+
+// Current queue depth (saturation indicator)
+const llmQueueDepth = new Gauge({
+    name: 'kx_llm_queue_depth',
+    help: 'Current number of anomalies waiting for LLM analysis',
+    registers: [register]
+});
+
+// Dropped events (when queue is full or LLM unavailable)
+const llmDroppedEvents = new Counter({
+    name: 'kx_llm_dropped_events_total',
+    help: 'Events dropped due to queue saturation or LLM errors',
+    labelNames: ['reason'],
+    registers: [register]
+});
+
+// Max queue size to prevent unbounded growth
+const MAX_QUEUE_SIZE = 100;
 
 // Use case detection patterns
 interface UseCase {
@@ -120,6 +167,16 @@ class StreamAnalyzer {
      * Enqueue anomaly for batch analysis
      */
     async enqueue(anomaly: Anomaly): Promise<void> {
+        // Track by severity for threshold analysis
+        llmEventsBySeverity.inc({ severity: `sev${anomaly.severity}` });
+
+        // Check for queue saturation
+        if (this.buffer.length >= MAX_QUEUE_SIZE) {
+            llmDroppedEvents.inc({ reason: 'queue_full' });
+            logger.warn({ queueSize: this.buffer.length, anomalyId: anomaly.id }, 'LLM queue saturated, dropping event');
+            return;
+        }
+
         // Detect use case
         const useCase = USE_CASES.find(uc => uc.match(anomaly));
 
@@ -134,6 +191,7 @@ class StreamAnalyzer {
         }
 
         this.buffer.push(anomaly);
+        llmQueueDepth.set(this.buffer.length);
         logger.debug({ service: anomaly.service, bufferSize: this.buffer.length, batchSize: BATCH_SIZE }, 'Buffered anomaly for batch processing');
 
         // Process immediately if batch full
@@ -161,14 +219,30 @@ class StreamAnalyzer {
         const batch = this.buffer.splice(0, BATCH_SIZE);
         const anomalyIds = batch.map(a => a.id);
 
+        // Update queue depth after removing batch
+        llmQueueDepth.set(this.buffer.length);
+
+        // Detect primary use case for labeling
+        const primaryUseCase = USE_CASES.find(uc => batch.some(a => uc.match(a)));
+
         logger.info({ batchSize: batch.length }, 'Processing anomaly batch');
         wsServer.analysisStart(anomalyIds);
 
+        const startTime = Date.now();
         try {
             await this.streamAnalysis(batch);
+
+            // Record success metrics
+            const durationSec = (Date.now() - startTime) / 1000;
+            llmDuration.observe(durationSec);
+            llmAnalysisTotal.inc({ status: 'success', use_case: primaryUseCase?.id || 'unknown' });
         } catch (error: unknown) {
             logger.error({ err: error }, 'Analysis batch processing failed');
             wsServer.analysisComplete(anomalyIds, `Analysis failed: ${getErrorMessage(error)}`);
+
+            // Record failure metrics
+            llmAnalysisTotal.inc({ status: 'error', use_case: primaryUseCase?.id || 'unknown' });
+            llmDroppedEvents.inc({ reason: 'llm_error' });
         }
 
         this.isProcessing = false;

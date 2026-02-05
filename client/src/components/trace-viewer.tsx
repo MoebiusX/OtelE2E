@@ -213,6 +213,15 @@ export function TraceViewer() {
           </div>
           <div className="flex items-center gap-2">
             <a
+              href={`${import.meta.env.VITE_GRAFANA_URL || 'http://localhost:3000'}/d/krystalinex-unified`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex items-center gap-1 px-3 py-1.5 bg-orange-600/20 hover:bg-orange-600/30 border border-orange-500/30 rounded-lg text-sm text-orange-300 transition-colors"
+            >
+              <ExternalLink className="w-3.5 h-3.5" />
+              Dashboard
+            </a>
+            <a
               href={`${import.meta.env.VITE_JAEGER_URL || 'http://localhost:16686'}`}
               target="_blank"
               rel="noopener noreferrer"

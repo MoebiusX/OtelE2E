@@ -31,12 +31,18 @@ async function checkDocker() {
 }
 
 async function startDockerServices() {
-    console.log('📦 Starting Docker services (Kong, RabbitMQ, Jaeger, OTEL Collector)...');
+    console.log('📦 Starting Docker services (Kong, RabbitMQ, Jaeger, OTEL, Grafana, Exporters)...');
     // Only start infrastructure services (not kx-exchange or frontend - those run natively)
     const services = [
         'kong-database', 'kong-migrations', 'kong-gateway',
         'rabbitmq', 'app-database', 'jaeger', 'otel-collector',
-        'prometheus', 'maildev', 'ollama'
+        'prometheus', 'maildev', 'ollama', 'alertmanager',
+        // Unified Observability stack
+        'loki', 'promtail', 'grafana',
+        // Metrics exporters for holistic observability
+        'postgres-exporter', 'kong-postgres-exporter', 'node-exporter',
+        // On-call / incident management
+        'goalert-db', 'goalert'
     ];
     const child = spawn('docker-compose', ['up', '-d', ...services], {
         cwd: rootDir,
@@ -216,7 +222,8 @@ async function main() {
 
     console.log('\n✨ All components starting! Open http://localhost:5173\n');
     console.log('   📊 Jaeger UI: http://localhost:16686');
-    console.log('   🐰 RabbitMQ: http://localhost:15672');
+    console.log('   📈 Grafana:   http://localhost:3000 (admin/admin)');
+    console.log('   🐰 RabbitMQ:  http://localhost:15672');
     console.log('   🦍 Kong Admin: http://localhost:8001\n');
 
     // Handle cleanup on exit
