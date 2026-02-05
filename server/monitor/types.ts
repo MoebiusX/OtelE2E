@@ -219,3 +219,49 @@ export interface AmountBaselinesResponse {
     operationCount: number;
 }
 
+// ============================================
+// BASELINE STATUS INDICATORS
+// ============================================
+
+/**
+ * Status indicator types based on statistical deviation from mean.
+ * Used to show how current performance compares to historical norms.
+ */
+export type BaselineStatus = 
+    | 'above_mean'       // 1-3σ above mean (slower than normal)
+    | 'below_mean'       // 1-3σ below mean (faster than normal)
+    | 'slope_above'      // Rate of change 1-3σ above normal
+    | 'slope_below'      // Rate of change 1-3σ below normal
+    | 'upward_trend'     // Consistent upward movement over time
+    | 'downward_trend'   // Consistent downward movement over time
+    | 'normal';          // Within ±1σ of mean
+
+/**
+ * Detailed status indicator with deviation metrics.
+ */
+export interface BaselineStatusIndicator {
+    status: BaselineStatus;
+    deviation: number;            // σ from mean (positive = above, negative = below)
+    slopeDeviation?: number;      // σ for rate of change
+    trendDirection?: 'up' | 'down' | 'stable';
+    confidence: number;           // 0-1, based on sample count
+    recentMean?: number;          // Mean of current hour's samples
+    previousMean?: number;        // Mean of previous hour's samples
+}
+
+/**
+ * Span baseline enriched with current status indicator.
+ */
+export interface EnrichedSpanBaseline extends SpanBaseline {
+    statusIndicator?: BaselineStatusIndicator;
+}
+
+/**
+ * API response for enriched baselines endpoint.
+ */
+export interface EnrichedBaselinesResponse {
+    baselines: EnrichedSpanBaseline[];
+    spanCount: number;
+    timestamp: Date;
+}
+

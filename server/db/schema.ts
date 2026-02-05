@@ -222,6 +222,19 @@ export const anomalies = pgTable('anomalies', {
     index('idx_anomalies_trace').on(table.traceId),
 ]);
 
+/**
+ * Recalculation State - Watermarks for incremental baseline recalculation
+ */
+export const recalculationState = pgTable('recalculation_state', {
+    id: uuid('id').primaryKey().defaultRandom(),
+    service: varchar('service', { length: 100 }).notNull().unique(),
+    lastProcessedAt: timestamp('last_processed_at', { withTimezone: true }).notNull(),
+    lastTraceTime: decimal('last_trace_time', { precision: 20, scale: 0 }),  // Jaeger microseconds
+    processingStatus: varchar('processing_status', { length: 50 }).default('idle').notNull()
+        .$type<'idle' | 'running' | 'error'>(),
+    updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),
+});
+
 // ============================================
 // RELATIONS
 // ============================================

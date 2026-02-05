@@ -19,13 +19,13 @@ const ANOMALY_WINDOW = 5 * 60 * 1000; // 5 minutes - keep anomalies for this lon
 
 // Default thresholds (used without adaptive baselines)
 const DEFAULT_THRESHOLDS = {
-    sev5: 3.3,   // ~80th percentile
-    sev4: 4.65,  // ~90th percentile
-    sev3: 6.0,   // ~95th percentile
-    sev2: 8.6,   // ~99th percentile
-    sev1: 10.3,   // ~99.9th percentile
+    sev5: 6.6,   // ~80th percentile
+    sev4: 9.3,  // ~90th percentile
+    sev3: 12.0,   // ~95th percentile
+    sev2: 17.2,   // ~99th percentile
+    sev1: 20.6,   // ~99.9th percentile
 };
-const MIN_SAMPLES = 100;       // Need at least 10 samples for reliable baseline
+const MIN_SAMPLES = 500;       // Need at least 10 samples for reliable baseline
 
 export class AnomalyDetector {
     private anomalies: Map<string, Anomaly> = new Map();

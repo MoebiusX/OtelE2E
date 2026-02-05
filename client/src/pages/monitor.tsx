@@ -14,6 +14,8 @@ import {
 } from "@/components/ui/table";
 import Layout from "@/components/Layout";
 import { getJaegerTraceUrl } from "@/lib/trace-utils";
+import { BaselineStatusBadge, type BaselineStatusIndicator } from "@/components/ui/baseline-status-badge";
+import { DeviationMiniChart } from "@/components/ui/deviation-mini-chart";
 
 // Severity configuration (SEV 1-5)
 const SEVERITY_CONFIG = {
@@ -61,6 +63,7 @@ interface SpanBaseline {
     p99: number;
     sampleCount: number;
     lastUpdated: string;
+    statusIndicator?: BaselineStatusIndicator;
 }
 
 interface Anomaly {
@@ -213,9 +216,9 @@ export default function Monitor() {
         refetchInterval: 5000,
     });
 
-    // Fetch baselines
+    // Fetch baselines (with status indicators)
     const { data: baselinesData } = useQuery<{ baselines: SpanBaseline[] }>({
-        queryKey: ["/api/v1/monitor/baselines"],
+        queryKey: ["/api/v1/monitor/baselines/enriched"],
         refetchInterval: 10000,
     });
 
@@ -1004,6 +1007,7 @@ export default function Monitor() {
                                 <TableHeader>
                                     <TableRow className="border-cyan-500/20 hover:bg-transparent">
                                         <TableHead className="text-cyan-100 text-base font-semibold">Span</TableHead>
+                                        <TableHead className="text-cyan-100 text-base font-semibold text-center">Status</TableHead>
                                         <TableHead className="text-cyan-100 text-base font-semibold text-right">Mean</TableHead>
                                         <TableHead className="text-cyan-100 text-base font-semibold text-right">Std Dev (σ)</TableHead>
                                         <TableHead className="text-cyan-100 text-base font-semibold text-right">P95</TableHead>
@@ -1021,6 +1025,20 @@ export default function Monitor() {
                                                 <span className="text-cyan-400 font-medium">{baseline.service}</span>
                                                 <span className="text-cyan-500/50 mx-1">:</span>
                                                 <span className="text-cyan-100">{baseline.operation}</span>
+                                            </TableCell>
+                                            <TableCell className="text-center">
+                                                <div className="flex items-center justify-center gap-2">
+                                                    <DeviationMiniChart
+                                                        currentValue={baseline.statusIndicator?.recentMean ?? baseline.mean}
+                                                        mean={baseline.mean}
+                                                        stdDev={baseline.stdDev}
+                                                        deviation={baseline.statusIndicator?.deviation}
+                                                        status={baseline.statusIndicator?.status}
+                                                        width={80}
+                                                        height={28}
+                                                    />
+                                                    <BaselineStatusBadge indicator={baseline.statusIndicator} size="sm" />
+                                                </div>
                                             </TableCell>
                                             <TableCell className="text-right text-base text-cyan-100 font-medium">
                                                 {formatDuration(baseline.mean)}
