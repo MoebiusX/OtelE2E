@@ -10,6 +10,7 @@ import { ZodError } from 'zod';
 import { createLogger } from '../lib/logger';
 import { AuthenticationError, ValidationError, getErrorMessage } from '../lib/errors';
 import { recordLogin } from '../metrics/prometheus';
+import { recordLoginSuccess, recordLoginFailure, recordInvalidToken } from '../observability/security-events';
 
 const logger = createLogger('auth-routes');
 const router = Router();
@@ -43,6 +44,8 @@ export const authenticate = async (req: Request, res: Response, next: NextFuncti
 
     if (!decoded) {
         logger.warn({ path: req.path }, 'Invalid or expired token');
+        // Record security event for invalid token
+        recordInvalidToken(false, req.ip || req.socket.remoteAddress, req.path).catch(() => { });
         return res.status(401).json({ error: 'Invalid or expired token' });
     }
 
@@ -167,6 +170,13 @@ router.post('/login', async (req, res) => {
         // Normal login response with tokens
         recordLogin('success');
 
+        // Record security event for successful login
+        recordLoginSuccess(
+            result.user.id,
+            sessionInfo.ipAddress,
+            sessionInfo.userAgent
+        ).catch(() => { });
+
         // DEBUG: Log what we're returning
         logger.info({
             userId: result.user.id,
@@ -186,6 +196,14 @@ router.post('/login', async (req, res) => {
         });
     } catch (error: unknown) {
         recordLogin('failure');
+
+        // Record security event for failed login
+        recordLoginFailure(
+            req.body?.email || 'unknown',
+            req.ip || req.socket.remoteAddress,
+            req.headers['user-agent'],
+            getErrorMessage(error)
+        ).catch(() => { });
         if (error instanceof ZodError) {
             return res.status(400).json({
                 error: 'Validation failed',

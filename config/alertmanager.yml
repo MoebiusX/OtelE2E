@@ -77,24 +77,14 @@ receivers:
   # Default GoAlert webhook
   - name: 'goalert-webhook'
     webhook_configs:
-      - url: 'http://goalert:8081/api/v2/generic/incoming'
+      - url: 'http://goalert:8081/api/v2/prometheusalertmanager/incoming?token=f6101e3e-34aa-4ed2-8da9-70c9ba2eea34'
         send_resolved: true
-        http_config:
-          # Add your GoAlert integration key as a header
-          # Create an integration in GoAlert and get the key
-          authorization:
-            type: Bearer
-            credentials_file: /etc/alertmanager/goalert-token
 
   # Critical alerts - immediate escalation
   - name: 'goalert-critical'
     webhook_configs:
-      - url: 'http://goalert:8081/api/v2/generic/incoming'
+      - url: 'http://goalert:8081/api/v2/prometheusalertmanager/incoming?token=f6101e3e-34aa-4ed2-8da9-70c9ba2eea34'
         send_resolved: true
-        http_config:
-          authorization:
-            type: Bearer
-            credentials_file: /etc/alertmanager/goalert-token
     # Email notifications via MailDev
     email_configs:
       - to: 'carlos@krystaline.io'
@@ -115,24 +105,18 @@ receivers:
   # ntfy - Free mobile push notifications (backup/secondary)
   # Configure topic in NTFY_TOPIC env var
   # Receives same alerts as GoAlert for mobile redundancy
+  # Note: ntfy headers are passed via URL params since Alertmanager doesn't support custom headers
   - name: 'ntfy-mobile'
     webhook_configs:
       - url: 'https://ntfy.sh/${NTFY_TOPIC}'
         send_resolved: true
-        http_config:
-          headers:
-            Title: '🚨 KrystalineX: {{ .GroupLabels.alertname }}'
-            Priority: '{{ if eq .Status "firing" }}{{ if eq .CommonLabels.severity "critical" }}urgent{{ else if eq .CommonLabels.severity "warning" }}high{{ else }}default{{ end }}{{ else }}low{{ end }}'
-            Tags: '{{ if eq .Status "firing" }}warning,{{ .CommonLabels.severity }}{{ else }}white_check_mark,resolved{{ end }}'
+        # ntfy will use default priorities based on message content
 
   # ntfy for critical alerts only
   - name: 'ntfy-critical'
     webhook_configs:
-      - url: 'https://ntfy.sh/${NTFY_TOPIC}?priority=urgent&tags=rotating_light,critical'
+      - url: 'https://ntfy.sh/${NTFY_TOPIC}?priority=urgent&tags=rotating_light,critical&title=CRITICAL+Alert'
         send_resolved: true
-        http_config:
-          headers:
-            Title: '🔥 CRITICAL: {{ .GroupLabels.alertname }}'
 
 # Templates for notification messages
 templates:

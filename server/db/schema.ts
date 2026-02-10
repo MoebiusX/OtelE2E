@@ -236,6 +236,37 @@ export const recalculationState = pgTable('recalculation_state', {
 });
 
 // ============================================
+// SECURITY & AUDIT
+// ============================================
+
+/**
+ * Security Events - Audit trail for security-relevant activities
+ */
+export const securityEvents = pgTable('security_events', {
+    id: uuid('id').primaryKey().defaultRandom(),
+    eventType: varchar('event_type', { length: 50 }).notNull()
+        .$type<'login_success' | 'login_failed' | '2fa_failed' | 'rate_limit_exceeded' |
+            'auth_rate_limit_exceeded' | 'sensitive_rate_limit_exceeded' |
+            'invalid_token' | 'token_expired' | 'anomaly_detected' |
+            'session_created' | 'session_revoked'>(),
+    severity: varchar('severity', { length: 20 }).notNull()
+        .$type<'info' | 'low' | 'medium' | 'high' | 'critical'>(),
+    userId: uuid('user_id').references(() => users.id, { onDelete: 'set null' }),
+    ipAddress: varchar('ip_address', { length: 45 }),  // IPv6 support
+    userAgent: text('user_agent'),
+    resource: varchar('resource', { length: 255 }),  // e.g., '/api/auth/login'
+    details: jsonb('details').$type<Record<string, unknown>>(),
+    traceId: varchar('trace_id', { length: 64 }),  // OTEL correlation
+    createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+}, (table) => [
+    index('idx_security_events_type').on(table.eventType),
+    index('idx_security_events_severity').on(table.severity),
+    index('idx_security_events_user').on(table.userId),
+    index('idx_security_events_created').on(table.createdAt),
+    index('idx_security_events_ip').on(table.ipAddress),
+]);
+
+// ============================================
 // RELATIONS
 // ============================================
 
@@ -272,6 +303,10 @@ export const ordersRelations = relations(orders, ({ one }) => ({
 
 export const kycSubmissionsRelations = relations(kycSubmissions, ({ one }) => ({
     user: one(users, { fields: [kycSubmissions.userId], references: [users.id] }),
+}));
+
+export const securityEventsRelations = relations(securityEvents, ({ one }) => ({
+    user: one(users, { fields: [securityEvents.userId], references: [users.id] }),
 }));
 
 // ============================================
@@ -343,6 +378,35 @@ export const insertAnomalySchema = createInsertSchema(anomalies);
 export const selectAnomalySchema = createSelectSchema(anomalies);
 export type AnomalyRecord = typeof anomalies.$inferSelect;
 export type NewAnomalyRecord = typeof anomalies.$inferInsert;
+
+// Security event schemas
+export const insertSecurityEventSchema = createInsertSchema(securityEvents);
+export const selectSecurityEventSchema = createSelectSchema(securityEvents);
+export type SecurityEvent = typeof securityEvents.$inferSelect;
+export type NewSecurityEvent = typeof securityEvents.$inferInsert;
+
+// Security event type constants for type-safe usage
+export const SecurityEventTypes = {
+    LOGIN_SUCCESS: 'login_success',
+    LOGIN_FAILED: 'login_failed',
+    TWO_FA_FAILED: '2fa_failed',
+    RATE_LIMIT_EXCEEDED: 'rate_limit_exceeded',
+    AUTH_RATE_LIMIT_EXCEEDED: 'auth_rate_limit_exceeded',
+    SENSITIVE_RATE_LIMIT_EXCEEDED: 'sensitive_rate_limit_exceeded',
+    INVALID_TOKEN: 'invalid_token',
+    TOKEN_EXPIRED: 'token_expired',
+    ANOMALY_DETECTED: 'anomaly_detected',
+    SESSION_CREATED: 'session_created',
+    SESSION_REVOKED: 'session_revoked',
+} as const;
+
+export const SecuritySeverity = {
+    INFO: 'info',
+    LOW: 'low',
+    MEDIUM: 'medium',
+    HIGH: 'high',
+    CRITICAL: 'critical',
+} as const;
 
 // ============================================
 // ADDITIONAL FORM SCHEMAS

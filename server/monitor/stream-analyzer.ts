@@ -10,7 +10,11 @@ import { wsServer } from './ws-server';
 import { metricsCorrelator } from './metrics-correlator';
 import { createLogger } from '../lib/logger';
 import { getErrorMessage } from '../lib/errors';
-import { Counter, Histogram, Gauge, register } from 'prom-client';
+import { Counter, Histogram, Gauge } from 'prom-client';
+import { getMetricsRegistry } from '../metrics/prometheus';
+
+// Get the shared metrics registry
+const register = getMetricsRegistry();
 
 const logger = createLogger('stream-analyzer');
 
@@ -66,6 +70,9 @@ const llmDroppedEvents = new Counter({
 
 // Max queue size to prevent unbounded growth
 const MAX_QUEUE_SIZE = 100;
+
+// Initialize gauge to 0 so it appears in metrics immediately
+llmQueueDepth.set(0);
 
 // Use case detection patterns
 interface UseCase {

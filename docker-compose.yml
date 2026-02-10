@@ -221,6 +221,7 @@ services:
       - "9093:9093"
     volumes:
       - ./config/alertmanager.yml:/etc/alertmanager/alertmanager.yml
+      - ./config/alertmanager/goalert-token:/etc/alertmanager/goalert-token:ro
       - alertmanager_data:/alertmanager
     command:
       - '--config.file=/etc/alertmanager/alertmanager.yml'
@@ -239,6 +240,12 @@ services:
       - GF_SECURITY_ADMIN_PASSWORD=${GRAFANA_ADMIN_PASSWORD:-admin}
       - GF_USERS_ALLOW_SIGN_UP=false
       - GF_FEATURE_TOGGLES_ENABLE=traceqlEditor tempoSearch tempoBackendSearch
+      # SMTP configuration for email alerts via MailDev
+      - GF_SMTP_ENABLED=true
+      - GF_SMTP_HOST=maildev:1025
+      - GF_SMTP_SKIP_VERIFY=true
+      - GF_SMTP_FROM_ADDRESS=grafana@krystalinex.local
+      - GF_SMTP_FROM_NAME=KrystalineX Grafana
     volumes:
       - grafana_data:/var/lib/grafana
       - ./config/grafana/provisioning:/etc/grafana/provisioning
