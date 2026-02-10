@@ -8,8 +8,21 @@
  */
 
 import { createLogger } from '../lib/logger';
+import { Gauge } from 'prom-client';
+import { getMetricsRegistry } from '../metrics/prometheus';
 
 const logger = createLogger('price-service');
+
+// Prometheus metric for price feed monitoring
+const register = getMetricsRegistry();
+const priceFeedLastUpdate = new Gauge({
+  name: 'price_feed_last_update_timestamp',
+  help: 'Unix timestamp of the last price feed update',
+  registers: [register],
+});
+
+// Initialize to current time so alert doesn't fire on startup
+priceFeedLastUpdate.set(Date.now() / 1000);
 
 export interface PriceData {
   symbol: string;
@@ -133,6 +146,10 @@ export const priceService = {
     };
 
     priceCache.set(upperSymbol, priceData);
+
+    // Update Prometheus metric for alerting
+    const updateTime = Date.now();
+    priceFeedLastUpdate.set(updateTime / 1000);  // Unix timestamp in seconds
 
     serviceStatus.lastUpdate = new Date();
     if (!serviceStatus.availableAssets.includes(upperSymbol)) {

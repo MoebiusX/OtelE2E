@@ -28,7 +28,8 @@
     "security:audit:fix": "npm audit fix",
     "security:check": "npm run security:audit && npm run security:secrets",
     "security:secrets": "node scripts/check-secrets.js",
-    "precommit": "npm run check && npm run security:secrets"
+    "ci:check-docs": "node scripts/check-confidential-docs.cjs",
+    "precommit": "npm run check && npm run security:secrets && npm run ci:check-docs"
   },
   "dependencies": {
     "@hookform/resolvers": "^3.10.0",

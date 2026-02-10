@@ -59,17 +59,21 @@ describe('HistoryStore', () => {
         });
 
         // Setup mock chain for select
+        // Some methods (updateBaselines, setTimeBaselines) await select().from() directly (returns array)
+        // Others (getAnomalyHistory) chain .where().orderBy().limit()
         const mockLimit = vi.fn().mockResolvedValue([]);
         const mockOrderBy = vi.fn().mockReturnValue({ limit: mockLimit });
         const mockWhere = vi.fn().mockReturnValue({
             orderBy: mockOrderBy,
             limit: mockLimit,
         });
-        const mockFrom = vi.fn().mockReturnValue({
+        // mockFrom must behave as both a thenable (resolving to []) and have chainable methods
+        const mockFromResult = Object.assign(Promise.resolve([]), {
             where: mockWhere,
             orderBy: mockOrderBy,
             limit: mockLimit,
         });
+        const mockFrom = vi.fn().mockReturnValue(mockFromResult);
         mocks.select.mockReturnValue({
             from: mockFrom,
         });

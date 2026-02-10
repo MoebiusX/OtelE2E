@@ -1,7 +1,7 @@
 # KrystalineX Technical Assessment
-> **Generated:** 2026-01-28  
-> **Assessment Method:** Live codebase analysis + automated test suite execution  
-> **Status:** ✅ Verified from observed state
+> **Generated:** 2026-02-06  
+> **Assessment Method:** Static review + prior test results (tests not rerun this pass)  
+> **Status:** ⚠️ Partially verified (see testing section)
 
 ---
 
@@ -9,14 +9,14 @@
 
 KrystalineX is a **demo-ready crypto exchange platform** with exceptional observability, security, and monitoring capabilities. The backend demonstrates professional-grade engineering with extensive test coverage (931 tests), proper security middleware, and a sophisticated anomaly detection system. The frontend requires polish for production but is sufficient for investor demos.
 
-### Overall Health Score: **82/100**
+### Overall Health Score: **83/100**
 
 | Category | Score | Status |
 |----------|-------|--------|
 | **Security** | 95% | ✅ Production-ready |
 | **Testing** | 95% | ✅ Comprehensive coverage |
 | **Architecture** | 90% | ✅ Well-structured |
-| **Observability** | 98% | ✅ Best-in-class |
+| **Observability** | 94% | ⚠️ Unified mode pending rollout |
 | **UI/UX Polish** | 65% | ⚠️ Needs work |
 | **User Journey Coherence** | 70% | ⚠️ Needs refinement |
 | **Documentation** | 75% | ⚠️ Needs update |
@@ -109,9 +109,9 @@ Helmet configured with:
 
 ---
 
-## Testing Assessment
+### Testing Assessment
 
-### Test Results: 712/714 PASSING ✅ (99.7%)
+### Test Results: not rerun on 2026-02-06 (last verified: 712/714 passing)
 
 | Test Category | Files | Tests | Status |
 |---------------|-------|-------|--------|
@@ -129,9 +129,9 @@ Helmet configured with:
 
 | Test Suite | Tests | Passing | Notes |
 |------------|-------|---------|-------|
-| Authentication | 4 | 4 | ✅ Full auth flow working |
-| Trading Flow | 5 | 2 | ⚠️ Balance/timing issues |
-| Transparency | 8 | 3 | ⚠️ Metrics display timing |
+| Authentication | 4 | 4 | ✅ Full auth flow working (not rerun this pass) |
+| Trading Flow | 5 | 2 | ⚠️ Balance/timing issues (needs rerun) |
+| Transparency | 8 | 3 | ⚠️ Metrics display timing (needs rerun) |
 
 ### Test Infrastructure
 - **Framework:** Vitest 2.1.9
@@ -196,26 +196,21 @@ server/
 
 ## Observability Assessment
 
-### ✅ Distributed Tracing (BEST-IN-CLASS)
+### ✅ Distributed Tracing
 **Location:** [server/otel.ts](../server/otel.ts)
 
-- Full OpenTelemetry SDK integration
-- Auto-instrumentation (Express, HTTP, pg, amqplib)
-- Jaeger exporter
-- Browser trace context propagation
-- Kong Gateway span correlation (17+ spans per transaction)
+- Full OpenTelemetry SDK integration with auto-instrumentation (Express, HTTP, pg, amqplib)
+- Jaeger exporter enabled; browser context propagation; Kong spans correlated across gateway paths
+- Note: unify exporters under OTLP endpoint once Unified Observability Mode is enabled
 
-### ✅ Metrics Collection (IMPLEMENTED)
+### ✅ Metrics Collection
 **Location:** [server/metrics/prometheus.ts](../server/metrics/prometheus.ts)
 
-Prometheus metrics:
-- HTTP request duration histogram
-- Request/response counters
-- Active connections gauge
-- Database query latency
-- RabbitMQ message rates
+- HTTP RED metrics, active connections, order processing histograms, circuit breaker gauges
+- RabbitMQ queue depth gauges; business KPIs (trade volume/value, logins, active users)
+- Next step: attach exemplars using active trace IDs for cross-signal linking
 
-### ✅ Anomaly Detection (ADVANCED)
+### ✅ Anomaly Detection
 **Location:** [server/monitor/](../server/monitor/)
 
 | Component | Purpose | Status |
@@ -234,13 +229,18 @@ Features:
 - WebSocket streaming for real-time alerts
 - Prometheus metric correlation
 
-### ✅ Structured Logging (IMPLEMENTED)
+### ✅ Structured Logging
 **Location:** [server/lib/logger.ts](../server/lib/logger.ts)
 
-- Pino with JSON output
-- Correlation ID propagation
-- Request/response logging
-- Error stack trace capture
+- Pino JSON with correlation IDs and request/response logging
+- Plan: add OTLP log exporter and align fields with trace/metric resource attributes
+
+### 🚧 Unified Observability Mode (planned rollout)
+- Single toggle `OBS_MODE=unified` and `OTEL_EXPORTER_OTLP_ENDPOINT` for all services
+- Collector profiles: docker-compose gateway with OTLP → Jaeger/Prometheus/Loki; k8s agent+gateway with `k8sattributes`, remote_write, and OTLP fan-out
+- Resource attributes standardized: `service.name`, `deployment.environment`, `service.version`, `service.instance.id`
+- Metrics-traces linking via exemplars; outbound DB/RabbitMQ/HTTP spans enriched with semantic attrs
+- Logging alignment: add trace/Span IDs to logs and ship via OTLP
 
 ---
 
@@ -407,22 +407,22 @@ Features:
 
 ---
 
-## Remaining Work (Low Priority)
+## Remaining Work (Prioritized)
 
-### Documentation (Priority: Medium)
-- [x] README.md exists
-- [x] ARCHITECTURE.md exists (needs update)
-- [x] DEMO-WALKTHROUGH.md created
-- [ ] API documentation (OpenAPI/Swagger)
-- [ ] Deployment runbook
+### Observability
+- [ ] Publish Unified Observability Mode configs (compose + k8s agent/gateway)
+- [ ] Enable OTLP log export and exemplars in metrics
+- [ ] Add SLOs (availability, latency, price freshness, queue depth) with burn-rate alerts
 
-### Nice-to-Have Enhancements
-| Item | Priority | Effort |
-|------|----------|--------|
-| OpenAPI spec generation | Low | 4hrs |
-| Docker Compose health checks for all services | Low | 2hrs |
-| Load testing scripts | Low | 4hrs |
-| CI/CD pipeline | Low | 4hrs |
+### Documentation
+- [ ] OpenAPI/Swagger documentation
+- [ ] Deployment runbook (docker + k8s)
+- [ ] Update architecture overview after unified observability rollout
+
+### Engineering Hygiene
+- [ ] Rerun test and E2E suites; update recorded pass counts
+- [ ] Add load/perf test scripts
+- [ ] CI/CD pipeline with observability smoke checks
 
 ---
 

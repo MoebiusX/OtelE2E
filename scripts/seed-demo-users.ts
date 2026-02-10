@@ -27,15 +27,13 @@ const DEMO_USERS = [
     { email: 'seed.user.secondary@krystaline.io', password: DEMO_PASSWORD },
 ];
 
-// Balances stored in base units: satoshis (BTC), gwei (ETH), cents (USD)
-// 1 BTC = 100,000,000 satoshis
-// 1 USD = 100 cents
+// Balances stored as actual amounts (not base units)
 const INITIAL_BALANCES: Record<string, number> = {
-    BTC: 100000000,    // 1 BTC in satoshis
-    ETH: 10000000000,  // 10 ETH in gwei (10^9)
-    USDT: 1000000,     // 10000 USDT in cents
-    USD: 500000,       // $5000 USD in cents
-    EUR: 450000,       // €4500 EUR in cents
+    BTC: 1,            // 1 BTC
+    ETH: 10,           // 10 ETH
+    USDT: 10000,       // 10,000 USDT
+    USD: 50000,        // $50,000 USD
+    EUR: 45000,        // €45,000 EUR
 };
 
 

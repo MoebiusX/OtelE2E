@@ -362,6 +362,108 @@ groups:
           summary: "Rate limiting is being triggered"
           description: "{{ $value }} requests/sec are being rate limited"
 
+      # ===========================================
+      # NEW: HIGH-IMPACT SECURITY EVENT ALERTS
+      # ===========================================
+
+      # Brute Force Attack Detection - Critical
+      - alert: BruteForceAttack
+        expr: |
+          sum(increase(kx_security_events_total{event_type="login_failed"}[5m])) > 20
+        for: 1m
+        labels:
+          severity: critical
+          service: security
+        annotations:
+          summary: "🚨 Potential brute force attack detected"
+          description: "{{ $value }} failed login attempts in the last 5 minutes. Immediate investigation required."
+          runbook_url: "https://github.com/KrystalineX/docs/RUNBOOK.md#security-brute-force"
+
+      # Credential Stuffing / Account Takeover
+      - alert: CredentialStuffingAttack
+        expr: |
+          sum(increase(kx_security_events_total{event_type="login_failed"}[15m])) > 100
+        for: 2m
+        labels:
+          severity: critical
+          service: security
+        annotations:
+          summary: "🔥 Credential stuffing attack in progress"
+          description: "{{ $value }} failed logins in 15 minutes. This pattern indicates automated credential testing."
+          runbook_url: "https://github.com/KrystalineX/docs/RUNBOOK.md#security-credential-stuffing"
+
+      # 2FA Bypass Attempts
+      - alert: TwoFactorAuthBypass
+        expr: |
+          sum(increase(kx_security_events_total{event_type="2fa_failed"}[10m])) > 10
+        for: 1m
+        labels:
+          severity: critical
+          service: security
+        annotations:
+          summary: "🔐 Multiple 2FA failures detected"
+          description: "{{ $value }} 2FA failures in 10 minutes. Possible account compromise attempt."
+
+      # Mass Rate Limit Abuse (DDoS pattern)
+      - alert: RateLimitAbuse
+        expr: |
+          sum(increase(kx_security_events_total{event_type=~".*rate_limit.*"}[5m])) > 50
+        for: 2m
+        labels:
+          severity: critical
+          service: security
+        annotations:
+          summary: "⚠️ Aggressive rate limit abuse"
+          description: "{{ $value }} rate limit triggers in 5 minutes. Possible DDoS or automated abuse pattern."
+
+      # Auth Rate Limit (targeted attack on auth endpoints)
+      - alert: AuthEndpointAbuse
+        expr: |
+          sum(increase(kx_security_events_total{event_type="auth_rate_limit_exceeded"}[5m])) > 20
+        for: 1m
+        labels:
+          severity: critical
+          service: security
+        annotations:
+          summary: "🔒 Auth endpoint under attack"
+          description: "{{ $value }} auth rate limits in 5 minutes. Authentication endpoints are being targeted."
+
+      # Sensitive Operations Rate Limit (high-value target)
+      - alert: SensitiveOperationAbuse
+        expr: |
+          sum(increase(kx_security_events_total{event_type="sensitive_rate_limit_exceeded"}[5m])) > 5
+        for: 1m
+        labels:
+          severity: critical
+          service: security
+        annotations:
+          summary: "💰 Sensitive operation abuse detected"
+          description: "{{ $value }} rate limits on sensitive endpoints. Financial operations may be targeted."
+
+      # Invalid Token Flood (token enumeration)
+      - alert: TokenEnumerationAttack
+        expr: |
+          sum(increase(kx_security_events_total{event_type=~"invalid_token|token_expired"}[5m])) > 30
+        for: 2m
+        labels:
+          severity: warning
+          service: security
+        annotations:
+          summary: "🎫 Token validation flood"
+          description: "{{ $value }} invalid token attempts. Possible token enumeration or replay attack."
+
+      # High Severity Security Events Spike
+      - alert: HighSeveritySecurityEvents
+        expr: |
+          sum(increase(kx_security_events_total{severity=~"high|critical"}[10m])) > 25
+        for: 2m
+        labels:
+          severity: critical
+          service: security
+        annotations:
+          summary: "🆘 Security incident in progress"
+          description: "{{ $value }} high/critical security events in 10 minutes. Multiple attack vectors may be active."
+
   # ============================================
   # SLA ALERTS
   # ============================================

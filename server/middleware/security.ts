@@ -10,6 +10,7 @@ import helmet from 'helmet';
 import { Request, Response, NextFunction } from 'express';
 import { config } from '../config';
 import { createLogger } from '../lib/logger';
+import { recordRateLimitExceeded } from '../observability/security-events';
 
 const logger = createLogger('security');
 
@@ -37,6 +38,9 @@ export const generalRateLimiter = rateLimit({
       path: req.path,
       method: req.method
     }, 'Rate limit exceeded');
+
+    // Record security event for rate limit
+    recordRateLimitExceeded('general', req.ip, req.path).catch(() => { });
 
     res.status(429).json({
       error: 'Too many requests',
@@ -67,6 +71,9 @@ export const authRateLimiter = rateLimit({
       email: req.body?.email ? `${req.body.email.substring(0, 3)}***` : undefined
     }, 'Auth rate limit exceeded');
 
+    // Record security event for auth rate limit
+    recordRateLimitExceeded('auth', req.ip, req.path).catch(() => { });
+
     res.status(429).json({
       error: 'Too many authentication attempts',
       message: 'Please try again in a minute',
@@ -94,6 +101,9 @@ export const sensitiveRateLimiter = rateLimit({
       ip: req.ip,
       path: req.path
     }, 'Sensitive operation rate limit exceeded');
+
+    // Record security event for sensitive rate limit (critical severity)
+    recordRateLimitExceeded('sensitive', req.ip, req.path).catch(() => { });
 
     res.status(429).json({
       error: 'Too many attempts',

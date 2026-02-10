@@ -23,11 +23,11 @@ const DEMO_USERS = [
 ];
 
 const INITIAL_BALANCES: Record<string, number> = {
-    BTC: 100000000,
+    BTC: 1,
     ETH: 10,
     USDT: 10000,
-    USD: 5000,
-    EUR: 4500,
+    USD: 50000,
+    EUR: 45000,
 };
 
 async function resetDemoWallets() {

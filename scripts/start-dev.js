@@ -224,7 +224,9 @@ async function main() {
     console.log('   📊 Jaeger UI: http://localhost:16686');
     console.log('   📈 Grafana:   http://localhost:3000 (admin/admin)');
     console.log('   🐰 RabbitMQ:  http://localhost:15672');
-    console.log('   🦍 Kong Admin: http://localhost:8001\n');
+    console.log('   🦍 Kong Admin: http://localhost:8001');
+    console.log('   📧 MailDev:   http://localhost:1080');
+    console.log('   🚨 On-Call:   http://localhost:8081 (GoAlert)\n');
 
     // Handle cleanup on exit
     const cleanup = () => {
